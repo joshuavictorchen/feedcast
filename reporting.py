@@ -18,6 +18,7 @@ from forecasting import (
     ForecastPoint,
     ModelRun,
     PipelineResult,
+    availability_adjusted_first_feed_error,
     hour_of_day,
 )
 
@@ -442,7 +443,7 @@ def plot_model_scores(
     ordered_models = sorted(
         model_runs,
         key=lambda model_run: (
-            sortable_metric(model_run.backtest_summary.recent_first_feed_error_minutes),
+            availability_adjusted_first_feed_error(model_run.backtest_summary),
             sortable_metric(model_run.backtest_summary.mean_first_feed_error_minutes),
         ),
     )
@@ -531,6 +532,9 @@ def write_model_report(
             "",
             f"- First-feed MAE: {format_minutes(model_run.backtest_summary.mean_first_feed_error_minutes)}",
             f"- Recent first-feed MAE: {format_minutes(model_run.backtest_summary.recent_first_feed_error_minutes)}",
+            f"- Availability-adjusted recent first-feed score: {format_minutes(availability_adjusted_first_feed_error(model_run.backtest_summary))}",
+            f"- Cutoff coverage: {format_ratio(model_run.backtest_summary.cutoff_coverage_ratio)} "
+            f"({model_run.backtest_summary.total_cutoffs}/{model_run.backtest_summary.potential_cutoffs})",
             f"- Full-24h timing MAE: {format_minutes(model_run.backtest_summary.mean_timing_mae_minutes)}",
             f"- Full-24h volume MAE: {format_ounces(model_run.backtest_summary.mean_volume_mae_oz)}",
             f"- Full-24h cases: {model_run.backtest_summary.full_horizon_cases}",
@@ -574,8 +578,8 @@ def build_summary_markdown(
         "## Headliner",
         "",
         f"**{result.headliner.definition.title}** is the current headliner. "
-        f"It was selected by recent first-feed accuracy first, then broader first-feed accuracy, "
-        f"then volume accuracy.",
+        f"It was selected by availability-adjusted recent first-feed accuracy first, "
+        f"then broader first-feed accuracy, then volume accuracy.",
         "",
         result.headliner.definition.description,
         "",
@@ -625,13 +629,13 @@ def build_leaderboard_table(model_runs: list[ModelRun]) -> list[str]:
     ordered_models = sorted(
         model_runs,
         key=lambda model_run: (
-            sortable_metric(model_run.backtest_summary.recent_first_feed_error_minutes),
+            availability_adjusted_first_feed_error(model_run.backtest_summary),
             sortable_metric(model_run.backtest_summary.mean_first_feed_error_minutes),
         ),
     )
     lines = [
-        "| Model | Recent first-feed MAE | Overall first-feed MAE | Full-24h timing MAE | Volume MAE | First current feed |",
-        "|---|---|---|---|---|---|",
+        "| Model | Adjusted recent score | Recent first-feed MAE | Coverage | Overall first-feed MAE | Full-24h timing MAE | Volume MAE | First current feed |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for model_run in ordered_models:
         first_point = model_run.forecast.points[0] if model_run.forecast.points else None
@@ -640,7 +644,10 @@ def build_leaderboard_table(model_runs: list[ModelRun]) -> list[str]:
             first_current = f"{first_point.time.strftime('%-I:%M %p')} / {first_point.volume_oz:.1f} oz"
         lines.append(
             f"| {model_run.definition.title} | "
+            f"{format_minutes(availability_adjusted_first_feed_error(model_run.backtest_summary))} | "
             f"{format_minutes(model_run.backtest_summary.recent_first_feed_error_minutes)} | "
+            f"{format_ratio(model_run.backtest_summary.cutoff_coverage_ratio)} "
+            f"({model_run.backtest_summary.total_cutoffs}/{model_run.backtest_summary.potential_cutoffs}) | "
             f"{format_minutes(model_run.backtest_summary.mean_first_feed_error_minutes)} | "
             f"{format_minutes(model_run.backtest_summary.mean_timing_mae_minutes)} | "
             f"{format_ounces(model_run.backtest_summary.mean_volume_mae_oz)} | "
@@ -740,6 +747,13 @@ def format_ounces(value: float | None) -> str:
     if value is None:
         return "n/a"
     return f"{value:.2f} oz"
+
+
+def format_ratio(value: float | None) -> str:
+    """Format a ratio as a percentage."""
+    if value is None:
+        return "n/a"
+    return f"{value * 100:.0f}%"
 
 
 def delta_text(current: float | None, previous: float | None, unit: str) -> str:

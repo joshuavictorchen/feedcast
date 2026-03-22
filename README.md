@@ -81,13 +81,41 @@ Bottle-only baseline. Uses recency-weighted recent full-feed intervals and a tim
 
 Bottle-only baseline. Weighted linear trend on recent intervals plus a time-of-day volume profile. This is the closest descendant of the original one-off script.
 
+### Phase-Locked Oscillator
+
+Breastfeed-aware starting heuristic. A lightweight recursive state-space timing model that lets a larger-than-usual feed push the next forecast later instead of snapping straight back to the rolling mean.
+
+### Phase Nowcast Hybrid
+
+Breastfeed-aware starting heuristic. Uses the phase model as the full-horizon backbone, but blends the first next-feed gap with a local event-state nowcast when both models already agree within a narrow window. This is a deliberate "trust but verify" model for the user's primary metric: next-feed timing.
+
+### Template Match
+
+Breastfeed-aware starting heuristic. Finds the closest historical analog window using recent gaps, volumes, and times of day, then uses what happened next as the projection template.
+
 ### Daily Shift
 
-Breastfeed-aware starting heuristic. Treats recent days as feed-slot templates, estimates feeds-per-day, and projects the schedule forward as those slots drift day to day.
+Breastfeed-aware starting heuristic. Builds a recent daily gap template, aligns today's observed cadence to that template, and explicitly carries the schedule across the overnight gap into tomorrow.
+
+### Gap-Conditional
+
+Breastfeed-aware starting heuristic. Weighted event-level regression for the next gap using raw last-feed volume, the previous gap, the recent rolling gap, and cyclical hour-of-day encoding. This version is trained on recent events directly instead of training on full feeds and patching snacks only at inference time.
+
+### Survival (Weibull)
+
+Bottle-only. Fits a Weibull time-to-next-feed distribution with day/night and feed-volume adjustments, then uses the distribution mode as the point forecast.
+
+### Gradient Boosted
+
+Exploratory canary model. A conservative gradient-boosted regressor over per-feed features. Useful as a check on whether extra model capacity is starting to pay off, but not trusted over the simpler models unless it wins on both accuracy and cutoff coverage.
+
+### Satiety Decay
+
+Breastfeed-aware starting heuristic. A physiological model that treats hunger as accumulating linearly over time, with each feed resetting hunger proportional to its volume. Naturally handles snacks (partial reset → shorter gap) and large feeds (full reset → longer gap).
 
 ### Consensus Blend
 
-Breastfeed-aware starting heuristic. Blends whichever base models are available at a cutoff and groups predictions by time proximity rather than raw forecast index.
+Breastfeed-aware starting heuristic. Blends the robust component models available at a cutoff and groups predictions by time proximity rather than raw forecast index. The current blend intentionally excludes the higher-variance gradient-boosted canary.
 
 ## Backtesting Rules
 
@@ -104,14 +132,27 @@ Metrics:
 - first-feed error: absolute timing error for the next predicted bottle
 - full-24h timing MAE: order-preserving sequence alignment across the next 24 hours
 - volume MAE: volume error on matched forecast/actual feeds
+- cutoff coverage: how often a model can actually produce a forecast across all eligible cutoffs
 
 The headliner model is chosen by:
 
-1. recent first-feed MAE
+1. availability-adjusted recent first-feed MAE
 2. overall first-feed MAE
 3. volume MAE
 
-This is deliberate. The current actionable forecast matters more than a broad but stale average.
+This is deliberate. The current actionable forecast matters more than a broad but stale average, but low-coverage models are penalized so they do not win by only working on easy cutoffs.
+
+## Modeling Principles
+
+The data are still limited. That means model direction matters more than squeezing a few minutes out of the current export through brittle tuning.
+
+Current principles:
+
+- prefer interpretable models before high-variance learners
+- treat volume as a first-class timing signal
+- treat snacks/top-offs carefully, but do not assume one universal heuristic is correct; event-level models currently work better with raw event state, while satiety-style models may aggregate recent clusters with `effective_timing_volume()`
+- report cutoff coverage alongside MAE so partial-availability models do not look stronger than they are
+- keep flexible ML models as exploratory or "canary" models until they beat the simpler baselines on both accuracy and availability
 
 ## Reports
 
