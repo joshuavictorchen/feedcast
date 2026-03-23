@@ -51,8 +51,7 @@ These are not model choices. They are project rules.
 - The export is treated as a full-history snapshot.
 - No data earlier than `2026-03-15` is considered, period.
 - Forecast timing targets are the logged bottle-feed start times.
-- Primary evaluation metric is exact next-feed timing error.
-- Secondary evaluation metric is per-feed volume accuracy.
+- The sole evaluation metric is feed timing accuracy. Volume is used by models as a feature and reported for bottle prep, but not used in model ranking.
 - The repo should stay simple. Add models and reports, not infrastructure.
 
 ## Breastfeeding Heuristic
@@ -127,18 +126,19 @@ For each model:
 2. Forecast the next 24 hours from that cutoff using only prior history.
 3. Compare the forecast to the actual later bottle feeds in the export.
 
-Metrics:
+Metrics (timing only — volume is not used in model ranking):
 
 - first-feed error: absolute timing error for the next predicted bottle
 - full-24h timing MAE: order-preserving sequence alignment across the next 24 hours
-- volume MAE: volume error on matched forecast/actual feeds
 - cutoff coverage: how often a model can actually produce a forecast across all eligible cutoffs
 
 The headliner model is chosen by:
 
 1. availability-adjusted recent first-feed MAE
-2. overall first-feed MAE
-3. volume MAE
+2. full-24h timing MAE
+3. overall first-feed MAE
+
+The availability adjustment formula: `adjusted = recent_first_feed_MAE + 40 × max(0, 0.75 − coverage) / 0.75`. Models with ≥75% coverage pay no penalty; models below 75% are penalized proportionally.
 
 This is deliberate. The current actionable forecast matters more than a broad but stale average, but low-coverage models are penalized so they do not win by only working on easy cutoffs.
 
@@ -160,31 +160,31 @@ Each run writes a new folder:
 
 ```text
 reports/<run_id>/
-  summary.md
-  headliner_schedule.png
-  model_scores.png
-  metrics.json
+  summary.md              # journal-style report (abstract, methods, results, discussion)
+  spaghetti_hero.png      # hero figure: all model trajectories, headliner emphasized
+  spaghetti_all.png       # comparison: all models on separate rows
+  spaghetti_top5.png      # comparison: top 5 models on separate rows
+  headliner_schedule.png  # Apple-style schedule view (days × time-of-day)
+  model_scores.png        # backtest comparison bar chart (timing only)
+  metrics.json            # machine-readable metrics for run-to-run comparison
   models/
-    recent_cadence.md
-    recent_cadence.png
-    trend_hybrid.md
-    trend_hybrid.png
-    daily_shift.md
-    daily_shift.png
-    consensus_blend.md
-    consensus_blend.png
+    <model_slug>.md       # per-model report with algorithm, diagnostics, backtest
+    <model_slug>.png      # per-model schedule plot
 ```
 
-`summary.md` is the top-level artifact.
+`summary.md` is the top-level artifact, structured as:
 
-It includes:
-
-- the headliner forecast
-- the model leaderboard
-- delta vs the most recent prior run in `reports/`
-- links to model-specific pages
+- **Abstract**: one-paragraph summary with headliner and key forecast
+- **Forecast**: next-24h table with times and volumes
+- **Model Comparison**: spaghetti plots + timing-only leaderboard
+- **Methods**: data description, backtesting protocol, and full algorithmic descriptions of all models (sufficient to reimplement from text alone)
+- **Results**: headliner selection rationale, model agreement, key findings
+- **Discussion**: limitations and future directions
+- **Appendix**: schedule view, individual model page links, delta vs prior run
 
 `metrics.json` is the machine-readable artifact that future sessions should use to compare runs and inspect backtest output.
+
+**Headliner selection** ranks models by: (1) availability-adjusted recent first-feed MAE, (2) full-24h timing MAE, (3) overall first-feed MAE. Volume accuracy is not used in model ranking.
 
 ## How To Add A Model
 

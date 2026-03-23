@@ -25,6 +25,7 @@ import numpy as np
 from scipy.stats import weibull_min
 
 ML_TO_FLOZ = 0.033814
+BIRTH_DATE = datetime(2026, 2, 27)
 DATA_FLOOR = datetime(2026, 3, 15)
 HORIZON_HOURS = 24
 DISPLAY_DAYS = 7
@@ -661,9 +662,9 @@ def select_headliner_slug(model_runs: list[ModelRun]) -> str:
     def sort_key(model_run: ModelRun) -> tuple[float, float, float, str]:
         summary = model_run.backtest_summary
         recent_first = availability_adjusted_first_feed_error(summary)
+        timing_24h = _sortable_metric(summary.mean_timing_mae_minutes)
         overall_first = _sortable_metric(summary.mean_first_feed_error_minutes)
-        volume = _sortable_metric(summary.mean_volume_mae_oz)
-        return (recent_first, overall_first, volume, model_run.definition.slug)
+        return (recent_first, timing_24h, overall_first, model_run.definition.slug)
 
     return min(model_runs, key=sort_key).definition.slug
 
