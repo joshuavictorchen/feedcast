@@ -4,3 +4,6 @@ __pycache__/
 .mpl-cache/
 exports/
 .report-archive/
+.claodex/
+.bridge/
+.handoff/
