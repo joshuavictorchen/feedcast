@@ -54,7 +54,7 @@ flowchart LR
 ```
 
 | Step | What happens | Why |
-|------|-------------|-----|
+| ---- | ------------ | --- |
 | Parse Activities | Filter bottle feeds and breastfeeds from the CSV, discard pre-floor data | Raw exports contain all activity types; we only need feeding events |
 | Build Events | Create bottle-centered events, optionally merging nearby breastfeed volume | Models need a uniform event type anchored on bottle-feed timestamps |
 | Run Models | Execute three scripted models independently | Each uses a different forecasting methodology for diversity |
@@ -67,7 +67,7 @@ flowchart LR
 
 ## Repo Layout
 
-```
+```text
 scripts/
   run_forecast.py              CLI entrypoint
 feedcast/
@@ -94,12 +94,24 @@ report/                        Latest report (tracked, committed)
 tracker.json                   Run history with predictions and retrospectives
 ```
 
+## Intentional Simplicity
+
+Some repo choices are unconventional on purpose. `report/` and `tracker.json`
+are operational state, and they still live in the repo because one visible
+workspace is simpler than splitting state, outputs, and code across separate
+systems.
+
+This project was built by a tired dad trying to add a little order to a
+routine-heavy household. The bias is toward local, inspectable workflows that
+humans and agents can understand quickly, even when a more "proper" architecture
+would be more elaborate.
+
 ## Forecast Sources
 
 **Scripted models** run deterministically from the event history:
 
 | Model | Approach |
-|-------|----------|
+| ----- | -------- |
 | Recent Cadence | Recency-weighted interval between full feeds, rolled forward at constant gap |
 | Phase Nowcast Hybrid | Phase-locked oscillator backbone with local regression nowcast for the first gap |
 | Gap-Conditional | Weighted linear regression on event state, rolled forward autoregressively |
@@ -108,7 +120,7 @@ tracker.json                   Run history with predictions and retrospectives
 **LLM agents** get the export CSV, a shared prompt, and a persistent workspace:
 
 | Agent | Model |
-|-------|-------|
+| ----- | ----- |
 | Claude Forecast | claude-opus-4-6 (effort: max) |
 | Codex Forecast | gpt-5.4 (reasoning: xhigh) |
 
@@ -158,7 +170,7 @@ add a corresponding case to `agents/run.sh`.
 ## Design Decisions
 
 | Decision | Choice | Rationale |
-|----------|--------|-----------|
+| -------- | ------ | --------- |
 | Scripted models | 3 distinct approaches | Interval baseline, recursive state-space, event regression for ensemble diversity |
 | Ensemble | Consensus uses scripted models only | Agents excluded until retrospectives demonstrate consistent value |
 | Featured forecast | Consensus > static tiebreaker | Simple default; manually overridable via `FEATURED_DEFAULT` |

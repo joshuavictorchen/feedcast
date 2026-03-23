@@ -18,7 +18,6 @@ from feedcast.data import (
     MAX_INTERVAL_HOURS,
     MIN_INTERVAL_HOURS,
     MIN_POINT_GAP_MINUTES,
-    SNACK_THRESHOLD_OZ,
     daily_feed_counts,
     hour_of_day,
 )
@@ -72,27 +71,6 @@ def day_weights(
         dtype=float,
     )
     return np.exp(-decay * ages_days)
-
-
-def weighted_linregress(
-    x_values: np.ndarray,
-    y_values: np.ndarray,
-    weights: np.ndarray,
-) -> tuple[float, float]:
-    """Run a weighted least-squares regression."""
-    normalized_weights = weights / np.sum(weights)
-    x_mean = np.average(x_values, weights=normalized_weights)
-    y_mean = np.average(y_values, weights=normalized_weights)
-    variance = np.average((x_values - x_mean) ** 2, weights=normalized_weights)
-    if variance < 1e-10:
-        return 0.0, float(y_mean)
-    covariance = np.average(
-        (x_values - x_mean) * (y_values - y_mean),
-        weights=normalized_weights,
-    )
-    slope = covariance / variance
-    intercept = y_mean - (slope * x_mean)
-    return float(slope), float(intercept)
 
 
 def _weighted_multi_linregress(
@@ -254,32 +232,6 @@ def roll_forward_constant_interval(
         )
 
     return normalize_forecast_points(points, cutoff, horizon_hours)
-
-
-def effective_timing_volume(
-    history: list[FeedEvent],
-    snack_threshold: float = SNACK_THRESHOLD_OZ,
-) -> float:
-    """Return the effective recent intake volume used by gap models."""
-    if not history:
-        return 3.0
-
-    last_event = history[-1]
-    if last_event.volume_oz >= snack_threshold:
-        return last_event.volume_oz
-
-    cluster_volume = last_event.volume_oz
-    cluster_start = last_event.time
-    for index in range(len(history) - 2, -1, -1):
-        gap_hours = (cluster_start - history[index].time).total_seconds() / 3600
-        if gap_hours > 2.0:
-            break
-        cluster_volume += history[index].volume_oz
-        cluster_start = history[index].time
-        if history[index].volume_oz >= snack_threshold:
-            break
-
-    return cluster_volume
 
 
 def state_gap_recent_events(

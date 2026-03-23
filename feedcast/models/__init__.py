@@ -44,21 +44,24 @@ from .shared import (
 CONSENSUS_BLEND_NAME = "Consensus Blend"
 CONSENSUS_BLEND_SLUG = "consensus_blend"
 CONSENSUS_BLEND_METHODOLOGY = """\
-Median-timestamp ensemble across the three scripted base models (Recent \
-Cadence, Phase Nowcast Hybrid, Gap-Conditional). It does not align forecasts \
-by feed index, because different models may emit different numbers of future \
-feeds. Instead, on each step it takes the next unconsumed point from every \
-available model, computes the median timestamp as an anchor, and forms a \
-cluster from points within +/-90 minutes of that anchor.
+Median-timestamp ensemble across the three scripted base models
+(Recent Cadence, Phase Nowcast Hybrid, Gap-Conditional). It does
+not align forecasts by feed index, because different models may
+emit different numbers of future feeds. Instead, on each step it
+takes the next unconsumed point from every available model,
+computes the median timestamp as an anchor, and forms a cluster
+from points within +/- 90 minutes of that anchor.
 
-Points that fall earlier than the cluster window are discarded as leading \
-outliers. If fewer than two models fall into the current cluster, the earliest \
-candidate is discarded and the procedure retries. Once a cluster contains at \
-least two models, the consensus point uses the median timestamp and mean \
-volume across that cluster, with its gap measured from the previous consensus \
-point. The process repeats until fewer than two models have points left. This \
-lets the blend stay robust when one model predicts an extra snack feed or \
-drifts earlier/later than the others."""
+Points that fall earlier than the cluster window are discarded as
+leading outliers. If fewer than two models fall into the current
+cluster, the earliest candidate is discarded and the procedure
+retries. Once a cluster contains at least two models, the
+consensus point uses the median timestamp and mean volume across
+that cluster, with its gap measured from the previous consensus
+point. The process repeats until fewer than two models have
+points left. This lets the blend stay robust when one model
+predicts an extra snack feed or drifts earlier/later than the
+others."""
 
 ModelFn = Callable[[list[FeedEvent], datetime, int], Forecast]
 
@@ -118,16 +121,6 @@ def build_event_cache(
                 spec.merge_window_minutes,
             )
     return event_cache
-
-
-def run_all_models(
-    activities: list[Activity],
-    cutoff: datetime,
-    horizon_hours: int,
-) -> list[Forecast]:
-    """Run the scripted model lineup against one cutoff."""
-    event_cache = build_event_cache(activities)
-    return run_all_models_from_cache(event_cache, cutoff, horizon_hours)
 
 
 def run_all_models_from_cache(
@@ -252,7 +245,22 @@ def _blend_consensus_points_by_time(
     cutoff: datetime,
     horizon_hours: int,
 ) -> tuple[list[ForecastPoint], int]:
-    """Blend component forecasts using time-based grouping."""
+    """Blend component forecasts using time-based grouping.
+
+    The algorithm walks through all component models in lockstep. On each
+    iteration it:
+
+      1. Collects the next unconsumed point from every model.
+      2. Computes the median timestamp as an anchor.
+      3. Discards points that fall before the anchor window (leading outliers).
+      4. Groups the remaining points within +/- CONSENSUS_MATCH_WINDOW_MINUTES
+         of the anchor into a cluster.
+      5. If the cluster has >= 2 models, emits a consensus point at the median
+         time with the mean volume. Otherwise, discards the earliest candidate
+         and retries.
+
+    The loop ends when fewer than 2 models have points remaining.
+    """
     del cutoff, horizon_hours
 
     component_indices = {slug: 0 for slug in component_forecasts}
@@ -261,6 +269,7 @@ def _blend_consensus_points_by_time(
     match_window = timedelta(minutes=CONSENSUS_MATCH_WINDOW_MINUTES)
 
     while True:
+        # Gather the next unconsumed point from each model that still has one.
         next_candidates = [
             (slug, forecast.points[component_indices[slug]])
             for slug, forecast in component_forecasts.items()
@@ -269,6 +278,7 @@ def _blend_consensus_points_by_time(
         if len(next_candidates) < 2:
             break
 
+        # Anchor the cluster window on the median of the candidate timestamps.
         candidate_timestamps = np.array(
             [point.time.timestamp() for _, point in next_candidates],
             dtype=float,
@@ -277,6 +287,8 @@ def _blend_consensus_points_by_time(
         cluster_start = anchor_time - match_window
         cluster_end = anchor_time + match_window
 
+        # Any point that falls before the window is a leading outlier — skip it
+        # and re-anchor on the next iteration.
         leading_outliers = [
             slug for slug, point in next_candidates if point.time < cluster_start
         ]
@@ -287,17 +299,20 @@ def _blend_consensus_points_by_time(
         if leading_outliers:
             continue
 
+        # Form the cluster from points that fall within the window.
         cluster = [
             (slug, point)
             for slug, point in next_candidates
             if cluster_start <= point.time <= cluster_end
         ]
         if len(cluster) < 2:
+            # Not enough agreement — drop the earliest candidate and retry.
             earliest_slug = min(next_candidates, key=lambda item: item[1].time)[0]
             component_indices[earliest_slug] += 1
             skipped_outliers += 1
             continue
 
+        # Emit the consensus point: median time, mean volume.
         timestamp_values = np.array(
             [point.time.timestamp() for _, point in cluster],
             dtype=float,

@@ -345,16 +345,31 @@ def _align_forecast_to_actual(
     predicted: list[ForecastPoint],
     actual: list[Any],
 ) -> tuple[float | None, int, int]:
-    """Align two ordered feed sequences with an order-preserving dynamic program."""
+    """Align two ordered feed sequences with an order-preserving dynamic program.
+
+    This is an edit-distance style alignment over two time-ordered feed lists.
+    At each cell (i, j) the DP chooses the cheapest of three moves:
+
+      - Match: pair predicted[i] with actual[j]; cost = abs time difference.
+      - Skip predicted: leave predicted[i] unmatched; cost = UNMATCHED_PENALTY.
+      - Skip actual: leave actual[j] unmatched; cost = UNMATCHED_PENALTY.
+
+    After filling the table, the traceback recovers the optimal alignment and
+    returns the mean timing error across matched pairs.
+    """
     if not predicted and not actual:
         return None, 0, 0
 
     predicted_count = len(predicted)
     actual_count = len(actual)
+
+    # dp[i][j] = minimum total cost to align predicted[:i] with actual[:j].
+    # step[i][j] records which move was taken to reach (i, j).
     dp = np.full((predicted_count + 1, actual_count + 1), np.inf)
     step = np.empty((predicted_count + 1, actual_count + 1), dtype=object)
     dp[0, 0] = 0.0
 
+    # Forward pass: fill the cost table.
     for predicted_index in range(predicted_count + 1):
         for actual_index in range(actual_count + 1):
             base_cost = dp[predicted_index, actual_index]
@@ -386,6 +401,7 @@ def _align_forecast_to_actual(
                     dp[predicted_index, actual_index + 1] = skip_actual_cost
                     step[predicted_index, actual_index + 1] = "skip_actual"
 
+    # Backward pass: trace back through the step table to recover the alignment.
     predicted_index = predicted_count
     actual_index = actual_count
     matched_time_errors: list[float] = []

@@ -33,21 +33,23 @@ from .shared import (
 MODEL_NAME = "Recent Cadence"
 MODEL_SLUG = "recent_cadence"
 MODEL_METHODOLOGY = """\
-Bottle-only interval baseline. It keeps only full feeds (>=1.5 oz) from the \
-last 3 days, computes the gap between consecutive full feeds, and applies \
-exponential recency weights to those gaps using the midpoint timestamp of each \
-gap (half-life = 36h). Separately, it estimates a day-level prior from recent \
-feeds-per-day counts using exponential day weights (half-life = 2 days), clamps \
-that rate to 6.5-10.5 feeds/day, and converts it into a target interval \
-24 / feeds_per_day. The final interval estimate is \
-clip(0.7 * weighted_recent_gap + 0.3 * target_interval, 1.5h, 6.0h).
+Bottle-only interval baseline. It keeps only full feeds (>=1.5 oz)
+from the last 3 days, computes the gap between consecutive full
+feeds, and applies exponential recency weights to those gaps using
+the midpoint timestamp of each gap (half-life = 36h). Separately,
+it estimates a day-level prior from recent feeds-per-day counts
+using exponential day weights (half-life = 2 days), clamps that
+rate to 6.5-10.5 feeds/day, and converts it into a target interval
+`24 / feeds_per_day`. The final interval estimate is
+`clip(0.7 * recent_gap + 0.3 * target_interval, 1.5h, 6.0h)`.
 
-Projection is a constant-gap roll-forward from the latest observed bottle \
-time. For projected volumes, it builds a 12-bin two-hour time-of-day profile \
-over the last 7 days with exponential recency weighting. Each bin stores a \
-weighted mean volume; empty bins fall back to the global weighted average. \
-Each forecast point therefore combines a simple constant timing rule with a \
-time-of-day volume lookup rather than trying to model volume causally."""
+Projection is a constant-gap roll-forward from the latest observed
+bottle time. For projected volumes, it builds a 12-bin time-of-day
+profile over the last 7 days with exponential recency weighting.
+Each bin stores a weighted mean volume; empty bins fall back to the
+global weighted average. Each forecast point combines a simple
+constant timing rule with a time-of-day volume lookup rather than
+trying to model volume causally."""
 
 
 def forecast_recent_cadence(

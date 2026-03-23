@@ -154,7 +154,7 @@ def _render_report(
         "history_days": (cutoff - DATA_FLOOR).days,
         "data_floor_display": DATA_FLOOR.strftime("%B %-d, %Y"),
         "bf_heuristic": (
-            f"{DEFAULT_BREASTFEED_OZ_PER_30_MIN} oz per 30 min breastfeeding, "
+            f"{DEFAULT_BREASTFEED_OZ_PER_30_MIN} oz/30 min, "
             f"merged within {DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES} min"
         ),
         "source_file": snapshot.export_path.name,
@@ -302,7 +302,18 @@ def _swap_report_directory(
     archive_dir: Path,
     run_id: str,
 ) -> None:
-    """Swap the staged report directory into place and archive the prior one."""
+    """Swap the staged report directory into place and archive the prior one.
+
+    The sequence is designed so that ``report/`` is always valid:
+
+      1. Rename the current ``report/`` to a backup.
+      2. Rename the staging directory into ``report/``.
+      3. If step 2 fails, restore the backup so the old report survives.
+      4. Best-effort archive the backup into ``.report-archive/<run_id>/``.
+
+    ``tracker.json`` is only updated after this swap succeeds, so the two
+    are always in sync.
+    """
     backup_dir: Path | None = None
     if output_dir.exists() and any(output_dir.iterdir()):
         backup_dir = output_dir.with_name(output_dir.name + ".bak")
@@ -311,10 +322,12 @@ def _swap_report_directory(
     try:
         staging_dir.rename(output_dir)
     except Exception:
+        # Restore the prior report so the repo stays consistent.
         if backup_dir is not None and backup_dir.exists():
             backup_dir.rename(output_dir)
         raise
 
+    # The new report is live. Archive the old one (best-effort).
     if backup_dir is None or not backup_dir.exists():
         return
 

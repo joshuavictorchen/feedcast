@@ -40,34 +40,36 @@ from .shared import (
 MODEL_NAME = "Phase Nowcast Hybrid"
 MODEL_SLUG = "phase_nowcast"
 MODEL_METHODOLOGY = """\
-Breastfeed-aware recursive state-space model built on a Phase-Locked \
-Oscillator (PLO) backbone. Inputs are bottle-centered events whose effective \
-volume includes breastfeeding logged within the merge window. The model first \
-estimates a nominal target interval from the most recent up to 24 events: it \
-computes recency-weighted observed gaps (half-life = 36h), blends that 70/30 \
-with a feeds-per-day prior derived from day-level weights (clamped to \
-6.0-10.5 feeds/day), then clips the result to 1.5-6.0h.
+Breastfeed-aware recursive state-space model built on a
+Phase-Locked Oscillator (PLO) backbone. Inputs are bottle-centered
+events whose effective volume includes breastfeeding logged within
+the merge window. The model first estimates a nominal target
+interval from the most recent up to 24 events: it computes
+recency-weighted observed gaps (half-life = 36h), blends that
+70/30 with a feeds-per-day prior derived from day-level weights
+(clamped to 6.0-10.5 feeds/day), then clips to 1.5-6.0h.
 
-The PLO initializes its period at that target interval and then walks forward \
-through roughly the last 28 events. For each observed transition, it predicts \
-the next gap as `period + 0.5 * (previous_volume - running_average_volume)`, \
-measures the error versus the actual gap, and updates the period with a \
-filter gain beta = 0.05. The running average volume updates as 70% old + 30% \
-new. During forecast rollout, the period mean-reverts 20% toward the target \
-interval on each step. Projected volume is \
-clip(0.65 * time_of_day_bin_mean + 0.35 * running_average_volume, 0.5, 8.0), \
-where the time-of-day profile is a 12-bin two-hour weighted volume profile \
+The PLO initializes its period at that target interval and walks
+forward through roughly the last 28 events. For each observed
+transition, it predicts the next gap as
+`period + 0.5 * (volume - running_avg)`, measures the error
+versus the actual gap, and updates the period with filter gain
+beta = 0.05. The running average volume updates as 70% old + 30%
+new. During forecast rollout, the period mean-reverts 20% toward
+the target interval on each step. Projected volume is
+`clip(0.65 * tod_bin_mean + 0.35 * running_avg, 0.5, 8.0)`,
+where the time-of-day profile is a 12-bin weighted volume profile
 over the last 7 days with global-mean fallback for empty bins.
 
-The "nowcast" layer fits a separate weighted linear regression on the last \
-5 days of events to predict only the immediate next gap. Its features are \
-[current volume, previous observed gap, rolling 3-gap mean, sin(hour), \
-cos(hour)] with exponential sample weights (half-life = 36h). If this local \
-first-gap estimate is within 30 minutes of the phase estimate and the latest \
-event is a full feed (>=1.5 oz), the first gap is blended as \
-40% phase + 60% state regression. All later forecast points are shifted by \
-the same delta, preserving the PLO's internal spacing. If those conditions \
-fail, the raw phase forecast is used unchanged."""
+The "nowcast" layer fits a separate weighted linear regression on
+the last 5 days of events to predict only the immediate next gap.
+Features: volume, previous gap, rolling 3-gap mean, sin(hour),
+cos(hour), with exponential sample weights (half-life = 36h). If
+the local first-gap estimate is within 30 minutes of the phase
+estimate and the latest event is a full feed (>=1.5 oz), the first
+gap is blended as 40% phase + 60% regression. All later forecast
+points shift by the same delta, preserving the PLO's internal
+spacing. Otherwise the raw phase forecast is used unchanged."""
 
 
 def forecast_phase_nowcast_hybrid(
