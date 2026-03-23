@@ -69,6 +69,7 @@ def generate_report(
     cutoff: datetime,
     run_id: str,
     retrospective: Any | None = None,
+    tracker_meta: dict[str, Any] | None = None,
     output_dir: Path = Path("report"),
     archive_dir: Path = Path(".report-archive"),
 ) -> Path:
@@ -83,6 +84,7 @@ def generate_report(
         cutoff: Analysis cutoff time.
         run_id: Timestamp-based run identifier.
         retrospective: Optional retrospective comparison data.
+        tracker_meta: Optional run metadata for the footer.
         output_dir: Target directory for the latest report.
         archive_dir: Directory to move prior reports into.
 
@@ -107,6 +109,7 @@ def generate_report(
             backtest_results=backtest_results,
             cutoff=cutoff,
             retrospective=retrospective,
+            tracker_meta=tracker_meta,
         )
         _plot_spaghetti(
             staging_dir / "spaghetti.png",
@@ -177,6 +180,7 @@ def _render_summary(
     backtest_results: list[Any],
     cutoff: datetime,
     retrospective: Any | None,
+    tracker_meta: dict[str, Any] | None,
 ) -> None:
     """Render summary.md from the Jinja2 template."""
     template_dir = Path(__file__).parent / "templates"
@@ -204,7 +208,7 @@ def _render_summary(
         # Backtest results
         "backtest_results": [_prepare_backtest(bt) for bt in backtest_results],
         # Retrospective
-        "retrospective": retrospective,
+        "retrospective": _prepare_retrospective(retrospective),
         # Limitations
         "history_days": history_days,
         "data_floor_display": DATA_FLOOR.strftime("%B %-d, %Y"),
@@ -215,6 +219,7 @@ def _render_summary(
         # Footer
         "source_file": snapshot.export_path.name,
         "dataset_id_short": snapshot.dataset_id[:15] + "...",
+        "git_commit_display": _git_commit_display(tracker_meta),
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
@@ -263,6 +268,33 @@ def _prepare_backtest(backtest: Any) -> dict[str, str]:
         "coverage_display": _fmt_pct(summary.cutoff_coverage_ratio),
         "overall_first_feed_display": _fmt_min(summary.mean_first_feed_error_minutes),
         "timing_mae_display": _fmt_min(summary.mean_timing_mae_minutes),
+    }
+
+
+def _prepare_retrospective(retrospective: Any | None) -> dict[str, Any] | None:
+    """Prepare retrospective data for template rendering."""
+    if retrospective is None:
+        return None
+
+    results = []
+    for result in getattr(retrospective, "results", []):
+        results.append(
+            {
+                "name": result.name,
+                "slug": result.slug,
+                "first_feed_display": _fmt_min(result.first_feed_error_minutes),
+                "timing_mae_display": _fmt_min(result.timing_mae_minutes),
+                "status": result.status,
+            }
+        )
+
+    return {
+        "available": retrospective.available,
+        "same_dataset": retrospective.same_dataset,
+        "dataset_id_short": retrospective.dataset_id_short,
+        "prior_run_id": retrospective.prior_run_id,
+        "observed_horizon_hours": retrospective.observed_horizon_hours,
+        "results": results,
     }
 
 
@@ -454,3 +486,14 @@ def _fmt_min(value: float | None) -> str:
 def _fmt_pct(value: float | None) -> str:
     """Format a ratio as a percentage."""
     return "n/a" if value is None else f"{value:.0%}"
+
+
+def _git_commit_display(tracker_meta: dict[str, Any] | None) -> str:
+    """Return a footer-friendly commit label."""
+    if tracker_meta is None:
+        return "n/a"
+
+    git_commit = tracker_meta.get("git_commit", "n/a")
+    if tracker_meta.get("git_dirty"):
+        return f"{git_commit} (dirty)"
+    return str(git_commit)

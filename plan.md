@@ -13,7 +13,7 @@ Markdown report is the primary output.
 - [x] Phase 2: Model infrastructure + scripted models (`models/`)
 - [x] Phase 3: Backtest harness (`backtest.py`)
 - [x] Phase 4: Report generation (`report.py` + `templates/`)
-- [ ] Phase 5: Retrospective tracker (`tracker.py`)
+- [x] Phase 5: Retrospective tracker (`tracker.py`)
 - [ ] Phase 6: LLM agent infrastructure (`agents/`)
 - [ ] Phase 7: CLI, README, cleanup
 
@@ -531,15 +531,16 @@ No prior run available.
 
 ---
 *Export: `{{ source_file }}` · Dataset: `{{ dataset_id_short }}` ·
-Commit: `{{ git_commit }}` · Generated: {{ generated_at }}*
+Commit: `{{ git_commit_display }}` · Generated: {{ generated_at }}*
 ```
 
 ### Phase 4 Notes
 
 - The actual `generate_report()` signature differs slightly from the plan
   sketch: it takes `run_id` as a separate parameter (used for archive folder
-  naming) and does not take `tracker_meta` (tracker integration is Phase 5's
-  concern). The `retrospective` parameter is `None` until Phase 5.
+  naming). Phase 5 added optional `tracker_meta` so the footer can show the
+  commit that produced the live report. The `retrospective` parameter is
+  `None` until tracker data is available.
 - Diagnostics from models may contain numpy types (`np.float64`) and nested
   dicts. `_clean_diagnostics()` and `_clean_value()` convert these to clean
   native Python types for readable template rendering.
@@ -576,6 +577,10 @@ Commit: `{{ git_commit }}` · Generated: {{ generated_at }}*
         "recent_cadence", "phase_nowcast", "gap_conditional",
         "consensus_blend", "claude_forecast", "codex_forecast"
       ],
+      "model_names": {
+        "recent_cadence": "Recent Cadence",
+        "phase_nowcast": "Phase Nowcast Hybrid"
+      },
       "prompt_hashes": {
         "claude_forecast": "sha256:...",
         "codex_forecast": "sha256:..."
@@ -604,9 +609,10 @@ models are valuable history and must be preserved.
 - `save_run(path, run_entry)` — append to runs array and write. **Only called
   after the staged report has been validated and swapped into `report/`.**
 
-- `build_run_entry(run_id, dataset_id, source_file, source_hash, cutoff, forecasts, prompt_hashes) -> dict`
-  — constructs the run entry including `git_commit` and `git_dirty` from
-  `git rev-parse HEAD` and `git status --porcelain`.
+- `build_run_entry(run_id, snapshot, cutoff, forecasts, prompt_hashes) -> dict`
+  — constructs the run entry from the current export snapshot, including
+  `git_commit`, tracked-file `git_dirty`, `model_names`, and serialized
+  forecast points.
 
 - `compute_retrospective(tracker_path, current_snapshot) -> Retrospective`
   — finds the most recent prior run. Logic:
@@ -618,6 +624,22 @@ models are valuable history and must be preserved.
   - Report first-feed error when at least one actual exists
   - Report full-24h MAE **only** when `observed_horizon_hours >= 24`
   - Reuse `align_forecast_to_actual` from `backtest.py` for alignment
+
+### Phase 5 Notes
+
+- Run manifests now store `model_names` in addition to `model_slugs`. That
+  decouples retrospective rendering from the current code lineup, so later
+  refactors or renamed slugs do not erase the prior run's display names.
+- `git_dirty` intentionally ignores untracked files. Raw export drops are
+  untracked input, not code changes, so they should not make every report look
+  dirty in the footer.
+- The report footer now consumes tracker metadata and shows the current commit
+  (with a dirty marker when tracked files differ from `HEAD`).
+- Phase 5 was validated end-to-end against the two March 22 exports:
+  a prior-run manifest saved from `export_narababy_silas_20260322.csv`,
+  retrospective comparison against `export_narababy_silas_20260322(1).csv`,
+  rendered retrospective section and footer commit metadata, and same-dataset
+  detection after saving the current run.
 
 ---
 
