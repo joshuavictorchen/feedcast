@@ -115,6 +115,15 @@ def run_all_models(
 ) -> list[Forecast]:
     """Run the scripted model lineup against one cutoff."""
     event_cache = build_event_cache(activities)
+    return run_all_models_from_cache(event_cache, cutoff, horizon_hours)
+
+
+def run_all_models_from_cache(
+    event_cache: dict[int | None, list[FeedEvent]],
+    cutoff: datetime,
+    horizon_hours: int,
+) -> list[Forecast]:
+    """Run the scripted model lineup against one cutoff using a cached event map."""
     forecasts: list[Forecast] = []
     for spec in MODELS:
         history = [

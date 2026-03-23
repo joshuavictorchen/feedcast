@@ -11,7 +11,7 @@ Markdown report is the primary output.
 
 - [x] Phase 1: Data layer (`data.py`)
 - [x] Phase 2: Model infrastructure + scripted models (`models/`)
-- [ ] Phase 3: Backtest harness (`backtest.py`)
+- [x] Phase 3: Backtest harness (`backtest.py`)
 - [ ] Phase 4: Report generation (`report.py` + `templates/`)
 - [ ] Phase 5: Retrospective tracker (`tracker.py`)
 - [ ] Phase 6: LLM agent infrastructure (`agents/`)
@@ -368,19 +368,41 @@ class BacktestSummary:
     mean_first_feed_error_minutes: float | None
     recent_first_feed_error_minutes: float | None
     mean_timing_mae_minutes: float | None
+
+@dataclass(frozen=True)
+class ModelBacktest:
+    name: str
+    slug: str
+    cases: list[BacktestCase]
+    summary: BacktestSummary
 ```
 
 ### Functions
 
-- `backtest_model(events, forecast_fn, cutoff, horizon_hours) -> list[BacktestCase]`
+- `run_backtests(activities, analysis_time, horizon_hours) -> list[ModelBacktest]`
+  — builds the per-merge-window event cache once, backtests each scripted
+  model on its own event representation, then backtests the scripted
+  consensus blend separately.
+
+- `backtest_model(events, forecast_fn, analysis_time, horizon_hours) -> list[BacktestCase]`
   — runs model at every historical feed as a potential cutoff, compares
   forecast to future actuals within the horizon.
+
+- `backtest_consensus(event_cache, events, analysis_time, horizon_hours) -> list[BacktestCase]`
+  — reuses `run_all_models_from_cache()` so consensus backtesting does not
+  rebuild event histories at every cutoff.
 
 - `summarize_backtests(cases, analysis_time, potential_cutoffs) -> BacktestSummary`
   — aggregates cases into report-friendly metrics.
 
 - `align_forecast_to_actual(predicted, actual) -> (timing_mae, unmatched_predicted, unmatched_actual)`
   — order-preserving DP alignment. Unmatched penalty = 180 minutes.
+
+- `availability_adjusted_first_feed_error(summary) -> float`
+  — ranking metric carried forward from the legacy code.
+
+- `rank_backtests(backtests) -> list[str]`
+  — best-to-worst scripted ranking used by featured-forecast fallback.
 
 **Scope:** scripted models + consensus only. Agents are NOT backtested (each
 invocation requires an LLM call). Agent evaluation comes exclusively from the
@@ -389,6 +411,19 @@ prior-run retrospective.
 The backtest harness should iterate `MODELS` and use `build_event_cache()` so
 each `ModelSpec` is evaluated against the same event representation it uses at
 forecast time.
+
+### Phase 3 Notes
+
+- The implementation introduced `ModelBacktest` as the practical return shape
+  for later report rendering and featured-forecast ranking. This avoids
+  parallel arrays of summaries and cases in later phases.
+- Phase 3 also promoted `run_all_models_from_cache()` from an optimization
+  detail to an explicit runner contract. Later phases should use it whenever
+  they already have an event cache, especially for repeated cutoff evaluation.
+- The Phase 3 backtest harness was validated for exact parity against the
+  current `forecasting.py` behavior for `recent_cadence`, `phase_nowcast`,
+  `gap_conditional`, and the three-model consensus blend restricted to those
+  same components.
 
 ---
 
