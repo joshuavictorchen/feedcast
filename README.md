@@ -1,36 +1,37 @@
 # Feedcast
 
-A tired dad built a feeding-schedule predictor for his structure-oriented
-wife — and an excuse to see how far agentic engineering can go on a real
-problem.
+Feedcast predicts the next 24 hours of bottle feeds for a newborn from
+Nara Baby app exports, using an ensemble of scripted forecasting models
+and LLM agents. Feed timing is the primary target. Each run scores the
+prior run's predictions against what actually happened. No backtesting.
 
-Feedcast predicts the next 24 hours of bottle feeds for a newborn, using
-an ensemble of scripted forecasting models and LLM agents run against
-Nara Baby app exports. Feed timing is the primary target. Each run
-evaluates the prior run's predictions against newly observed feeds —
-there is no backtesting.
+Built by a tired dad with Claude and Codex, coordinated via
+[claodex](https://github.com/joshuavictorchen/claodex). My wife
+mentioned missing the sense of structure we used to have before Silas
+was born. Predicting feedings felt like a practical place to start.
+It also gave me a reason to experiment with agentic engineering.
 
 ## Latest Forecast
 
 ![Featured Forecast](report/schedule.png)
 
-*Latest committed forecast from the consensus blend.
+*Latest committed featured forecast.
 Full report: [report/report.md](report/report.md).*
 
-Reports are committed as markdown directly in the repo — simple, effective,
-and always one click away.
+Reports are committed as markdown in the repo. The latest forecast is
+always right here.
 
 ## The Forecasting Challenge
 
 The only input is feeding history: timestamps and volumes from a
-baby-tracking app. Factors that clearly influence when a baby eats —
-sleep state, growth spurts, developmental leaps — aren't captured in
-the data. The baby is growing fast, so patterns shift week to week.
+baby-tracking app. Sleep, growth spurts, and developmental leaps all
+affect when a baby eats, but none of that is in the data. The baby is
+growing fast, so patterns shift week to week.
 
-Despite this, feeding cadence has exploitable structure. Larger feeds
-tend to precede longer gaps. The daily feed count is relatively stable
-even as timing drifts. These regularities are what the models try to
-extract from limited, non-stationary data.
+That said, there are real patterns. Larger feeds tend to be followed by
+longer gaps, and the daily feed count stays fairly stable even as timing
+shifts. The models try to find that structure in a small, shifting
+dataset.
 
 ## Forecast Sources
 
@@ -57,26 +58,13 @@ never auto-featured.
 
 ## Pipeline
 
-```mermaid
-flowchart LR
-    A["CSV Export"] --> B["Parse Activities"]
-    B --> C["Build Events"]
-    C --> D["Run Models"]
-    D --> E["Consensus Blend"]
-    E --> F["Select Featured"]
-    F --> G["Run Agents<br/>(optional)"]
-    G --> H["Retrospective"]
-    H --> I["Render Report"]
-    I --> J["Save Tracker"]
-```
-
 | Step | Description |
 | ---- | ----------- |
 | Parse Activities | Filter feeding events from the raw CSV export |
-| Build Events | Create bottle-centered events, merging nearby breastfeed volume |
+| Build Events | Create bottle-centered events with optional breastfeed volume merging (per model) |
 | Run Models | Execute three scripted models independently |
 | Consensus Blend | Median-timestamp ensemble across scripted models |
-| Select Featured | Choose the consensus blend, or fall back through a static tiebreaker |
+| Select Featured | Choose the consensus blend, or fall back to a static tiebreaker |
 | Run Agents | Claude and Codex produce independent forecasts (optional) |
 | Retrospective | Score the prior run's predictions against newly observed actuals |
 | Render Report | Generate the markdown report, charts, and diagnostics |
@@ -91,7 +79,7 @@ feeds observed in the new export. Over time, these results accumulate in
 report.
 
 The featured forecast defaults to the consensus blend. If it's unavailable,
-the pipeline falls back through a static scripted tiebreaker list.
+the pipeline falls back to a static tiebreaker.
 
 ## Quick Start
 
@@ -115,8 +103,8 @@ python3 -m venv .venv
 .venv/bin/python scripts/run_forecast.py --skip-agents
 ```
 
-LLM agent forecasts require local `claude` and `codex` CLIs with working auth.
-Use `--skip-agents` if they're unavailable.
+LLM agent forecasts run `claude` and `codex` as local CLI tools with
+working auth. Use `--skip-agents` if they're unavailable.
 
 Each run updates these artifacts:
 
@@ -173,8 +161,8 @@ with descriptive names. Adjust them and rerun.
 `feedcast/models/__init__.py` to any available model slug.
 
 **Domain notes:** Observations about feeding patterns and model critique are
-captured in `feedcast/models/notes.md`. Models are not required to follow
-these notes — they are a reference point, not a specification.
+captured in `feedcast/models/notes.md`. These are a reference point for
+model design, not a binding constraint.
 
 ## Working with Agents
 
@@ -207,10 +195,3 @@ add a corresponding case to `agents/run.sh`.
 - Prefer simple approaches until complexity clearly earns its keep.
 - Let new exports drive iteration. The goal is the next 24 hours.
 - Simplicity wins unless the forecast improves.
-
-## Built With
-
-This project was built with Claude and Codex, coordinated via
-[claodex](https://github.com/joshuavictorchen/claodex). The LLM agents
-that produce forecasts run as CLI tools (`claude`, `codex`), not through
-APIs — the same way the project itself was developed.
