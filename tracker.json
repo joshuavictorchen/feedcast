@@ -403,6 +403,208 @@
         "observed_horizon_hours": 0.0,
         "results": []
       }
+    },
+    {
+      "run_id": "20260323-152932",
+      "timestamp": "2026-03-23T15:29:32",
+      "git_commit": "423677b",
+      "git_dirty": true,
+      "dataset_id": "sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0",
+      "source_file": "export_narababy_silas_20260323.csv",
+      "source_hash": "sha256:e1658d2f4e1136a5ecc62dc3835f34e51102d541fe6d6e03b678b1bd0f9ed670",
+      "cutoff": "2026-03-23T11:41:13",
+      "featured_slug": "consensus_blend",
+      "model_slugs": [
+        "recent_cadence",
+        "phase_nowcast",
+        "gap_conditional",
+        "consensus_blend"
+      ],
+      "model_names": {
+        "recent_cadence": "Recent Cadence",
+        "phase_nowcast": "Phase Nowcast Hybrid",
+        "gap_conditional": "Gap-Conditional",
+        "consensus_blend": "Consensus Blend"
+      },
+      "prompt_hashes": {},
+      "predictions": {
+        "recent_cadence": [
+          {
+            "time": "2026-03-23T14:50:33.772339",
+            "volume_oz": 2.367,
+            "gap_hours": 3.156
+          },
+          {
+            "time": "2026-03-23T17:59:54.544678",
+            "volume_oz": 2.608,
+            "gap_hours": 3.156
+          },
+          {
+            "time": "2026-03-23T21:09:15.317017",
+            "volume_oz": 2.75,
+            "gap_hours": 3.156
+          },
+          {
+            "time": "2026-03-24T00:18:36.089356",
+            "volume_oz": 3.5,
+            "gap_hours": 3.156
+          },
+          {
+            "time": "2026-03-24T03:27:56.861695",
+            "volume_oz": 3.598,
+            "gap_hours": 3.156
+          },
+          {
+            "time": "2026-03-24T06:37:17.634034",
+            "volume_oz": 3.5,
+            "gap_hours": 3.156
+          },
+          {
+            "time": "2026-03-24T09:46:38.406373",
+            "volume_oz": 3.668,
+            "gap_hours": 3.156
+          }
+        ],
+        "phase_nowcast": [
+          {
+            "time": "2026-03-23T13:46:52.097095",
+            "volume_oz": 2.499,
+            "gap_hours": 2.094
+          },
+          {
+            "time": "2026-03-23T16:09:42.407759",
+            "volume_oz": 2.759,
+            "gap_hours": 2.381
+          },
+          {
+            "time": "2026-03-23T18:44:05.917429",
+            "volume_oz": 3.732,
+            "gap_hours": 2.573
+          },
+          {
+            "time": "2026-03-23T21:41:42.232842",
+            "volume_oz": 2.903,
+            "gap_hours": 2.96
+          },
+          {
+            "time": "2026-03-24T00:17:47.477466",
+            "volume_oz": 3.361,
+            "gap_hours": 2.601
+          },
+          {
+            "time": "2026-03-24T03:05:55.221770",
+            "volume_oz": 3.452,
+            "gap_hours": 2.802
+          },
+          {
+            "time": "2026-03-24T05:54:50.770989",
+            "volume_oz": 4.067,
+            "gap_hours": 2.815
+          },
+          {
+            "time": "2026-03-24T08:55:22.381239",
+            "volume_oz": 3.61,
+            "gap_hours": 3.009
+          }
+        ],
+        "gap_conditional": [
+          {
+            "time": "2026-03-23T13:48:23.144590",
+            "volume_oz": 2.034,
+            "gap_hours": 2.119
+          },
+          {
+            "time": "2026-03-23T15:30:04.740861",
+            "volume_oz": 2.626,
+            "gap_hours": 1.695
+          },
+          {
+            "time": "2026-03-23T17:40:32.123629",
+            "volume_oz": 2.604,
+            "gap_hours": 2.174
+          },
+          {
+            "time": "2026-03-23T20:00:12.542848",
+            "volume_oz": 3.13,
+            "gap_hours": 2.328
+          },
+          {
+            "time": "2026-03-23T22:52:07.552896",
+            "volume_oz": 3.779,
+            "gap_hours": 2.865
+          },
+          {
+            "time": "2026-03-24T02:11:20.796562",
+            "volume_oz": 3.532,
+            "gap_hours": 3.32
+          },
+          {
+            "time": "2026-03-24T05:21:58.941776",
+            "volume_oz": 4.285,
+            "gap_hours": 3.177
+          },
+          {
+            "time": "2026-03-24T08:29:33.534104",
+            "volume_oz": 3.65,
+            "gap_hours": 3.126
+          },
+          {
+            "time": "2026-03-24T10:52:59.670610",
+            "volume_oz": 2.495,
+            "gap_hours": 2.391
+          }
+        ],
+        "consensus_blend": [
+          {
+            "time": "2026-03-23T13:48:23.144590",
+            "volume_oz": 2.3,
+            "gap_hours": 2.119
+          },
+          {
+            "time": "2026-03-23T15:49:53.574310",
+            "volume_oz": 2.692,
+            "gap_hours": 2.025
+          },
+          {
+            "time": "2026-03-23T17:59:54.544678",
+            "volume_oz": 2.981,
+            "gap_hours": 2.167
+          },
+          {
+            "time": "2026-03-23T21:09:15.317017",
+            "volume_oz": 2.928,
+            "gap_hours": 3.156
+          },
+          {
+            "time": "2026-03-24T00:17:47.477466",
+            "volume_oz": 3.547,
+            "gap_hours": 3.142
+          },
+          {
+            "time": "2026-03-24T03:05:55.221770",
+            "volume_oz": 3.527,
+            "gap_hours": 2.802
+          },
+          {
+            "time": "2026-03-24T05:54:50.770989",
+            "volume_oz": 3.95,
+            "gap_hours": 2.815
+          },
+          {
+            "time": "2026-03-24T08:55:22.381239",
+            "volume_oz": 3.643,
+            "gap_hours": 3.009
+          }
+        ]
+      },
+      "retrospective": {
+        "available": false,
+        "same_dataset": true,
+        "dataset_id_short": "sha256:7b6cdd2f...",
+        "prior_run_id": "20260323-144934",
+        "observed_horizon_hours": 0.0,
+        "results": []
+      }
     }
   ]
 }

@@ -6,7 +6,6 @@ generation, and the atomic swap that keeps `report/` consistent on failure.
 
 from __future__ import annotations
 
-import json
 import shutil
 import tempfile
 from datetime import datetime
@@ -14,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
+import yaml
 
 from feedcast.data import (
     BIRTH_DATE,
@@ -278,7 +278,7 @@ def _write_diagnostics(
         },
     }
     output_path.write_text(
-        _to_yaml(payload),
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=False),
         encoding="utf-8",
     )
 
@@ -362,41 +362,3 @@ def _git_commit_display(tracker_meta: dict[str, Any]) -> str:
     if tracker_meta.get("git_dirty"):
         return f"{git_commit} (dirty)"
     return str(git_commit)
-
-
-def _to_yaml(value: Any) -> str:
-    """Serialize a small nested payload into readable YAML."""
-    return "\n".join(_yaml_lines(value)) + "\n"
-
-
-def _yaml_lines(value: Any, indent: int = 0) -> list[str]:
-    """Return YAML lines for one nested structure."""
-    prefix = " " * indent
-    if isinstance(value, dict):
-        if not value:
-            return [f"{prefix}{{}}"]
-        lines: list[str] = []
-        for key, item in value.items():
-            if isinstance(item, (dict, list)):
-                lines.append(f"{prefix}{key}:")
-                lines.extend(_yaml_lines(item, indent + 2))
-            else:
-                lines.append(f"{prefix}{key}: {_yaml_scalar(item)}")
-        return lines
-    if isinstance(value, list):
-        if not value:
-            return [f"{prefix}[]"]
-        lines = []
-        for item in value:
-            if isinstance(item, (dict, list)):
-                lines.append(f"{prefix}-")
-                lines.extend(_yaml_lines(item, indent + 2))
-            else:
-                lines.append(f"{prefix}- {_yaml_scalar(item)}")
-        return lines
-    return [f"{prefix}{_yaml_scalar(value)}"]
-
-
-def _yaml_scalar(value: Any) -> str:
-    """Return one scalar value encoded safely for YAML output."""
-    return json.dumps(value, ensure_ascii=True)

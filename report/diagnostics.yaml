@@ -1,73 +1,67 @@
-run_id: "20260323-144934"
-cutoff: "2026-03-23T11:41:13"
-featured_slug: "consensus_blend"
+run_id: 20260323-152932
+cutoff: '2026-03-23T11:41:13'
+featured_slug: consensus_blend
 forecasts:
-  -
-    name: "Recent Cadence"
-    slug: "recent_cadence"
-    available: true
-    error_message: null
-    diagnostics:
-      recent_full_feeds: 25
-      weighted_interval_hours: 2.926
-      average_feeds_per_day: 6.195
-      blended_interval_hours: 3.156
-  -
-    name: "Phase Nowcast Hybrid"
-    slug: "phase_nowcast"
-    available: true
-    error_message: null
-    diagnostics:
-      target_interval_hours: 2.754
-      current_period_hours: 2.624
-      running_average_volume_oz: 3.269
-      last_feed_volume_oz: 2.133
-      last_volume_delta_oz: -1.136
-      current_volume_adjustment_hours: -0.568
-      phase_first_gap_hours: 2.056
-      state_first_gap_hours: 2.119
-      state_training_examples: 43
-      last_event_is_snack: false
-      first_gap_difference_minutes: 3.794
-      first_gap_blend_applied: true
-      first_gap_blend_reason: "agreement_blend"
-      state_coefficients_available: true
-  -
-    name: "Gap-Conditional"
-    slug: "gap_conditional"
-    available: true
-    error_message: null
-    diagnostics:
-      coefficients:
-        intercept: 2.373
-        volume: 0.325
-        previous_gap: -0.373
-        rolling_gap: 0.08
-        hour_sin: 0.185
-        hour_cos: 0.673
-      training_examples: 43
-  -
-    name: "Consensus Blend"
-    slug: "consensus_blend"
-    available: true
-    error_message: null
-    diagnostics:
-      component_models:
-        - "recent_cadence"
-        - "phase_nowcast"
-        - "gap_conditional"
-      component_forecast_counts:
-        recent_cadence: 7
-        phase_nowcast: 8
-        gap_conditional: 9
-      unavailable_components:
-        {}
-      skipped_outlier_points: 0
+- name: Recent Cadence
+  slug: recent_cadence
+  available: true
+  error_message: null
+  diagnostics:
+    recent_full_feeds: 25
+    weighted_interval_hours: 2.926
+    average_feeds_per_day: 6.195
+    blended_interval_hours: 3.156
+- name: Phase Nowcast Hybrid
+  slug: phase_nowcast
+  available: true
+  error_message: null
+  diagnostics:
+    target_interval_hours: 2.754
+    current_period_hours: 2.624
+    running_average_volume_oz: 3.269
+    last_feed_volume_oz: 2.133
+    last_volume_delta_oz: -1.136
+    current_volume_adjustment_hours: -0.568
+    phase_first_gap_hours: 2.056
+    state_first_gap_hours: 2.119
+    state_training_examples: 43
+    last_event_is_snack: false
+    first_gap_difference_minutes: 3.794
+    first_gap_blend_applied: true
+    first_gap_blend_reason: agreement_blend
+    state_coefficients_available: true
+- name: Gap-Conditional
+  slug: gap_conditional
+  available: true
+  error_message: null
+  diagnostics:
+    coefficients:
+      intercept: 2.373
+      volume: 0.325
+      previous_gap: -0.373
+      rolling_gap: 0.08
+      hour_sin: 0.185
+      hour_cos: 0.673
+    training_examples: 43
+- name: Consensus Blend
+  slug: consensus_blend
+  available: true
+  error_message: null
+  diagnostics:
+    component_models:
+    - recent_cadence
+    - phase_nowcast
+    - gap_conditional
+    component_forecast_counts:
+      recent_cadence: 7
+      phase_nowcast: 8
+      gap_conditional: 9
+    unavailable_components: {}
+    skipped_outlier_points: 0
 retrospective:
   available: false
   same_dataset: true
-  dataset_id_short: "sha256:7b6cdd2f..."
-  prior_run_id: "20260323-144652"
+  dataset_id_short: sha256:7b6cdd2f...
+  prior_run_id: 20260323-144934
   observed_horizon_hours: 0.0
-  results:
-    []
+  results: []

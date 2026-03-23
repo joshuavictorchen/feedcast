@@ -30,6 +30,14 @@ python3 -m venv .venv
 LLM agent forecasts require local `claude` and `codex` CLIs with working auth.
 Use `--skip-agents` if they're unavailable.
 
+Each run updates these generated artifacts:
+
+- `report/report.md` — the human-readable forecast report
+- `report/schedule.png` — the featured schedule chart
+- `report/spaghetti.png` — the all-model trajectory chart
+- `report/diagnostics.yaml` — structured model diagnostics for the run
+- `tracker.json` — stored predictions and retrospective history
+
 ## Pipeline
 
 ```mermaid
