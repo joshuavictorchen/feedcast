@@ -92,6 +92,13 @@ cutoff, the retrospective reports a partial horizon. First-feed error is
 always reported when at least one actual exists, but full-24h MAE is only
 computed when the full horizon is observed.
 
+## Data Floor
+
+All activities before March 15, 2026 are discarded during CSV parsing
+(`DATA_FLOOR` in `data.py`). This is a global constraint, not a per-model
+lookback window — models may further narrow their training windows, but
+nothing before this date is ever visible to any part of the pipeline.
+
 ## Git Metadata
 
 `git_dirty` intentionally ignores untracked files (`--untracked-files=no`).

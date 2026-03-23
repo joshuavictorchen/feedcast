@@ -12,7 +12,7 @@ The scope is intentionally narrow:
 ## Workflow
 
 1. Drop the latest full-history Nara export into `exports/`.
-2. Run `python analyze.py`.
+2. Run `.venv/bin/python analyze.py`.
 3. Read the report at `report/summary.md`.
 
 ## Setup
