@@ -12,6 +12,8 @@
 | {{ loop.index }} | **{{ point.time_display }}** | {{ point.gap_display }} | {{ point.volume_display }} |
 {% endfor %}
 
+![Featured Forecast](schedule.png)
+
 ![Forecast Trajectories](spaghetti.png)
 
 ## Models
@@ -27,6 +29,9 @@
 {% for point in forecast.points -%}
 | {{ loop.index }} | **{{ point.time_display }}** | {{ point.gap_display }} | {{ point.volume_display }} |
 {% endfor %}
+
+![{{ forecast.name }}]({{ forecast.slug }}.png)
+
 {% if forecast.diagnostics -%}
 <details>
 <summary>Diagnostics</summary>

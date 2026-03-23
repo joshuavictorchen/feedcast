@@ -17,6 +17,7 @@ os.environ.setdefault("MPLCONFIGDIR", str(_mpl_config_dir.resolve()))
 
 import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.ticker as mticker  # noqa: E402
 import numpy as np  # noqa: E402
 from jinja2 import Environment, FileSystemLoader  # noqa: E402
 
@@ -29,6 +30,8 @@ from data import (  # noqa: E402
     ExportSnapshot,
     FeedEvent,
     Forecast,
+    ForecastPoint,
+    hour_of_day,
 )
 
 # ── Apple-inspired color palette ──────────────────────────────────────────
@@ -55,6 +58,13 @@ MODEL_COLORS = {
 }
 
 FEATURED_COLOR = GREEN
+
+# Schedule chart constants
+ORANGE_SOFT = "#FFCC80"
+CARD = "#FFFFFF"
+NIGHT_FILL = "#F0F0F5"
+PROJ_FILL = "#FFF7ED"
+DISPLAY_DAYS = 7
 
 
 # ── Public entry point ────────────────────────────────────────────────────
@@ -118,6 +128,33 @@ def generate_report(
             events=events,
             cutoff=cutoff,
         )
+
+        # Featured forecast schedule chart (Apple-style calendar view)
+        featured = _find_forecast(all_forecasts, featured_slug)
+        if featured.available and featured.points:
+            _plot_schedule(
+                events=events,
+                forecast_points=featured.points,
+                cutoff=cutoff,
+                output_path=staging_dir / "schedule.png",
+                title="Featured Forecast",
+                subtitle=featured.name,
+            )
+
+        # Per-model schedule charts
+        for forecast in all_forecasts:
+            if not forecast.available or not forecast.points:
+                continue
+            color = MODEL_COLORS.get(forecast.slug, ORANGE)
+            _plot_schedule(
+                events=events,
+                forecast_points=forecast.points,
+                cutoff=cutoff,
+                output_path=staging_dir / f"{forecast.slug}.png",
+                title=forecast.name,
+                subtitle=forecast.methodology[:80] if forecast.methodology else "",
+                forecast_color=color,
+            )
 
         # Step 2: Validate staged output
         assert (staging_dir / "summary.md").exists(), "summary.md missing"
@@ -427,6 +464,323 @@ def _plot_spaghetti(
         output_path, dpi=200, bbox_inches="tight", facecolor=BG, edgecolor="none"
     )
     plt.close(fig)
+
+
+# ── Schedule chart (Apple-style calendar view) ──────────────────────────
+
+
+def _plot_schedule(
+    events: list[FeedEvent],
+    forecast_points: list[ForecastPoint],
+    cutoff: datetime,
+    output_path: Path,
+    title: str,
+    subtitle: str,
+    forecast_color: str = ORANGE,
+) -> None:
+    """Calendar-style schedule chart: daily columns, time-of-day on Y axis.
+
+    Historical feeds are blue circles sized by volume. Predicted feeds are
+    colored diamonds with time/volume labels. The forecast window is highlighted
+    with a warm fill.
+    """
+    _apply_plot_style()
+
+    # Date range: DISPLAY_DAYS of history through the end of the forecast
+    display_start = max(
+        DATA_FLOOR,
+        (cutoff - timedelta(days=DISPLAY_DAYS)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ),
+    )
+    proj_end = cutoff + timedelta(hours=HORIZON_HOURS)
+    display_end = proj_end.replace(hour=0, minute=0, second=0)
+
+    all_dates = []
+    current_date = display_start.date()
+    while current_date <= display_end.date():
+        all_dates.append(current_date)
+        current_date += timedelta(days=1)
+    date_to_x = {date: i for i, date in enumerate(all_dates)}
+    proj_dates = {p.time.date() for p in forecast_points}
+
+    fig, axis = plt.subplots(figsize=(16, 9.5))
+
+    # Day columns: white cards, warm fill for forecast days, night bands
+    for x, date in enumerate(all_dates):
+        axis.axvspan(
+            x - 0.42,
+            x + 0.42,
+            color=PROJ_FILL if date in proj_dates else CARD,
+            zorder=0,
+            linewidth=0,
+        )
+        # Night bands (midnight–6am, 6pm–midnight)
+        axis.axvspan(
+            x - 0.42,
+            x + 0.42,
+            ymin=1 - 6 / 24,
+            ymax=1.0,
+            color=NIGHT_FILL,
+            zorder=1,
+            linewidth=0,
+        )
+        axis.axvspan(
+            x - 0.42,
+            x + 0.42,
+            ymin=0,
+            ymax=3 / 24,
+            color=NIGHT_FILL,
+            zorder=1,
+            linewidth=0,
+        )
+
+    # Column separators
+    for x in range(len(all_dates) + 1):
+        axis.axvline(x - 0.5, color=SEPARATOR, linewidth=0.5, alpha=0.5, zorder=2)
+
+    # NOW marker
+    if cutoff.date() in date_to_x:
+        now_x = date_to_x[cutoff.date()]
+        now_y = hour_of_day(cutoff)
+        axis.plot(
+            [now_x - 0.42, now_x + 0.42],
+            [now_y, now_y],
+            color=RED,
+            linewidth=1.2,
+            alpha=0.5,
+            zorder=9,
+        )
+        axis.scatter(
+            [now_x],
+            [now_y],
+            color="white",
+            s=50,
+            zorder=10,
+            edgecolors=RED,
+            linewidths=1.5,
+        )
+        axis.annotate(
+            "NOW",
+            (now_x + 0.42, now_y),
+            fontsize=6.5,
+            color=RED,
+            fontweight="bold",
+            va="center",
+            ha="left",
+            xytext=(4, 0),
+            textcoords="offset points",
+        )
+
+    # Historical feeds: blue circles sized by volume, fading with age
+    history = [e for e in events if display_start <= e.time <= cutoff]
+    if history:
+        hx = np.array([date_to_x[e.time.date()] for e in history], dtype=float)
+        hy = np.array([hour_of_day(e.time) for e in history], dtype=float)
+        hvols = np.array([e.volume_oz for e in history], dtype=float)
+        hsizes = np.array([_volume_to_marker_size(v) for v in hvols], dtype=float)
+        ages = np.array([(cutoff - e.time).total_seconds() / 3600 for e in history])
+        max_age = max(float(np.max(ages)), 1.0)
+        alphas = 0.25 + (0.60 * (1 - (ages / max_age)))
+        for i in range(len(history)):
+            axis.scatter(
+                hx[i],
+                hy[i],
+                s=hsizes[i],
+                c=BLUE,
+                alpha=float(alphas[i]),
+                edgecolors="white",
+                linewidths=0.6,
+                zorder=5,
+            )
+
+    # Forecast points: colored diamonds with labels
+    if forecast_points:
+        fx = np.array(
+            [date_to_x.get(p.time.date(), 0) for p in forecast_points], dtype=float
+        )
+        fy = np.array([hour_of_day(p.time) for p in forecast_points], dtype=float)
+        fvols = np.array([p.volume_oz for p in forecast_points], dtype=float)
+        fsizes = np.array([_volume_to_marker_size(v) for v in fvols], dtype=float)
+        # Soft glow behind each diamond
+        for i in range(len(forecast_points)):
+            axis.scatter(
+                fx[i],
+                fy[i],
+                s=fsizes[i] * 2.5,
+                c=ORANGE_SOFT,
+                alpha=0.2,
+                zorder=3,
+                linewidths=0,
+            )
+        axis.scatter(
+            fx,
+            fy,
+            s=fsizes,
+            c=forecast_color,
+            alpha=0.85,
+            edgecolors="white",
+            linewidths=0.8,
+            zorder=6,
+            marker="D",
+        )
+        # Volume and time labels
+        label_color = _darken_color(forecast_color)
+        for i, point in enumerate(forecast_points):
+            label = (
+                f"{point.volume_oz:.1f} oz\n"
+                f"{point.time.strftime('%-I:%M %p').lower()}"
+            )
+            axis.annotate(
+                label,
+                (fx[i], fy[i]),
+                textcoords="offset points",
+                xytext=(14, 0),
+                fontsize=7,
+                color=label_color,
+                ha="left",
+                va="center",
+                fontweight="medium",
+                linespacing=1.3,
+            )
+
+    # Axis formatting
+    axis.set_xticks(range(len(all_dates)))
+    axis.set_xticklabels(
+        [
+            datetime.combine(d, datetime.min.time()).strftime("%a\n%-m/%d")
+            for d in all_dates
+        ],
+        fontsize=9,
+        fontweight="medium",
+    )
+    axis.set_ylim(24, 0)
+    axis.set_yticks(range(0, 25, 3))
+    axis.set_yticklabels([_format_hour(h) for h in range(0, 25, 3)], fontsize=9)
+    axis.yaxis.set_minor_locator(mticker.MultipleLocator(1))
+    axis.grid(True, which="major", axis="y", alpha=0.2, color=SEPARATOR, linewidth=0.5)
+    axis.grid(True, which="minor", axis="y", alpha=0.08, color=SEPARATOR, linewidth=0.3)
+    axis.tick_params(axis="both", which="both", length=0)
+    axis.set_xlim(-0.55, len(all_dates) - 0.45)
+    for spine in axis.spines.values():
+        spine.set_visible(False)
+
+    # Title and subtitle
+    fig.text(
+        0.04,
+        0.965,
+        title,
+        fontsize=22,
+        fontweight="bold",
+        color="#1D1D1F",
+        va="top",
+        ha="left",
+    )
+    fig.text(
+        0.04,
+        0.93,
+        f"{subtitle} · cutoff {cutoff.strftime('%B %-d, %Y %-I:%M %p')}",
+        fontsize=10.5,
+        color=LABEL_SECONDARY,
+        va="top",
+        ha="left",
+    )
+
+    # Legend
+    from matplotlib.lines import Line2D
+
+    legend_items = [
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="none",
+            markerfacecolor=BLUE,
+            markersize=9,
+            alpha=0.7,
+            markeredgecolor="white",
+            markeredgewidth=0.5,
+            label="Recorded",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="D",
+            color="none",
+            markerfacecolor=forecast_color,
+            markersize=8,
+            alpha=0.85,
+            markeredgecolor="white",
+            markeredgewidth=0.5,
+            label="Projected",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="none",
+            markerfacecolor="white",
+            markersize=7,
+            markeredgecolor=RED,
+            markeredgewidth=1.2,
+            label="Now",
+        ),
+    ]
+    for oz in [1, 3, 5]:
+        legend_items.append(
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="none",
+                markerfacecolor="#D1D1D6",
+                markeredgecolor="#C7C7CC",
+                markersize=np.sqrt(_volume_to_marker_size(oz)) / 3.0,
+                markeredgewidth=0.3,
+                label=f"{oz} fl oz",
+            )
+        )
+    axis.legend(
+        handles=legend_items,
+        loc="lower center",
+        bbox_to_anchor=(0.5, -0.09),
+        ncol=6,
+        fontsize=8.5,
+        frameon=False,
+        columnspacing=2.5,
+        handletextpad=0.4,
+    )
+
+    fig.subplots_adjust(top=0.89, bottom=0.10, left=0.06, right=0.96)
+    fig.savefig(
+        output_path, dpi=200, bbox_inches="tight", facecolor=BG, edgecolor="none"
+    )
+    plt.close(fig)
+
+
+def _volume_to_marker_size(volume_oz: float) -> float:
+    """Map feed volume to a matplotlib scatter marker area."""
+    return 50 + (volume_oz / 5.0) * 350
+
+
+def _format_hour(hour: int) -> str:
+    """Format an integer hour (0–24) for the schedule chart Y axis."""
+    if hour in {0, 24}:
+        return "12 AM"
+    if hour == 12:
+        return "12 PM"
+    return f"{hour} AM" if hour < 12 else f"{hour - 12} PM"
+
+
+def _darken_color(hex_color: str) -> str:
+    """Return a darkened version of a hex color for text labels."""
+    # Strip # and parse RGB
+    hex_color = hex_color.lstrip("#")
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    # Darken by 40%
+    factor = 0.6
+    r, g, b = int(r * factor), int(g * factor), int(b * factor)
+    return f"#{r:02x}{g:02x}{b:02x}"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
