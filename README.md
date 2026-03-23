@@ -10,6 +10,13 @@ The main user-facing goal is an actionable forecast: when the next bottle feed i
 
 Model competition is useful, but secondary. The headliner report exists to surface the best current forecast, not just to maintain a scoreboard.
 
+## Setup
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
 ## Current Workflow
 
 Run:
