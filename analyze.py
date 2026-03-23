@@ -1,66 +1,135 @@
-"""Run the Silas feeding forecast pipeline."""
+"""Run the current forecasting pipeline and generate the latest report."""
 
 from __future__ import annotations
 
 import argparse
-import os
 from datetime import datetime
 from pathlib import Path
 
-# Matplotlib needs a writable config directory in this environment.
-mpl_config_dir = Path(".mpl-cache")
-mpl_config_dir.mkdir(exist_ok=True)
-os.environ.setdefault("MPLCONFIGDIR", str(mpl_config_dir.resolve()))
+from agents import prompt_hash, run_all_agents
+from backtest import rank_backtests, run_backtests
+from data import (
+    DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
+    HORIZON_HOURS,
+    load_export_snapshot,
+)
+from models import (
+    build_event_cache,
+    run_all_models_from_cache,
+    run_consensus_blend,
+    select_featured_forecast,
+)
+from report import generate_report
+from tracker import build_run_entry, compute_retrospective, save_run
 
-from forecasting import run_forecasting_pipeline
-from reporting import write_reports
+TRACKER_PATH = Path("tracker.json")
 
 
 def main() -> None:
-    """Run the forecast pipeline and write a new report set."""
-    parser = argparse.ArgumentParser(description="Forecast Silas bottle feeds from the latest Nara export.")
+    """Run the forecasting pipeline for one export."""
+    parser = argparse.ArgumentParser(
+        description="Forecast Silas's next 24 hours of bottle feeds."
+    )
     parser.add_argument(
         "--export-path",
         type=Path,
         default=None,
-        help="Optional explicit export CSV. Defaults to the newest file in exports/.",
+        help="Optional explicit export CSV. Defaults to the latest matching file.",
     )
     parser.add_argument(
-        "--analysis-time",
-        default=None,
-        help="Optional override for the forecast cutoff in ISO format, e.g. 2026-03-22T13:30:00.",
-    )
-    parser.add_argument(
-        "--reports-dir",
-        type=Path,
-        default=Path("reports"),
-        help="Output root for generated reports.",
+        "--skip-agents",
+        action="store_true",
+        help="Skip Claude/Codex agent forecasts and run scripted models only.",
     )
     args = parser.parse_args()
 
-    analysis_time = None
-    if args.analysis_time:
-        analysis_time = datetime.fromisoformat(args.analysis_time)
+    snapshot = load_export_snapshot(export_path=args.export_path)
+    cutoff = snapshot.latest_activity_time
+    run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    result = run_forecasting_pipeline(
-        export_path=args.export_path,
-        analysis_time=analysis_time,
+    event_cache = build_event_cache(snapshot.activities)
+    base_forecasts = run_all_models_from_cache(event_cache, cutoff, HORIZON_HOURS)
+    consensus_forecast = run_consensus_blend(
+        base_forecasts,
+        event_cache[DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES],
+        cutoff,
+        HORIZON_HOURS,
     )
-    run_dir = write_reports(result, output_root=args.reports_dir)
+    backtests = run_backtests(snapshot.activities, cutoff)
+    ranked_slugs = rank_backtests(backtests)
+    featured_slug = select_featured_forecast(
+        base_forecasts,
+        consensus_forecast,
+        ranked_slugs,
+    )
 
-    print(f"Export:     {result.snapshot.export_path}")
-    print(f"Run ID:     {result.run_id}")
-    print(f"Cutoff:     {result.analysis_time.isoformat(sep=' ')}")
-    print(f"Headliner:  {result.headliner.definition.title}")
-    if result.headliner.forecast.points:
-        first_point = result.headliner.forecast.points[0]
+    agent_forecasts = []
+    prompt_hashes: dict[str, str] = {}
+    if not args.skip_agents:
+        agent_forecasts = run_all_agents(snapshot)
+        shared_prompt_hash = prompt_hash()
+        prompt_hashes = {
+            forecast.slug: shared_prompt_hash for forecast in agent_forecasts
+        }
+
+    all_forecasts = [*base_forecasts, consensus_forecast, *agent_forecasts]
+    retrospective = compute_retrospective(TRACKER_PATH, snapshot)
+    run_entry = build_run_entry(
+        run_id=run_id,
+        snapshot=snapshot,
+        cutoff=cutoff,
+        forecasts=all_forecasts,
+        prompt_hashes=prompt_hashes,
+    )
+
+    report_dir = generate_report(
+        snapshot=snapshot,
+        all_forecasts=all_forecasts,
+        featured_slug=featured_slug,
+        backtest_results=backtests,
+        events=event_cache[DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES],
+        cutoff=cutoff,
+        run_id=run_id,
+        retrospective=retrospective,
+        tracker_meta=run_entry,
+    )
+    save_run(TRACKER_PATH, run_entry)
+
+    _print_summary(
+        snapshot=snapshot,
+        cutoff=cutoff,
+        featured_slug=featured_slug,
+        all_forecasts=all_forecasts,
+        report_dir=report_dir,
+        tracker_path=TRACKER_PATH,
+    )
+
+
+def _print_summary(
+    snapshot,
+    cutoff: datetime,
+    featured_slug: str,
+    all_forecasts,
+    report_dir: Path,
+    tracker_path: Path,
+) -> None:
+    """Print a compact run summary to stdout."""
+    featured = next(
+        forecast for forecast in all_forecasts if forecast.slug == featured_slug
+    )
+    print(f"Export:      {snapshot.export_path}")
+    print(f"Dataset ID:  {snapshot.dataset_id}")
+    print(f"Cutoff:      {cutoff.isoformat(sep=' ')}")
+    print(f"Featured:    {featured.name}")
+    if featured.points:
+        first_point = featured.points[0]
         print(
-            "First feed: "
+            "First feed:  "
             f"{first_point.time.strftime('%Y-%m-%d %I:%M %p')} "
-            f"at {first_point.volume_oz:.1f} oz"
+            f"({first_point.gap_hours:.1f}h, {first_point.volume_oz:.1f} oz)"
         )
-    print(f"Summary:    {run_dir / 'summary.md'}")
-    print(f"Metrics:    {run_dir / 'metrics.json'}")
+    print(f"Report:      {report_dir / 'summary.md'}")
+    print(f"Tracker:     {tracker_path}")
 
 
 if __name__ == "__main__":

@@ -1,14 +1,23 @@
-# Silas Feeding Forecasts
+# Silas Feeding Forecast
 
-This repo forecasts Silas's next 24 hours of bottle feeds from Nara Baby exports and backtests multiple models against the later reality already present in the same export.
+This repo forecasts the next 24 hours of bottle feeds from Nara Baby CSV
+exports and turns the result into a single Markdown report.
 
-The project is intentionally small. The priority is modeling and report quality, not framework work.
+The scope is intentionally narrow:
 
-## Why This Exists
+- predict bottle-feed timing as accurately as possible
+- include estimated bottle volume because it is operationally useful
+- keep the pipeline simple enough to iterate on quickly as new exports arrive
 
-The main user-facing goal is an actionable forecast: when the next bottle feed is likely to happen, and roughly how large it will be.
+## Workflow
 
-Model competition is useful, but secondary. The headliner report exists to surface the best current forecast, not just to maintain a scoreboard.
+1. Drop the latest full-history Nara export into `exports/`.
+2. Run `analyze.py`.
+3. Read the new report in `report/summary.md`.
+
+The export files are treated as raw input, not durable project history. The
+tracked history lives in `tracker.json`, the latest tracked output lives in
+`report/`, and older rendered reports are archived into `.report-archive/`.
 
 ## Setup
 
@@ -17,206 +26,116 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-## Current Workflow
+LLM forecasts require local `claude` and `codex` CLIs with working auth.
 
-Run:
+## Usage
+
+Default run:
 
 ```bash
 .venv/bin/python analyze.py
 ```
 
-Optional flags:
+Use a specific export:
 
 ```bash
 .venv/bin/python analyze.py --export-path exports/export_narababy_silas_20260322.csv
-.venv/bin/python analyze.py --analysis-time 2026-03-22T13:30:00
 ```
 
-The script:
+Skip the LLM agents and run the scripted forecasters only:
 
-1. Selects the newest export in `exports/` by filename date.
-2. Parses bottle feeds and breastfeeds from that export.
-3. Uses the latest relevant feed activity from that export as the default forecast cutoff.
-4. Clamps all usable history to `2026-03-15`.
-5. Backtests every model at every bottle-feed cutoff available in the export.
-6. Picks a headliner model.
-7. Writes a new report set under `reports/<run_id>/`.
-
-## Repo Shape
-
-- `analyze.py`: small entrypoint and CLI
-- `forecasting.py`: data loading, model definitions, forecasting, backtesting, headliner selection
-- `reporting.py`: PNGs, Markdown reports, metrics JSON, delta-vs-prior-run summaries
-- `exports/`: raw Nara Baby exports
-- `reports/`: generated report runs
-
-## Hard Invariants
-
-These are not model choices. They are project rules.
-
-- Only the newest export in `exports/` is used for a default run.
-- The export is treated as a full-history snapshot.
-- No data earlier than `2026-03-15` is considered, period.
-- Forecast timing targets are the logged bottle-feed start times.
-- The sole evaluation metric is feed timing accuracy. Volume is used by models as a feature and reported for bottle prep, but not used in model ranking.
-- The repo should stay simple. Add models and reports, not infrastructure.
-
-## Breastfeeding Heuristic
-
-Breastfeeding is treated as a heuristic input, not measured truth.
-
-Current starting assumption:
-
-- `30 minutes breastfeeding ~= 0.5 oz`
-- if a model opts in, estimated breastfeeding intake is added to the following bottle when that bottle starts within `45 minutes` after the breastfeed ends
-- this changes model features and projected volume assumptions, but not the timing target
-
-Important:
-
-- this is only a starting point
-- future models may ignore it, tighten it, loosen it, or interpret it differently
-- report readers should not confuse this estimate with observed intake
-
-## Current Models
-
-### Recent Cadence
-
-Bottle-only baseline. Uses recency-weighted recent full-feed intervals and a time-of-day volume profile.
-
-### Trend Hybrid
-
-Bottle-only baseline. Weighted linear trend on recent intervals plus a time-of-day volume profile. This is the closest descendant of the original one-off script.
-
-### Phase-Locked Oscillator
-
-Breastfeed-aware starting heuristic. A lightweight recursive state-space timing model that lets a larger-than-usual feed push the next forecast later instead of snapping straight back to the rolling mean.
-
-### Phase Nowcast Hybrid
-
-Breastfeed-aware starting heuristic. Uses the phase model as the full-horizon backbone, but blends the first next-feed gap with a local event-state nowcast when both models already agree within a narrow window. This is a deliberate "trust but verify" model for the user's primary metric: next-feed timing.
-
-### Template Match
-
-Breastfeed-aware starting heuristic. Finds the closest historical analog window using recent gaps, volumes, and times of day, then uses what happened next as the projection template.
-
-### Daily Shift
-
-Breastfeed-aware starting heuristic. Builds a recent daily gap template, aligns today's observed cadence to that template, and explicitly carries the schedule across the overnight gap into tomorrow.
-
-### Gap-Conditional
-
-Breastfeed-aware starting heuristic. Weighted event-level regression for the next gap using raw last-feed volume, the previous gap, the recent rolling gap, and cyclical hour-of-day encoding. This version is trained on recent events directly instead of training on full feeds and patching snacks only at inference time.
-
-### Survival (Weibull)
-
-Bottle-only. Fits a Weibull time-to-next-feed distribution with day/night and feed-volume adjustments, then uses the distribution mode as the point forecast.
-
-### Gradient Boosted
-
-Exploratory canary model. A conservative gradient-boosted regressor over per-feed features. Useful as a check on whether extra model capacity is starting to pay off, but not trusted over the simpler models unless it wins on both accuracy and cutoff coverage.
-
-### Satiety Decay
-
-Breastfeed-aware starting heuristic. A physiological model that treats hunger as accumulating linearly over time, with each feed resetting hunger proportional to its volume. Naturally handles snacks (partial reset → shorter gap) and large feeds (full reset → longer gap).
-
-### Consensus Blend
-
-Breastfeed-aware starting heuristic. Blends the robust component models available at a cutoff and groups predictions by time proximity rather than raw forecast index. The current blend intentionally excludes the higher-variance gradient-boosted canary.
-
-## Backtesting Rules
-
-Backtesting uses the same export as both history and future truth.
-
-For each model:
-
-1. Take every bottle feed as a possible cutoff.
-2. Forecast the next 24 hours from that cutoff using only prior history.
-3. Compare the forecast to the actual later bottle feeds in the export.
-
-Metrics (timing only — volume is not used in model ranking):
-
-- first-feed error: absolute timing error for the next predicted bottle
-- full-24h timing MAE: order-preserving sequence alignment across the next 24 hours
-- cutoff coverage: how often a model can actually produce a forecast across all eligible cutoffs
-
-The headliner model is chosen by:
-
-1. availability-adjusted recent first-feed MAE
-2. full-24h timing MAE
-3. overall first-feed MAE
-
-The availability adjustment formula: `adjusted = recent_first_feed_MAE + 40 × max(0, 0.75 − coverage) / 0.75`. Models with ≥75% coverage pay no penalty; models below 75% are penalized proportionally.
-
-This is deliberate. The current actionable forecast matters more than a broad but stale average, but low-coverage models are penalized so they do not win by only working on easy cutoffs.
-
-## Modeling Principles
-
-The data are still limited. That means model direction matters more than squeezing a few minutes out of the current export through brittle tuning.
-
-Current principles:
-
-- prefer interpretable models before high-variance learners
-- treat volume as a first-class timing signal
-- treat snacks/top-offs carefully, but do not assume one universal heuristic is correct; event-level models currently work better with raw event state, while satiety-style models may aggregate recent clusters with `effective_timing_volume()`
-- report cutoff coverage alongside MAE so partial-availability models do not look stronger than they are
-- keep flexible ML models as exploratory or "canary" models until they beat the simpler baselines on both accuracy and availability
-
-## Reports
-
-Each run writes a new folder:
-
-```text
-reports/<run_id>/
-  summary.md              # journal-style report (abstract, methods, results, discussion)
-  spaghetti_hero.png      # hero figure: all model trajectories, headliner emphasized
-  spaghetti_all.png       # comparison: all models on separate rows
-  spaghetti_top5.png      # comparison: top 5 models on separate rows
-  headliner_schedule.png  # Apple-style schedule view (days × time-of-day)
-  model_scores.png        # backtest comparison bar chart (timing only)
-  metrics.json            # machine-readable metrics for run-to-run comparison
-  models/
-    <model_slug>.md       # per-model report with algorithm, diagnostics, backtest
-    <model_slug>.png      # per-model schedule plot
+```bash
+.venv/bin/python analyze.py --skip-agents
 ```
 
-`summary.md` is the top-level artifact, structured as:
+`--skip-agents` is primarily a smoke-test/debugging path. The intended default
+run is the full pipeline with both agents enabled.
 
-- **Abstract**: one-paragraph summary with headliner and key forecast
-- **Forecast**: next-24h table with times and volumes
-- **Model Comparison**: spaghetti plots + timing-only leaderboard
-- **Methods**: data description, backtesting protocol, and full algorithmic descriptions of all models (sufficient to reimplement from text alone)
-- **Results**: headliner selection rationale, model agreement, key findings
-- **Discussion**: limitations and future directions
-- **Appendix**: schedule view, individual model page links, delta vs prior run
+## What The Pipeline Does
 
-`metrics.json` is the machine-readable artifact that future sessions should use to compare runs and inspect backtest output.
+For each run, the pipeline:
 
-**Headliner selection** ranks models by: (1) availability-adjusted recent first-feed MAE, (2) full-24h timing MAE, (3) overall first-feed MAE. Volume accuracy is not used in model ranking.
+1. selects the latest matching export, unless `--export-path` is provided
+2. parses bottle feeds and breastfeeding events from the CSV
+3. treats the latest recorded feeding activity in that export as the forecast start
+4. runs three scripted models plus a scripted consensus blend
+5. runs two agent forecasts, each in its own persistent workspace
+6. backtests the scripted forecasts within the current export
+7. compares the previous run's predictions to newly observed actual feeds
+8. renders a single Markdown report and updates `tracker.json`
 
-## How To Add A Model
+The forecast horizon is always the next 24 hours.
 
-Keep it simple:
+## Forecast Sources
 
-1. Add a new forecast function in `forecasting.py`.
-2. Register it in `build_model_definitions()`.
-3. Decide whether it is bottle-only or whether it uses the current breastfeeding heuristic.
-4. Re-run `analyze.py`.
+### Scripted models
 
-The harness will automatically:
+- `Recent Cadence`: bottle-only recency-weighted interval baseline
+- `Phase Nowcast Hybrid`: breastfeed-aware recursive timing model with a local first-gap nowcast
+- `Gap-Conditional`: breastfeed-aware event-level regression rolled forward autoregressively
+- `Consensus Blend`: median-timestamp ensemble across the three scripted models
 
-- generate a current forecast
-- backtest the new model
-- include it in the leaderboard
-- create a model page for it
+These models are documented in the report with enough methodological detail to
+reproduce them from the text alone.
 
-## Notes For Future Claodex Sessions
+### Agent forecasts
 
-If a future session is asked to "run the models" or "add a new model", the expected path is:
+- `Claude Forecast`
+- `Codex Forecast`
 
-1. inspect the newest export in `exports/`
-2. preserve the `2026-03-15` floor unless the user explicitly changes it
-3. keep exact next-feed timing as the primary success metric
-4. prefer changes that improve forecast quality, not project machinery
-5. update `README.md` if assumptions or evaluation rules change
+Both agents share the same prompt and runner. Each gets a persistent workspace
+under `agents/`, can read the full repo, and must write two files on every run:
 
-If a model assumption changes in a meaningful way, document it here and in the model notes so later sessions do not silently compare different definitions of "feed."
+- `forecast.json`: predicted feeds in a fixed JSON schema
+- `methodology.md`: what the agent actually did on that run
+
+The runner does not preprocess the data for the agents beyond telling them:
+
+- which export CSV to use
+- which workspace belongs to them
+
+Everything else is up to the agent.
+
+## Report
+
+The primary artifact is `report/summary.md`.
+
+It includes:
+
+- the featured forecast at the top
+- a spaghetti plot of all available trajectories
+- one section per scripted model and agent forecast
+- current-export backtest results for the scripted lineup
+- retrospective comparison against the previous run, when new actuals exist
+- the exact export, dataset fingerprint, and git commit used for the run
+
+## Repo Layout
+
+- `analyze.py`: slim CLI entrypoint
+- `data.py`: CSV parsing, domain types, dataset fingerprinting
+- `models/`: scripted forecasters and consensus blend
+- `agents/`: shared agent runner, prompt, and persistent agent workspaces
+- `backtest.py`: temporal backtesting for scripted forecasts
+- `tracker.py`: run manifests and prior-run retrospectives
+- `report.py`: Markdown rendering and plots
+- `templates/summary.md.j2`: report template
+- `tracker.json`: tracked run history
+- `report/`: latest tracked report
+
+## Design Rules
+
+- The global data floor is March 15, 2026.
+- Feed timing is the success metric. Volume supports forecasting and bottle prep but is not used to rank models.
+- Raw exports are full-history snapshots. New drops may replace earlier ones operationally without being committed.
+- Simplicity wins unless additional complexity clearly improves the forecast.
+
+## Iterating
+
+This repo is meant to evolve as more exports arrive.
+
+- Scripted models can be adjusted or replaced as evidence improves.
+- Agents can develop their own repeatable strategies in their workspaces.
+- `tracker.json` and the retrospective section make it possible to inspect whether changes are helping.
+
+The goal is not to preserve every experiment. The goal is to maintain a clean,
+credible forecasting tool that gets better over time.

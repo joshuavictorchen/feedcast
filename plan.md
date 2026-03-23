@@ -14,8 +14,8 @@ Markdown report is the primary output.
 - [x] Phase 3: Backtest harness (`backtest.py`)
 - [x] Phase 4: Report generation (`report.py` + `templates/`)
 - [x] Phase 5: Retrospective tracker (`tracker.py`)
-- [ ] Phase 6: LLM agent infrastructure (`agents/`)
-- [ ] Phase 7: CLI, README, cleanup
+- [x] Phase 6: LLM agent infrastructure (`agents/`)
+- [x] Phase 7: CLI, README, cleanup
 
 Each phase gets a review and checkpoint commit before proceeding.
 
@@ -34,7 +34,7 @@ Each phase gets a review and checkpoint commit before proceeding.
 | Exports | Untracked raw drops; reproducibility via run manifests in `tracker.json` |
 | Evaluation (dense) | Current-export temporal backtests for scripted models + consensus |
 | Evaluation (sparse) | Prior-run retrospective for all models including agents |
-| Failure mode | Partial success — agent or model failure doesn't block the report |
+| Failure mode | Fail fast by default. Agent output is required unless `--skip-agents` is explicitly used. |
 | Model registration | Explicit lists, no auto-registration magic |
 
 ## Transactional Invariant
@@ -43,12 +43,14 @@ The report write and tracker update are a single logical transaction:
 
 1. Render the new report into a temp directory.
 2. Validate the staged output (summary.md and spaghetti plot exist).
-3. Archive existing `report/` to `.report-archive/<run_id>/`.
-4. Move the staged temp directory to `report/`.
-5. **Only after step 4 succeeds:** append the run entry to `tracker.json`.
+3. If `report/` already exists, rename it to a sibling backup path.
+4. Rename the staged directory into `report/`.
+5. If step 4 fails, restore the backup back to `report/`.
+6. Best-effort archive the backup into `.report-archive/<run_id>/`.
+7. **Only after step 4 succeeds:** append the run entry to `tracker.json`.
 
-If any step fails, the repo remains in a consistent state with the previous
-report and tracker intact.
+If rendering or validation fails, `report/` is untouched. If the swap fails,
+the previous `report/` is restored before the exception escapes.
 
 ---
 
@@ -65,14 +67,12 @@ nara-silas/
 │   ├── phase_nowcast.py
 │   └── gap_conditional.py
 ├── agents/
-│   ├── __init__.py             # explicit agent list, run_agent_forecast() base logic
-│   ├── base_prompt.md          # shared prompt body (data format, output schema)
-│   ├── claude_forecast/
-│   │   ├── prompt.md           # claude-specific framing + includes base prompt
-│   │   └── run.sh              # CLI invocation wrapper
-│   └── codex_forecast/
-│       ├── prompt.md           # codex-specific framing + includes base prompt
-│       └── run.sh              # CLI invocation wrapper
+│   ├── __init__.py             # agent list, run_agent_forecast(), run_all_agents()
+│   ├── run.sh                  # shared invocation script (dispatches by agent name)
+│   ├── prompt/
+│   │   └── prompt.md           # shared task prompt
+│   ├── claude/                 # Claude's persistent workspace (gitignored)
+│   └── codex/                  # Codex's persistent workspace (gitignored)
 ├── backtest.py                 # current-export temporal backtesting
 ├── tracker.py                  # run manifest I/O + retrospective comparison
 ├── report.py                   # Jinja2 rendering + matplotlib plots
@@ -645,70 +645,181 @@ models are valuable history and must be preserved.
 
 ## Phase 6: LLM Agent Infrastructure
 
+### Design Principles
+
+- **Maximum creative freedom**: agents are minimally guardrailed. They get
+  context, a workspace, and a task. How they solve it is up to them.
+- **Shared infrastructure**: one prompt, one invocation script, two workspaces.
+- **File-based output contract**: agents write `forecast.json` and
+  `methodology.md` to their workspace. Python reads both. No stdout parsing.
+- **Persistent workspace**: each agent accumulates notes, strategies, and
+  artifacts across runs. The workspace is theirs to evolve.
+
+### Folder Structure
+
+```
+agents/
+├── __init__.py          # agent list, run_agent_forecast(), run_all_agents()
+├── run.sh               # shared invocation script, dispatches by agent name
+├── prompt/
+│   └── prompt.md        # shared task prompt
+├── claude/              # Claude's persistent workspace (gitignored)
+│   └── (forecast.json, notes, strategy files — created by the agent)
+└── codex/               # Codex's persistent workspace (gitignored)
+    └── (forecast.json, notes, strategy files — created by the agent)
+```
+
 ### `agents/__init__.py`
 
-Explicit agent list (no auto-registration):
+Explicit agent list:
 
 ```python
+@dataclass(frozen=True)
+class AgentSpec:
+    name: str
+    slug: str
+    workspace: str   # relative to agents/ dir
+
 AGENTS = [
-    ("Claude Forecast", "claude_forecast", "agents/claude_forecast"),
-    ("Codex Forecast", "codex_forecast", "agents/codex_forecast"),
+    AgentSpec("Claude Forecast", "claude_forecast", "claude"),
+    AgentSpec("Codex Forecast", "codex_forecast", "codex"),
 ]
 ```
 
-- `run_agent_forecast(agent_name, slug, agent_dir, events, cutoff, horizon_hours) -> Forecast`
-  - Reads `prompt.md` from `agent_dir`
-  - Injects formatted feeding data: last ~5 days of events as a readable table,
-    baby's age, cutoff time, breastfeeding context
-  - Calls `run.sh` from `agent_dir` with the assembled prompt on stdin
-  - Parses JSON output: `{"feeds": [{"time": "ISO", "volume_oz": float}, ...]}`
-  - Constructs `Forecast` with computed `gap_hours`
-  - On any failure (CLI not found, timeout, parse error, bad JSON):
-    returns `Forecast(available=False, error_message=...)`
+- `run_agent_forecast(spec, snapshot) -> Forecast`
+  - Resolves the workspace under `agents/`, deletes stale required outputs,
+    and assembles the full prompt in Python
+  - Calls `agents/run.sh <agent_name>` with the prompt on stdin
+  - After CLI exits, reads `agents/<workspace>/forecast.json` and
+    `agents/<workspace>/methodology.md`
+  - Parses forecast JSON: `{"feeds": [{"time": "ISO", "volume_oz": float}, ...]}`
+  - Reads methodology markdown as the `Forecast.methodology` string
+  - Computes `gap_hours` from consecutive feed times
+  - Validates that feed times are strictly increasing, within the next 24 hours,
+    after the latest recorded activity, and paired with positive finite volumes
+  - On any failure (CLI not found, timeout, missing output, parse error):
+    raises `RuntimeError`
+  - Timeout: 600 seconds (10 minutes)
 
-- `run_all_agents(events, cutoff, horizon_hours) -> list[Forecast]` — iterates
-  `AGENTS`, calls `run_agent_forecast` for each.
+- `run_all_agents(snapshot) -> list[Forecast]` — iterates `AGENTS`,
+  calls `run_agent_forecast` for each.
 
-- `prompt_hash(agent_dir) -> str` — SHA-256 of the assembled prompt template
-  (for tracker metadata).
+- `prompt_hash() -> str` — SHA-256 of the shared prompt template (for tracker
+  metadata). Since the prompt is shared, one hash covers both agents.
 
-### `agents/base_prompt.md`
+### `agents/run.sh`
 
-Shared prompt body:
-- Context: baby's name (Silas), age in days, breastfeeding note (~once/day,
-  always immediately before a bottle)
-- Data: recent feeding history as a table (time, volume, gap since previous)
-- Task: predict the next 24 hours of bottle feeds from the cutoff time
-- Output: strict JSON matching the schema
-- Guidance: reason about patterns (day/night cadence, volume-gap relationship,
-  recent trends), then provide predictions
-
-### Per-Agent Folders
-
-**`agents/claude_forecast/prompt.md`** — Claude-specific framing (e.g., system
-prompt style, any model-specific instructions) plus inclusion of
-`base_prompt.md` content.
-
-**`agents/claude_forecast/run.sh`** — thin wrapper script. Takes prompt on
-stdin, calls the `claude` CLI, outputs the response to stdout. The user fills
-in exact flags. Example placeholder:
+Single shared invocation script. Takes agent name as first argument and a full
+prompt on stdin. It does only one job: dispatch to the correct local CLI with
+the agreed model and permission flags.
 
 ```bash
 #!/usr/bin/env bash
-# Adjust flags as needed for your claude CLI installation
-claude --model claude-opus-4-6-max -p "$(cat -)"
+set -euo pipefail
+
+AGENT="$1"
+PROMPT="$(cat)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+case "$AGENT" in
+  claude)
+    exec claude \
+      --model claude-opus-4-6 \
+      --effort max \
+      --permission-mode bypassPermissions \
+      -p "$PROMPT"
+    ;;
+  codex)
+    exec codex exec \
+      --model gpt-5.4 \
+      -c 'model_reasoning_effort="xhigh"' \
+      --dangerously-bypass-approvals-and-sandbox \
+      --cd "$REPO_DIR" \
+      "$PROMPT"
+    ;;
+  *)
+    echo "Unknown agent: $AGENT" >&2
+    exit 1
+    ;;
+esac
 ```
 
-**`agents/codex_forecast/`** — same structure, Codex-specific.
+Deliberately thin and user-editable. Prompt assembly lives in Python so the
+project's latest-export selection logic is defined in one place (`data.py`),
+not duplicated in shell.
 
-```bash
-#!/usr/bin/env bash
-# Adjust flags as needed for your codex CLI installation
-codex -q --model gpt-5.4-xhigh "$(cat -)"
+### `agents/prompt/prompt.md`
+
+Static shared prompt providing:
+- Motivation: predict when the next bottle feeds will happen over the next 24 hours
+- Primary objective: bottle-feed timing; volume is secondary
+- Context: the forecast starts immediately after the latest recorded feeding
+  activity in the export CSV named above
+- Minimal breastfeeding note: it may appear immediately before a bottle but is
+  not a separate prediction target
+- Rules: do not modify anything outside your workspace; the workspace persists
+- Output contract: write both `forecast.json` and `methodology.md`
+
+No template variables live in the prompt file itself. Python prepends two
+dynamic lines before invoking the CLI:
+- `Export CSV to use: ...`
+- `Your workspace: ...`
+
+The prompt is intentionally open-ended. No methodology is prescribed. The
+agent has full repo access and can read code, inspect tracker history and old
+reports, run helper scripts, use pure inference, inspect the other agent's
+workspace, and evolve its strategy over time.
+
+### Agent Workspaces
+
+`agents/claude/` and `agents/codex/` are gitignored. Each agent owns its
+workspace completely:
+- `forecast.json` and `methodology.md` are required outputs (written each run)
+- Everything else is optional: notes, strategy docs, intermediate analysis
+- Contents persist across runs so agents can learn and evolve
+- The Python code reads only `forecast.json` and `methodology.md` from the
+  workspace after a run completes
+- Stale required outputs are deleted before each run so an old file cannot
+  silently satisfy a failed invocation
+
+### Output Contract
+
+Two files in the agent's workspace directory:
+
+**`forecast.json`**:
+```json
+{"feeds": [{"time": "2026-03-23T01:30:00", "volume_oz": 3.5}, ...]}
 ```
 
-The `run.sh` scripts are deliberately thin and user-editable. No CLI syntax
-assumptions are hardcoded in Python.
+- `time`: ISO 8601 datetime, must be after the cutoff
+- `volume_oz`: estimated volume (used for display, not accuracy scoring)
+- `gap_hours` is computed by Python from consecutive feed times
+- Feeds should be ordered chronologically
+
+**`methodology.md`**:
+
+Markdown description of what the agent did on this run. Read by the report
+renderer and included directly in the model's report section. Durable strategy
+notes can live elsewhere in the workspace; `methodology.md` is run-specific.
+
+This separation means the report can render agent methodology the same way it
+renders scripted model methodology — just a string — but the agent's version
+is richer (full markdown) and self-maintained.
+
+### Phase 6 Notes
+
+- Prompt assembly moved into Python instead of shell so export selection lives
+  in one place (`data.py`) and cannot drift between the main pipeline and the
+  agent pipeline.
+- The runner deletes stale `forecast.json` and `methodology.md` before every
+  invocation so a previous successful run cannot mask a current failure.
+- A deterministic fake-agent run validated the full contract end to end:
+  workspace creation, file outputs, report integration, and tracker writes.
+- Live agent execution depends on the user's local `claude` and `codex` CLI
+  state. In this environment the real `claude` invocation did not complete in a
+  reasonable window, so manual local execution remains the expected path for
+  generating the final agent-backed report.
 
 ---
 
@@ -718,26 +829,27 @@ assumptions are hardcoded in Python.
 
 Pipeline flow:
 
-1. Parse args (`--export-path`, `--analysis-time`, `--skip-agents`)
+1. Parse args (`--export-path`, `--skip-agents`)
 2. Load `ExportSnapshot`
-3. Run scripted models (`run_all_models(snapshot.activities, ...)`)
-4. Build the breastfeed-aware merged history used by consensus/reporting
+3. Build the per-model event cache from raw activities
+4. Run scripted models (`run_all_models_from_cache(...)`)
 5. Run consensus blend (`run_consensus_blend`)
 6. Run current-export backtests (scripted + consensus)
 7. Determine featured forecast (`select_featured_forecast`)
 8. Run agents (`run_all_agents`) unless `--skip-agents`
 9. Compute retrospective from tracker
-10. Generate report atomically (render → validate → archive old → swap)
-11. **Only after successful swap:** save run to tracker
-12. Print summary to stdout
+10. Build the run manifest
+11. Generate report atomically (render → validate → backup old → swap → archive backup)
+12. **Only after successful swap:** save run to tracker
+13. Print summary to stdout
 
 ### Cleanup Tasks
 
 - `git rm --cached exports/export_narababy_silas_20260322.csv` — untrack the
   already-committed export
 - Delete `forecasting.py` and `reporting.py`
-- Move existing `reports/` contents to `.report-archive/`
-- Remove empty `reports/` directory
+- Move legacy `reports/` contents to `.report-archive/legacy-reports/`
+- Stop using the old `reports/` layout entirely; keep only tracked `report/`
 
 ### `.gitignore`
 
@@ -774,11 +886,22 @@ Clean portfolio-ready rewrite covering:
 - Project description and motivation
 - Setup instructions
 - Usage (`python analyze.py`)
-- Architecture overview (file structure, data flow)
-- Model descriptions (one paragraph each)
-- Agent descriptions
-- How to add a new model or agent
-- Limitations and future directions
+- Current architecture and workflow
+- Scripted model lineup and agent contract
+- Report/tracker outputs
+- Constraints and iteration philosophy
+
+### Phase 7 Notes
+
+- `analyze.py` is now the single entrypoint for the full pipeline. The old
+  `forecasting.py` and `reporting.py` monoliths are removed.
+- `exports/` is now raw input only. The previously committed export is removed
+  from git tracking with `git rm --cached`.
+- The legacy `reports/` tree is archived under the ignored
+  `.report-archive/legacy-reports/` path. The live tracked output location is
+  now `report/`.
+- `--skip-agents` exists for scripted-only smoke tests and debugging. The
+  intended default run is still the full pipeline with both agents enabled.
 
 ---
 
