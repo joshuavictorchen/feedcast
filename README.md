@@ -1,9 +1,97 @@
 # Feedcast
 
-Predicts Silas's next 24 hours of bottle feeds from Nara Baby CSV exports.
+A tired dad built a feeding-schedule predictor for his structure-oriented
+wife — and an excuse to see how far agentic engineering can go on a real
+problem.
 
-Feed timing is the primary target. Volume estimates are included because
-they're operationally useful, but accuracy is measured on timing.
+Feedcast predicts the next 24 hours of bottle feeds for a newborn, using
+an ensemble of scripted forecasting models and LLM agents run against
+Nara Baby app exports. Feed timing is the primary target. Each run
+evaluates the prior run's predictions against newly observed feeds —
+there is no backtesting.
+
+## Latest Forecast
+
+![Featured Forecast](report/schedule.png)
+
+*Latest committed forecast from the consensus blend.
+Full report: [report/report.md](report/report.md).*
+
+Reports are committed as markdown directly in the repo — simple, effective,
+and always one click away.
+
+## The Forecasting Challenge
+
+The only input is feeding history: timestamps and volumes from a
+baby-tracking app. Factors that clearly influence when a baby eats —
+sleep state, growth spurts, developmental leaps — aren't captured in
+the data. The baby is growing fast, so patterns shift week to week.
+
+Despite this, feeding cadence has exploitable structure. Larger feeds
+tend to precede longer gaps. The daily feed count is relatively stable
+even as timing drifts. These regularities are what the models try to
+extract from limited, non-stationary data.
+
+## Forecast Sources
+
+**Scripted models** run deterministically from the event history:
+
+| Model | Approach |
+| ----- | -------- |
+| Recent Cadence | Recency-weighted interval between full feeds, rolled forward at constant gap |
+| Phase Nowcast Hybrid | Phase-locked oscillator backbone with local regression nowcast for the first gap |
+| Gap-Conditional | Weighted linear regression on event state, rolled forward autoregressively |
+| Consensus Blend | Median-timestamp ensemble across the three scripted models |
+
+**LLM agents** get the export CSV, a shared prompt, and a persistent workspace:
+
+| Agent | Model |
+| ----- | ----- |
+| Claude Forecast | claude-opus-4-6 (effort: max) |
+| Codex Forecast | gpt-5.4 (reasoning: xhigh) |
+
+Each agent writes `forecast.json` and `methodology.md` to its workspace.
+Stale outputs are deleted before each invocation so a failed run cannot
+reuse prior results. Agents are excluded from the consensus blend and are
+never auto-featured.
+
+## Pipeline
+
+```mermaid
+flowchart LR
+    A["CSV Export"] --> B["Parse Activities"]
+    B --> C["Build Events"]
+    C --> D["Run Models"]
+    D --> E["Consensus Blend"]
+    E --> F["Select Featured"]
+    F --> G["Run Agents<br/>(optional)"]
+    G --> H["Retrospective"]
+    H --> I["Render Report"]
+    I --> J["Save Tracker"]
+```
+
+| Step | Description |
+| ---- | ----------- |
+| Parse Activities | Filter feeding events from the raw CSV export |
+| Build Events | Create bottle-centered events, merging nearby breastfeed volume |
+| Run Models | Execute three scripted models independently |
+| Consensus Blend | Median-timestamp ensemble across scripted models |
+| Select Featured | Choose the consensus blend, or fall back through a static tiebreaker |
+| Run Agents | Claude and Codex produce independent forecasts (optional) |
+| Retrospective | Score the prior run's predictions against newly observed actuals |
+| Render Report | Generate the markdown report, charts, and diagnostics |
+| Save Tracker | Append predictions and retrospective to `tracker.json` |
+
+## Evaluation
+
+There is no historical backtesting. The only accuracy signal is **prospective
+performance**: each run compares the prior run's predictions to the actual
+feeds observed in the new export. Over time, these results accumulate in
+`tracker.json` and are aggregated into a historical accuracy table in the
+report.
+
+The featured forecast defaults to the consensus blend. If it's unavailable,
+the pipeline falls back through a static scripted tiebreaker list.
 
 ## Quick Start
 
@@ -30,40 +118,13 @@ python3 -m venv .venv
 LLM agent forecasts require local `claude` and `codex` CLIs with working auth.
 Use `--skip-agents` if they're unavailable.
 
-Each run updates these generated artifacts:
+Each run updates these artifacts:
 
 - `report/report.md` — the human-readable forecast report
 - `report/schedule.png` — the featured schedule chart
 - `report/spaghetti.png` — the all-model trajectory chart
-- `report/diagnostics.yaml` — structured model diagnostics for the run
+- `report/diagnostics.yaml` — structured model diagnostics
 - `tracker.json` — stored predictions and retrospective history
-
-## Pipeline
-
-```mermaid
-flowchart LR
-    A["CSV Export"] --> B["Parse Activities"]
-    B --> C["Build Events"]
-    C --> D["Run Models"]
-    D --> E["Consensus Blend"]
-    E --> F["Select Featured"]
-    F --> G["Run Agents<br/>(optional)"]
-    G --> H["Retrospective"]
-    H --> I["Render Report"]
-    I --> J["Save Tracker"]
-```
-
-| Step | What happens | Why |
-| ---- | ------------ | --- |
-| Parse Activities | Filter bottle feeds and breastfeeds from the CSV, discard pre-floor data | Raw exports contain all activity types; we only need feeding events |
-| Build Events | Create bottle-centered events, optionally merging nearby breastfeed volume | Models need a uniform event type anchored on bottle-feed timestamps |
-| Run Models | Execute three scripted models independently | Each uses a different forecasting methodology for diversity |
-| Consensus Blend | Median-timestamp ensemble across the scripted models | Reduces individual model noise without requiring a meta-learner |
-| Select Featured | Default to the consensus blend; fall back through a static scripted tiebreaker | One forecast is highlighted in the report as the recommended answer |
-| Run Agents | Claude and Codex each produce independent forecasts in persistent workspaces | LLM forecasts complement scripted models with different reasoning |
-| Retrospective | Compare the prior run's predictions to newly observed actuals | The only accuracy signal: did we actually predict correctly? |
-| Render Report | Generate `report.md`, schedule chart, trajectory chart, and diagnostics | The report is the deliverable; everything else supports it |
-| Save Tracker | Append the run entry (predictions + retrospective) to `tracker.json` | Accumulates history for retrospective accuracy tracking |
 
 ## Repo Layout
 
@@ -74,6 +135,7 @@ feedcast/
   pipeline.py                  End-to-end orchestration
   data.py                      CSV parsing, domain types, fingerprinting
   models/                      Scripted forecasters and consensus blend
+    notes.md                   Domain observations and model critique
     shared.py                  Shared utilities and tuning constants
     recent_cadence.py          Interval baseline
     phase_nowcast.py           Recursive state-space + nowcast
@@ -94,51 +156,6 @@ report/                        Latest report (tracked, committed)
 tracker.json                   Run history with predictions and retrospectives
 ```
 
-## Intentional Simplicity
-
-Some repo choices are unconventional on purpose. `report/` and `tracker.json`
-are operational state, and they still live in the repo because one visible
-workspace is simpler than splitting state, outputs, and code across separate
-systems.
-
-This project was built by a tired dad trying to add a little order to a
-routine-heavy household. The bias is toward local, inspectable workflows that
-humans and agents can understand quickly, even when a more "proper" architecture
-would be more elaborate.
-
-## Forecast Sources
-
-**Scripted models** run deterministically from the event history:
-
-| Model | Approach |
-| ----- | -------- |
-| Recent Cadence | Recency-weighted interval between full feeds, rolled forward at constant gap |
-| Phase Nowcast Hybrid | Phase-locked oscillator backbone with local regression nowcast for the first gap |
-| Gap-Conditional | Weighted linear regression on event state, rolled forward autoregressively |
-| Consensus Blend | Median-timestamp ensemble across the three scripted models |
-
-**LLM agents** get the export CSV, a shared prompt, and a persistent workspace:
-
-| Agent | Model |
-| ----- | ----- |
-| Claude Forecast | claude-opus-4-6 (effort: max) |
-| Codex Forecast | gpt-5.4 (reasoning: xhigh) |
-
-Each agent must write `forecast.json` and `methodology.md` to its workspace.
-The runner deletes stale outputs before each invocation so a failed run cannot
-reuse prior results. Agents are excluded from the consensus blend and are
-never auto-featured.
-
-## Evaluation
-
-There is no historical backtesting. The only accuracy signal is **retrospective
-performance**: each run compares the prior run's predictions to the actual feeds
-observed in the new export. Over time, these retrospective results accumulate in
-`tracker.json` and are aggregated into a historical accuracy table in the report.
-
-The featured forecast defaults to the consensus blend. If it's unavailable, the
-pipeline falls back through a static scripted tiebreaker list.
-
 ## Working with Models
 
 **Add a model:** Create a new file in `feedcast/models/`, implement a forecast
@@ -154,6 +171,10 @@ with descriptive names. Adjust them and rerun.
 
 **Change the featured default:** Set `FEATURED_DEFAULT` in
 `feedcast/models/__init__.py` to any available model slug.
+
+**Domain notes:** Observations about feeding patterns and model critique are
+captured in `feedcast/models/notes.md`. Models are not required to follow
+these notes — they are a reference point, not a specification.
 
 ## Working with Agents
 
@@ -176,7 +197,7 @@ add a corresponding case to `agents/run.sh`.
 | Featured forecast | Consensus > static tiebreaker | Simple default; manually overridable via `FEATURED_DEFAULT` |
 | Agent failure | Fail fast | Use `--skip-agents` to work around; no silent fallback |
 | Model registration | Explicit `MODELS` list | No auto-discovery; you see what runs by reading one list |
-| Report tracking | `report/` committed; `.report-archive/` gitignored | Only the latest report lives in the repo |
+| Report tracking | `report/` and `tracker.json` committed | One workspace; latest report always accessible; diffs are readable |
 | Exports | Untracked raw drops | Reproducibility via `tracker.json` dataset fingerprints |
 | Report write | Atomic swap with rollback | If rendering fails, the prior report is preserved |
 
@@ -186,3 +207,10 @@ add a corresponding case to `agents/run.sh`.
 - Prefer simple approaches until complexity clearly earns its keep.
 - Let new exports drive iteration. The goal is the next 24 hours.
 - Simplicity wins unless the forecast improves.
+
+## Built With
+
+This project was built with Claude and Codex, coordinated via
+[claodex](https://github.com/joshuavictorchen/claodex). The LLM agents
+that produce forecasts run as CLI tools (`claude`, `codex`), not through
+APIs — the same way the project itself was developed.
