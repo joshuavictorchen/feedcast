@@ -12,7 +12,7 @@ Markdown report is the primary output.
 - [x] Phase 1: Data layer (`data.py`)
 - [x] Phase 2: Model infrastructure + scripted models (`models/`)
 - [x] Phase 3: Backtest harness (`backtest.py`)
-- [ ] Phase 4: Report generation (`report.py` + `templates/`)
+- [x] Phase 4: Report generation (`report.py` + `templates/`)
 - [ ] Phase 5: Retrospective tracker (`tracker.py`)
 - [ ] Phase 6: LLM agent infrastructure (`agents/`)
 - [ ] Phase 7: CLI, README, cleanup
@@ -533,6 +533,26 @@ No prior run available.
 *Export: `{{ source_file }}` · Dataset: `{{ dataset_id_short }}` ·
 Commit: `{{ git_commit }}` · Generated: {{ generated_at }}*
 ```
+
+### Phase 4 Notes
+
+- The actual `generate_report()` signature differs slightly from the plan
+  sketch: it takes `run_id` as a separate parameter (used for archive folder
+  naming) and does not take `tracker_meta` (tracker integration is Phase 5's
+  concern). The `retrospective` parameter is `None` until Phase 5.
+- Diagnostics from models may contain numpy types (`np.float64`) and nested
+  dicts. `_clean_diagnostics()` and `_clean_value()` convert these to clean
+  native Python types for readable template rendering.
+- The Jinja2 template uses `trim_blocks` and `lstrip_blocks` to avoid blank
+  lines from control flow. Diagnostics are wrapped in `<details>` tags to
+  keep per-model sections concise.
+- The spaghetti plot uses a dedicated `FEATURED_COLOR` (green) for the featured
+  forecast to distinguish it from model-specific colors, which are keyed by
+  slug in `MODEL_COLORS`.
+- `requirements.txt` updated: `scikit-learn` dropped, `jinja2` added.
+- The report was validated end-to-end: summary.md renders all sections
+  (Forecast, Models, Backtest, Retrospective, Limitations), spaghetti.png
+  generates at ~104KB, archive/swap logic works across consecutive runs.
 
 ---
 

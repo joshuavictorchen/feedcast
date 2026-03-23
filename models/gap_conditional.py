@@ -19,11 +19,24 @@ from .shared import (
 
 MODEL_NAME = "Gap-Conditional"
 MODEL_SLUG = "gap_conditional"
-MODEL_METHODOLOGY = (
-    "Breastfeed-aware event-level regression. It predicts each next gap from the "
-    "latest event state: last volume, previous gap, rolling recent gap, and "
-    "cyclical time-of-day features."
-)
+MODEL_METHODOLOGY = """\
+Breastfeed-aware event-level regression. It uses bottle-centered events whose \
+effective volume includes breastfeeding merged into the next bottle feed. \
+Training data is the last 5 days of events (including snacks). For each \
+eligible event, the target is the observed gap until the following feed. The \
+feature vector is [current volume, previous observed gap, rolling mean of the \
+last 3 gaps, sin(2*pi*hour/24), cos(2*pi*hour/24)]. Samples receive \
+exponential recency weights with half-life = 36h, and coefficients are fitted \
+with weighted normal equations `(X^T W X)^-1 X^T W y`. The predicted gap is \
+clipped to 1.5-6.0h.
+
+For projection, the model does not emit one gap and stop. It rolls forward \
+autoregressively: each predicted feed is appended as a synthetic event, using \
+volume from a 12-bin two-hour time-of-day profile built over the same 5-day \
+window with exponential recency weighting and global-mean fallback for empty \
+bins. The next gap is then predicted from this updated synthetic state using \
+the same fitted coefficients. That preserves volume-to-gap feedback across the \
+entire 24-hour forecast horizon instead of treating each step independently."""
 
 
 def forecast_gap_conditional(

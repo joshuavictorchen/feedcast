@@ -43,11 +43,22 @@ from .shared import (
 
 CONSENSUS_BLEND_NAME = "Consensus Blend"
 CONSENSUS_BLEND_SLUG = "consensus_blend"
-CONSENSUS_BLEND_METHODOLOGY = (
-    "Median-timestamp ensemble across the scripted base models. It groups upcoming "
-    "feeds by time proximity rather than forecast index, then averages their "
-    "projected volumes."
-)
+CONSENSUS_BLEND_METHODOLOGY = """\
+Median-timestamp ensemble across the three scripted base models (Recent \
+Cadence, Phase Nowcast Hybrid, Gap-Conditional). It does not align forecasts \
+by feed index, because different models may emit different numbers of future \
+feeds. Instead, on each step it takes the next unconsumed point from every \
+available model, computes the median timestamp as an anchor, and forms a \
+cluster from points within +/-90 minutes of that anchor.
+
+Points that fall earlier than the cluster window are discarded as leading \
+outliers. If fewer than two models fall into the current cluster, the earliest \
+candidate is discarded and the procedure retries. Once a cluster contains at \
+least two models, the consensus point uses the median timestamp and mean \
+volume across that cluster, with its gap measured from the previous consensus \
+point. The process repeats until fewer than two models have points left. This \
+lets the blend stay robust when one model predicts an extra snack feed or \
+drifts earlier/later than the others."""
 
 ModelFn = Callable[[list[FeedEvent], datetime, int], Forecast]
 

@@ -1,0 +1,94 @@
+# Silas Feeding Forecast
+
+**{{ date_display }}** · {{ age_days }} days old · Cutoff: {{ cutoff_display }}
+
+## Forecast
+
+**{{ featured.name }}** predicts **{{ featured.points | length }} feeds** over the next 24 hours.
+
+| Feed | Time | Gap | Volume |
+|------|------|-----|--------|
+{% for point in featured.points -%}
+| {{ loop.index }} | **{{ point.time_display }}** | {{ point.gap_display }} | {{ point.volume_display }} |
+{% endfor %}
+
+![Forecast Trajectories](spaghetti.png)
+
+## Models
+{% for forecast in all_forecasts %}
+
+### {{ forecast.name }}{% if not forecast.available %} (unavailable){% endif %}
+
+{% if forecast.available -%}
+{{ forecast.methodology }}
+
+| Feed | Time | Gap | Volume |
+|------|------|-----|--------|
+{% for point in forecast.points -%}
+| {{ loop.index }} | **{{ point.time_display }}** | {{ point.gap_display }} | {{ point.volume_display }} |
+{% endfor %}
+{% if forecast.diagnostics -%}
+<details>
+<summary>Diagnostics</summary>
+
+{% for key, value in forecast.diagnostics.items() -%}
+- `{{ key }}`: {{ value }}
+{% endfor %}
+</details>
+{%- endif %}
+{% else -%}
+*{{ forecast.error_message }}*
+{%- endif %}
+{% endfor %}
+
+## Backtest (Current Export)
+
+Temporal backtests using the current export as both training history and future
+truth. Each model is evaluated at every historical feed as a potential cutoff
+point, and its forecast is compared to the actual feeds that followed. Only
+scripted models and consensus are backtested.
+
+| Model | Recent 1st-Feed MAE | Coverage | Overall 1st-Feed MAE | Full-24h MAE |
+|-------|---------------------|----------|----------------------|--------------|
+{% for bt in backtest_results -%}
+| {{ bt.name }} | {{ bt.recent_first_feed_display }} | {{ bt.coverage_display }} | {{ bt.overall_first_feed_display }} | {{ bt.timing_mae_display }} |
+{% endfor %}
+## Retrospective
+{% if retrospective is none or not retrospective.available %}
+
+No prior run available.
+{% elif retrospective.same_dataset %}
+
+No new actuals since prior run (same dataset: `{{ retrospective.dataset_id_short }}`).
+{% else %}
+
+Comparing prior run `{{ retrospective.prior_run_id }}` predictions against
+actual feeds observed in the current export (observed horizon:
+{{ "%.1f" | format(retrospective.observed_horizon_hours) }}h).
+
+| Model | 1st-Feed Error | Full-24h MAE | Status |
+|-------|----------------|--------------|--------|
+{% for result in retrospective.results -%}
+| {{ result.name }} | {{ result.first_feed_display }} | {{ result.timing_mae_display }} | {{ result.status }} |
+{% endfor %}
+{% if retrospective.observed_horizon_hours < 24 -%}
+> Partial horizon: only {{ "%.1f" | format(retrospective.observed_horizon_hours) }}h
+> of actuals observed. Full-24h MAE is not reported.
+{% endif -%}
+{% endif %}
+
+## Limitations
+
+- **Limited data:** {{ history_days }} days of usable history since
+  {{ data_floor_display }}. Model comparison at this scale is noisy — a
+  few-minute difference in MAE may not be statistically significant.
+- **Non-stationarity:** Feeding patterns are changing rapidly as the baby
+  grows (intervals lengthen, volumes increase). Models fitted to last week's
+  data may not generalize to next week.
+- **Breastfeeding volumes are estimated:** The {{ bf_heuristic }} heuristic
+  is not measured intake. Models that use breastfeeding volume carry this
+  uncertainty forward.
+
+---
+
+*Export: `{{ source_file }}` · Dataset: `{{ dataset_id_short }}` · Generated: {{ generated_at }}*
