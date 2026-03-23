@@ -10,7 +10,7 @@ Markdown report is the primary output.
 ## Phase Checklist
 
 - [x] Phase 1: Data layer (`data.py`)
-- [ ] Phase 2: Model infrastructure + scripted models (`models/`)
+- [x] Phase 2: Model infrastructure + scripted models (`models/`)
 - [ ] Phase 3: Backtest harness (`backtest.py`)
 - [ ] Phase 4: Report generation (`report.py` + `templates/`)
 - [ ] Phase 5: Retrospective tracker (`tracker.py`)
@@ -215,6 +215,8 @@ DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES = 45
 Model-specific math used by multiple models. Ported from current
 `forecasting.py` helpers:
 
+- `ForecastUnavailable` lives here instead of `models/__init__.py` so model
+  modules can import it without package-init circularity.
 - `exp_weights(timestamps, now, half_life_hours) -> ndarray`
 - `day_weights(dates, reference_date, half_life_days) -> ndarray`
 - `weighted_linregress(x, y, weights) -> (slope, intercept)`
@@ -236,25 +238,41 @@ Model-specific math used by multiple models. Ported from current
 No auto-registration. Explicit model list:
 
 ```python
-from models.recent_cadence import forecast_recent_cadence
-from models.phase_nowcast import forecast_phase_nowcast_hybrid
-from models.gap_conditional import forecast_gap_conditional
+@dataclass(frozen=True)
+class ModelSpec:
+    name: str
+    slug: str
+    methodology: str
+    merge_window_minutes: int | None
+    forecast_fn: ModelFn
 
 MODELS = [
-    ("Recent Cadence", "recent_cadence", forecast_recent_cadence),
-    ("Phase Nowcast Hybrid", "phase_nowcast", forecast_phase_nowcast_hybrid),
-    ("Gap-Conditional", "gap_conditional", forecast_gap_conditional),
+    ModelSpec(..., merge_window_minutes=None, forecast_fn=forecast_recent_cadence),
+    ModelSpec(..., merge_window_minutes=45, forecast_fn=forecast_phase_nowcast_hybrid),
+    ModelSpec(..., merge_window_minutes=45, forecast_fn=forecast_gap_conditional),
 ]
 ```
 
-- `run_all_models(events, cutoff, horizon_hours) -> list[Forecast]` — iterates
-  `MODELS`, catches `ForecastUnavailable`, returns all results (including
-  unavailable ones with `available=False`).
+- `build_event_cache(activities) -> dict[merge_window, list[FeedEvent]]` —
+  builds only the event streams the scripted lineup actually needs. This
+  prevents bottle-only and breastfeed-aware models from being forced onto the
+  same history representation.
 
-- `run_consensus_blend(base_forecasts, events, cutoff, horizon_hours) -> Forecast`
-  — time-proximity clustering over pre-computed base model forecasts. Requires
-  ≥2 available base forecasts. Not in `MODELS` (called separately after base
-  models run). Ported from current `blend_consensus_points_by_time`.
+- `run_all_models(activities, cutoff, horizon_hours) -> list[Forecast]` —
+  iterates `MODELS`, builds the correct history for each model from raw
+  activities, catches `ForecastUnavailable`, and returns all results
+  (including unavailable ones with `available=False`).
+
+- `run_consensus_blend(base_forecasts, history, cutoff, horizon_hours) -> Forecast`
+  — time-proximity clustering over pre-computed scripted base forecasts.
+  Requires ≥2 available scripted forecasts. It explicitly excludes any future
+  agent forecasts from consensus inputs. Ported from current
+  `blend_consensus_points_by_time`.
+
+- `select_featured_forecast(base_forecasts, consensus_forecast, ranked_slugs=None) -> str`
+  — returns `consensus_blend` when available; otherwise prefers the best
+  scripted forecast by backtest ranking when supplied, then falls back to the
+  static tiebreaker `phase_nowcast > gap_conditional > recent_cadence`.
 
 **Featured forecast selection:**
 
@@ -308,6 +326,19 @@ Depends on: `fit_state_gap_regression`, `predict_state_gap_hours`,
 `build_volume_profile`, `lookup_volume_profile`, `normalize_forecast_points`,
 `exp_weights`, `_weighted_multi_linregress`.
 
+### Phase 2 Notes
+
+- The original plan understated a real modeling invariant: the scripted models
+  do not all share the same event history. `Recent Cadence` is bottle-only,
+  while `Phase Nowcast` and `Gap-Conditional` are breastfeed-aware. Phase 2
+  therefore introduced `ModelSpec.merge_window_minutes` and `build_event_cache()`
+  so later phases can reuse the correct event stream per model.
+- The three ported scripted models were validated for exact parity against the
+  existing `forecasting.py` implementation on the latest export.
+- The new three-model consensus blend was also validated against the legacy
+  `blend_consensus_points_by_time()` logic restricted to those same three base
+  models.
+
 ---
 
 ## Phase 3: Backtest Harness (`backtest.py`)
@@ -354,6 +385,10 @@ class BacktestSummary:
 **Scope:** scripted models + consensus only. Agents are NOT backtested (each
 invocation requires an LLM call). Agent evaluation comes exclusively from the
 prior-run retrospective.
+
+The backtest harness should iterate `MODELS` and use `build_event_cache()` so
+each `ModelSpec` is evaluated against the same event representation it uses at
+forecast time.
 
 ---
 
@@ -607,16 +642,17 @@ assumptions are hardcoded in Python.
 Pipeline flow:
 
 1. Parse args (`--export-path`, `--analysis-time`, `--skip-agents`)
-2. Load `ExportSnapshot`, then build feed events from `snapshot.activities`
-3. Run scripted models (`run_all_models`)
-4. Run consensus blend (`run_consensus_blend`)
-5. Run current-export backtests (scripted + consensus)
-6. Determine featured forecast (blend > best-by-backtest > static tiebreaker)
-7. Run agents (`run_all_agents`) unless `--skip-agents`
-8. Compute retrospective from tracker
-9. Generate report atomically (render → validate → archive old → swap)
-10. **Only after successful swap:** save run to tracker
-11. Print summary to stdout
+2. Load `ExportSnapshot`
+3. Run scripted models (`run_all_models(snapshot.activities, ...)`)
+4. Build the breastfeed-aware merged history used by consensus/reporting
+5. Run consensus blend (`run_consensus_blend`)
+6. Run current-export backtests (scripted + consensus)
+7. Determine featured forecast (`select_featured_forecast`)
+8. Run agents (`run_all_agents`) unless `--skip-agents`
+9. Compute retrospective from tracker
+10. Generate report atomically (render → validate → archive old → swap)
+11. **Only after successful swap:** save run to tracker
+12. Print summary to stdout
 
 ### Cleanup Tasks
 
@@ -652,10 +688,8 @@ jinja2
 
 ### Tooling Note
 
-Black is not currently installed in the repo's `.venv`. Phase 1 code was kept
-formatted manually, but if we want enforced Black formatting during later
-phases we need an explicit tooling decision: either add Black as a dev
-dependency in-repo or get approval to install it in the environment.
+Black is now installed in the repo's `.venv` and should be run on changed
+Python files at each phase checkpoint.
 
 ### `README.md`
 
