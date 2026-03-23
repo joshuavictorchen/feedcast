@@ -7,10 +7,10 @@ import json
 import math
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
-from data import ExportSnapshot, Forecast, ForecastPoint, HORIZON_HOURS
+from data import ExportSnapshot, Forecast, ForecastPoint
 
 AGENT_TIMEOUT_SECONDS = 600
 
@@ -145,7 +145,6 @@ def _load_forecast_points(
 
     points: list[ForecastPoint] = []
     previous_time = latest_activity_time
-    horizon_end = latest_activity_time + timedelta(hours=HORIZON_HOURS)
 
     for item in feeds:
         if not isinstance(item, dict):
@@ -160,10 +159,6 @@ def _load_forecast_points(
             raise RuntimeError(
                 f"{forecast_path} feed times must be strictly increasing and after "
                 "the latest recorded activity."
-            )
-        if point_time >= horizon_end:
-            raise RuntimeError(
-                f"{forecast_path} contains a feed outside the 24-hour horizon."
             )
         volume_oz = float(item["volume_oz"])
         if not math.isfinite(volume_oz) or volume_oz <= 0:

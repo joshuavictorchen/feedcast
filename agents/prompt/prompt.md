@@ -49,7 +49,6 @@ Requirements:
 
 - `time` must be ISO 8601
 - feeds must be in chronological order
-- every feed must be within the next 24 hours
 - include volume even though timing is the main target
 
 ### `methodology.md`
