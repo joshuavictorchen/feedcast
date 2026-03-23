@@ -1,4 +1,8 @@
-"""Event-state regression model for next-gap prediction."""
+"""Event-state regression model for next-gap prediction.
+
+This model fits one weighted regression over recent event state and then rolls
+that regression forward autoregressively across the forecast window.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
-from data import FeedEvent, Forecast, ForecastPoint
+from feedcast.data import FeedEvent, Forecast, ForecastPoint
 from .shared import (
     GAP_CONDITIONAL_HALF_LIFE_HOURS,
     GAP_CONDITIONAL_LOOKBACK_DAYS,
@@ -45,6 +49,8 @@ def forecast_gap_conditional(
     horizon_hours: int,
 ) -> Forecast:
     """Predict each gap from the latest event state."""
+    # Unlike the cadence baseline, this model keeps updating the synthetic
+    # state after each projected feed so the entire horizon is coupled.
     coefficients, recent, training_examples = fit_state_gap_regression(
         history,
         cutoff,

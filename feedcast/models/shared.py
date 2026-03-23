@@ -1,4 +1,9 @@
-"""Shared model utilities and constants."""
+"""Shared scripted-model utilities.
+
+These helpers cover the common mechanics reused by more than one model:
+weighting, volume profiling, forecast normalization, and local next-gap
+regression support.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +12,7 @@ from typing import Any
 
 import numpy as np
 
-from data import (
+from feedcast.data import (
     FeedEvent,
     ForecastPoint,
     MAX_INTERVAL_HOURS,

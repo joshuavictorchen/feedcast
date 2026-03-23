@@ -1,4 +1,9 @@
-"""Phase-based state-space forecast with first-gap nowcast blending."""
+"""Phase-based state-space forecast with first-gap nowcast blending.
+
+This is the most stateful scripted model. It keeps a recursive phase estimate
+for the full schedule, then optionally adjusts only the immediate next gap with
+the shared local regression model.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +11,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
-from data import (
+from feedcast.data import (
     FeedEvent,
     Forecast,
     ForecastPoint,
@@ -71,6 +76,8 @@ def forecast_phase_nowcast_hybrid(
     horizon_hours: int,
 ) -> Forecast:
     """Blend phase and local state timing when both agree on the next feed."""
+    # The design goal is conservative complexity: use the richer local
+    # nowcast only when it broadly agrees with the phase model.
     phase_forecast = _forecast_phase_locked_oscillator(history, cutoff, horizon_hours)
     if not phase_forecast.points:
         raise ForecastUnavailable(

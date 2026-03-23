@@ -1,4 +1,9 @@
-"""Run the current forecasting pipeline and generate the latest report."""
+"""Run the end-to-end forecast pipeline for one export snapshot.
+
+This module is the orchestration layer: load data, run models and agents,
+compare the prior run to new actuals, render the report, and update the
+tracker.
+"""
 
 from __future__ import annotations
 
@@ -6,21 +11,27 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 
-from agents import prompt_hash, run_all_agents
-from backtest import rank_backtests, run_backtests
-from data import (
+from feedcast.agents import prompt_hash, run_all_agents
+from feedcast.data import (
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     HORIZON_HOURS,
+    ExportSnapshot,
+    Forecast,
     load_export_snapshot,
 )
-from models import (
+from feedcast.models import (
     build_event_cache,
     run_all_models_from_cache,
     run_consensus_blend,
     select_featured_forecast,
 )
-from report import generate_report
-from tracker import build_run_entry, compute_retrospective, save_run
+from feedcast.report import generate_report
+from feedcast.tracker import (
+    build_run_entry,
+    compute_retrospective,
+    summarize_retrospective_history,
+    save_run,
+)
 
 TRACKER_PATH = Path("tracker.json")
 
@@ -55,15 +66,9 @@ def main() -> None:
         cutoff,
         HORIZON_HOURS,
     )
-    backtests = run_backtests(snapshot.activities, cutoff)
-    ranked_slugs = rank_backtests(backtests)
-    featured_slug = select_featured_forecast(
-        base_forecasts,
-        consensus_forecast,
-        ranked_slugs,
-    )
+    featured_slug = select_featured_forecast([*base_forecasts, consensus_forecast])
 
-    agent_forecasts = []
+    agent_forecasts: list[Forecast] = []
     prompt_hashes: dict[str, str] = {}
     if not args.skip_agents:
         agent_forecasts = run_all_agents(snapshot)
@@ -74,11 +79,17 @@ def main() -> None:
 
     all_forecasts = [*base_forecasts, consensus_forecast, *agent_forecasts]
     retrospective = compute_retrospective(TRACKER_PATH, snapshot)
+    historical_accuracy = summarize_retrospective_history(
+        TRACKER_PATH,
+        additional_retrospective=retrospective,
+    )
     run_entry = build_run_entry(
         run_id=run_id,
         snapshot=snapshot,
         cutoff=cutoff,
         forecasts=all_forecasts,
+        featured_slug=featured_slug,
+        retrospective=retrospective,
         prompt_hashes=prompt_hashes,
     )
 
@@ -86,11 +97,11 @@ def main() -> None:
         snapshot=snapshot,
         all_forecasts=all_forecasts,
         featured_slug=featured_slug,
-        backtest_results=backtests,
         events=event_cache[DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES],
         cutoff=cutoff,
         run_id=run_id,
         retrospective=retrospective,
+        historical_accuracy=historical_accuracy,
         tracker_meta=run_entry,
     )
     save_run(TRACKER_PATH, run_entry)
@@ -106,10 +117,10 @@ def main() -> None:
 
 
 def _print_summary(
-    snapshot,
+    snapshot: ExportSnapshot,
     cutoff: datetime,
     featured_slug: str,
-    all_forecasts,
+    all_forecasts: list[Forecast],
     report_dir: Path,
     tracker_path: Path,
 ) -> None:
@@ -128,9 +139,5 @@ def _print_summary(
             f"{first_point.time.strftime('%Y-%m-%d %I:%M %p')} "
             f"({first_point.gap_hours:.1f}h, {first_point.volume_oz:.1f} oz)"
         )
-    print(f"Report:      {report_dir / 'summary.md'}")
+    print(f"Report:      {report_dir / 'report.md'}")
     print(f"Tracker:     {tracker_path}")
-
-
-if __name__ == "__main__":
-    main()

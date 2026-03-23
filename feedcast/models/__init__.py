@@ -1,4 +1,4 @@
-"""Scripted model registry and consensus blend."""
+"""Register the scripted models and build the scripted consensus forecast."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Callable
 
 import numpy as np
 
-from data import (
+from feedcast.data import (
     Activity,
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     FeedEvent,
@@ -103,6 +103,7 @@ STATIC_FEATURED_TIEBREAKER = [
     GAP_CONDITIONAL_SLUG,
     RECENT_CADENCE_SLUG,
 ]
+FEATURED_DEFAULT = CONSENSUS_BLEND_SLUG
 
 
 def build_event_cache(
@@ -215,17 +216,14 @@ def run_consensus_blend(
 
 
 def select_featured_forecast(
-    base_forecasts: list[Forecast],
-    consensus_forecast: Forecast,
-    ranked_slugs: list[str] | None = None,
+    forecasts: list[Forecast],
+    default_slug: str = FEATURED_DEFAULT,
 ) -> str:
     """Choose the featured forecast slug.
 
     Args:
-        base_forecasts: Scripted base model forecasts.
-        consensus_forecast: Consensus forecast built from the scripted models.
-        ranked_slugs: Optional best-to-worst scripted model ranking from the
-            backtest harness.
+        forecasts: Scripted forecasts considered for featuring.
+        default_slug: Configured default forecast slug.
 
     Returns:
         Slug of the featured forecast.
@@ -233,20 +231,16 @@ def select_featured_forecast(
     Raises:
         ForecastUnavailable: If nothing available can be featured.
     """
-    if consensus_forecast.available:
-        return consensus_forecast.slug
-
-    available_forecasts = {
-        forecast.slug: forecast for forecast in base_forecasts if forecast.available
+    available_slugs = {
+        forecast.slug
+        for forecast in forecasts
+        if forecast.available and forecast.points
     }
-
-    if ranked_slugs is not None:
-        for slug in ranked_slugs:
-            if slug in available_forecasts:
-                return slug
+    if default_slug in available_slugs:
+        return default_slug
 
     for slug in STATIC_FEATURED_TIEBREAKER:
-        if slug in available_forecasts:
+        if slug in available_slugs:
             return slug
 
     raise ForecastUnavailable("No scripted forecast is available to feature.")

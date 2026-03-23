@@ -1,4 +1,9 @@
-"""Shared LLM agent runner for forecast generation."""
+"""Run the repo-level Claude and Codex forecasting workspaces.
+
+The agent code here is importable package logic. The mutable workspaces,
+shared prompt, and shell dispatcher stay in the top-level `agents/` directory
+so they remain easy to inspect and edit directly.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from data import ExportSnapshot, Forecast, ForecastPoint
+from feedcast.data import ExportSnapshot, Forecast, ForecastPoint
 
 AGENT_TIMEOUT_SECONDS = 600
 
@@ -199,10 +204,10 @@ def _remove_stale_outputs(*paths: Path) -> None:
 
 
 def _agents_dir() -> Path:
-    """Return the tracked agents directory."""
-    return Path(__file__).resolve().parent
+    """Return the repo-level tracked agents directory."""
+    return _repo_root() / "agents"
 
 
 def _repo_root() -> Path:
     """Return the repository root."""
-    return _agents_dir().parent
+    return Path(__file__).resolve().parent.parent

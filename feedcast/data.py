@@ -1,4 +1,8 @@
-"""Domain types and CSV loading utilities for Nara Baby exports."""
+"""Domain types and CSV loading utilities for Nara Baby exports.
+
+This module defines the pipeline's core data structures and turns a raw export
+CSV into bottle-centered events that the scripted models can consume.
+"""
 
 from __future__ import annotations
 

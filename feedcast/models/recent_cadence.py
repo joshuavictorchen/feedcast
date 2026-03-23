@@ -1,4 +1,8 @@
-"""Recent cadence baseline model."""
+"""Recent cadence baseline model.
+
+This model deliberately stays simple: estimate one recent interval, then roll
+it forward with time-of-day volume lookups.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
-from data import (
+from feedcast.data import (
     FeedEvent,
     Forecast,
     MAX_INTERVAL_HOURS,
@@ -52,6 +56,8 @@ def forecast_recent_cadence(
     horizon_hours: int,
 ) -> Forecast:
     """Project feeds using recent intervals and time-of-day volume bins."""
+    # This is the low-complexity baseline. It ignores recursive state and asks
+    # whether recent full-feed cadence is already good enough.
     if len(history) < 4:
         raise ForecastUnavailable("Recent Cadence needs at least four events.")
 

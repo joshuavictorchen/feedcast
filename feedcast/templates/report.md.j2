@@ -1,0 +1,81 @@
+# Silas Feeding Forecast
+
+**{{ date_display }}** · {{ age_days }} days old · Cutoff: {{ cutoff_display }}
+
+## Next Feeds
+
+**{{ featured_name }}** predicts **{{ featured_points | length }} feeds** over the next 24 hours, totaling **{{ featured_total_oz }} oz**.
+
+| Feed | Time | Gap | Volume |
+|------|------|-----|--------|
+{% for point in featured_points -%}
+| {{ loop.index }} | **{{ point.time_display }}** | {{ point.gap_display }} | {{ point.volume_display }} |
+{% endfor %}
+
+![Featured Forecast](schedule.png)
+
+## Model Trajectories
+
+![Forecast Trajectories](spaghetti.png)
+
+## Model Comparison
+
+| Model | Status | First Feed | Feed Times |
+|-------|--------|------------|------------|
+{% for row in comparison_rows -%}
+| {{ row.name }} | {{ row.status }} | {{ row.first_feed_display }} | {{ row.feed_times_display }} |
+{% endfor %}
+
+## Prior Run Retrospective
+{% if not retrospective.available %}
+{% if retrospective.same_dataset %}
+No new actuals since the prior run (same dataset: `{{ retrospective.dataset_id_short }}`).
+{% else %}
+No prior run available yet.
+{% endif %}
+{% else %}
+Comparing prior run `{{ retrospective.prior_run_id }}` predictions against
+actual bottle feeds observed in the current export (observed horizon:
+{{ "%.1f" | format(retrospective.observed_horizon_hours) }}h).
+
+| Model | 1st-Feed Error | 24h MAE | Status |
+|-------|----------------|---------|--------|
+{% for result in retrospective.results -%}
+| {{ result.name }} | {{ result.first_feed_display }} | {{ result.timing_mae_display }} | {{ result.status }} |
+{% endfor %}
+{% if retrospective.observed_horizon_hours < 24 -%}
+Partial horizon only. Full-24h MAE is unavailable until a complete 24-hour window is observed.
+{% endif %}
+{% endif %}
+
+## Historical Retrospective Accuracy
+{% if historical_accuracy %}
+Aggregated from stored prior-run retrospectives. These scores reflect the model
+versions that made those earlier predictions.
+
+| Model | Comparisons | Full 24h Runs | Mean 1st-Feed Error | Mean 24h MAE |
+|-------|-------------|---------------|---------------------|--------------|
+{% for row in historical_accuracy -%}
+| {{ row.name }} | {{ row.comparisons }} | {{ row.full_horizon }} | {{ row.first_feed_display }} | {{ row.timing_mae_display }} |
+{% endfor %}
+{% else %}
+No completed retrospective history yet.
+{% endif %}
+
+## Methodologies
+{% for row in methodologies %}
+### {{ row.title }}
+
+{{ row.body }}
+{% endfor %}
+
+## Notes
+
+- **Limited data:** {{ history_days }} days of usable history since {{ data_floor_display }}. A few minutes of difference can look meaningful before enough real retrospectives accumulate.
+- **Non-stationarity:** Silas is growing fast. Older runs are still useful, but they are not ground truth for the next developmental phase.
+- **Breastfeeding volumes are estimated:** The {{ bf_heuristic }} heuristic is not measured intake, so any model that uses it inherits that uncertainty.
+- **Diagnostics artifact:** Detailed model diagnostics are saved separately in `diagnostics.yaml` so the main report stays readable.
+
+---
+
+*Export: `{{ source_file }}` · Dataset: `{{ dataset_id_short }}` · Commit: `{{ git_commit_display }}` · Generated: {{ generated_at }}*
