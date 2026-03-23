@@ -39,7 +39,7 @@ Default run:
 Use a specific export:
 
 ```bash
-.venv/bin/python analyze.py --export-path exports/export_narababy_silas_20260322.csv
+.venv/bin/python analyze.py --export-path exports/export_narababy_silas_YYYYMMDD.csv
 ```
 
 Skip the LLM agents and run the scripted forecasters only:
@@ -84,7 +84,9 @@ reproduce them from the text alone.
 - `Codex Forecast`
 
 Both agents share the same prompt and runner. Each gets a persistent workspace
-under `agents/`, can read the full repo, and must write two files on every run:
+under `agents/`, and those workspaces are tracked in git so their notes,
+scripts, and methodology can evolve visibly over time. Each agent can read the
+full repo and must write two files on every run:
 
 - `forecast.json`: predicted feeds in a fixed JSON schema
 - `methodology.md`: what the agent actually did on that run
@@ -95,6 +97,50 @@ The runner does not preprocess the data for the agents beyond telling them:
 - which workspace belongs to them
 
 Everything else is up to the agent.
+
+## Evaluation
+
+The repo uses two kinds of evaluation.
+
+- Current-export backtests: scripted models and the consensus blend are replayed
+  across historical cutoffs within the current export.
+- Prior-run retrospective: the previous run's saved predictions are compared to
+  new actual feeds that appear in the next export.
+
+The featured forecast follows a simple rule:
+
+- prefer `Consensus Blend` if it is available
+- otherwise fall back to the best scripted model by current-export backtest rank
+- never auto-feature an agent forecast
+
+For scripted backtests, the main ranking signal is next-feed timing, not
+volume. Coverage matters too: a model that only works on easy cutoffs should
+not outrank a model that is slightly less accurate but reliably available.
+
+## Breastfeeding Heuristic
+
+Breastfeeding is not the prediction target. Bottle-feed timing is.
+
+Two scripted models use a lightweight breastfeeding heuristic as an input:
+estimated breastfeeding intake is merged into the next bottle if that bottle
+starts soon after the breastfeeding session. This changes model features and
+projected bottle volume, but timing is still scored against logged bottle-feed
+start times.
+
+The current starting assumption is:
+
+- `30 minutes breastfeeding ~= 0.5 oz`
+- merge breastfeeding into the next bottle when it starts within `45 minutes`
+
+This is a heuristic, not measured intake, and it is expected to evolve if the
+data suggest a better interpretation.
+
+## Modeling Principles
+
+- Optimize for bottle-feed timing first. Volume is useful, but secondary.
+- Prefer simple, interpretable approaches until more complexity clearly earns its keep.
+- Treat limited data with caution. Directionally sound models matter more than brittle tuning.
+- Let new exports drive iteration. The goal is to improve the next 24-hour forecast, not to preserve every past experiment.
 
 ## Report
 
@@ -121,6 +167,21 @@ It includes:
 - `templates/summary.md.j2`: report template
 - `tracker.json`: tracked run history
 - `report/`: latest tracked report
+
+## Extending The System
+
+To add or revise a scripted model:
+
+1. implement it in `models/`
+2. add it to the explicit `MODELS` list in `models/__init__.py`
+3. make sure its methodology text is report-ready
+4. rerun `analyze.py`
+
+To iterate on agent behavior:
+
+1. adjust the shared prompt in `agents/prompt/prompt.md` if the contract or framing should change
+2. let each agent evolve its own workspace strategy under `agents/claude/` or `agents/codex/`
+3. rerun `analyze.py`
 
 ## Design Rules
 

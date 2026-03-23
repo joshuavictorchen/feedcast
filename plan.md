@@ -71,8 +71,8 @@ nara-silas/
 │   ├── run.sh                  # shared invocation script (dispatches by agent name)
 │   ├── prompt/
 │   │   └── prompt.md           # shared task prompt
-│   ├── claude/                 # Claude's persistent workspace (gitignored)
-│   └── codex/                  # Codex's persistent workspace (gitignored)
+│   ├── claude/                 # Claude's persistent tracked workspace
+│   └── codex/                  # Codex's persistent tracked workspace
 ├── backtest.py                 # current-export temporal backtesting
 ├── tracker.py                  # run manifest I/O + retrospective comparison
 ├── report.py                   # Jinja2 rendering + matplotlib plots
@@ -663,9 +663,9 @@ agents/
 ├── run.sh               # shared invocation script, dispatches by agent name
 ├── prompt/
 │   └── prompt.md        # shared task prompt
-├── claude/              # Claude's persistent workspace (gitignored)
+├── claude/              # Claude's persistent tracked workspace
 │   └── (forecast.json, notes, strategy files — created by the agent)
-└── codex/               # Codex's persistent workspace (gitignored)
+└── codex/               # Codex's persistent tracked workspace
     └── (forecast.json, notes, strategy files — created by the agent)
 ```
 
@@ -773,11 +773,12 @@ workspace, and evolve its strategy over time.
 
 ### Agent Workspaces
 
-`agents/claude/` and `agents/codex/` are gitignored. Each agent owns its
+`agents/claude/` and `agents/codex/` are tracked in git. Each agent owns its
 workspace completely:
 - `forecast.json` and `methodology.md` are required outputs (written each run)
 - Everything else is optional: notes, strategy docs, intermediate analysis
-- Contents persist across runs so agents can learn and evolve
+- Contents persist across runs so agents can learn, evolve, and leave a visible
+  history in the repo
 - The Python code reads only `forecast.json` and `methodology.md` from the
   workspace after a run completes
 - Stale required outputs are deleted before each run so an old file cannot
