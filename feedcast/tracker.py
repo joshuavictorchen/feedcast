@@ -22,7 +22,10 @@ from feedcast.data import (
     HORIZON_HOURS,
     build_feed_events,
 )
-from feedcast.scoring import score_forecast
+from feedcast.scoring import (
+    DEFAULT_HORIZON_WEIGHT_HALF_LIFE_HOURS,
+    score_forecast,
+)
 
 
 @dataclass(frozen=True)
@@ -265,7 +268,11 @@ def summarize_retrospective_history(
     tracker_path: Path,
     additional_retrospective: Retrospective | None = None,
 ) -> list[HistoricalAccuracySummary]:
-    """Aggregate stored retrospective results into model-level accuracy rows."""
+    """Aggregate stored retrospective results into model-level accuracy rows.
+
+    Historical means are weighted by observed-horizon evidence so thin partial
+    windows contribute less than near-complete or full 24-hour retrospectives.
+    """
     tracker = load_tracker(tracker_path)
     retrospective_blocks = [
         run.get("retrospective") for run in tracker["runs"] if isinstance(run, dict)
@@ -292,9 +299,9 @@ def summarize_retrospective_history(
                 slug,
                 {
                     "name": name,
-                    "scores": [],
-                    "count_scores": [],
-                    "timing_scores": [],
+                    "score_samples": [],
+                    "count_samples": [],
+                    "timing_samples": [],
                     "coverage_ratios": [],
                     "full_horizon_count": 0,
                 },
@@ -302,43 +309,46 @@ def summarize_retrospective_history(
             score = _float_or_none(result.get("score"))
             count_score = _float_or_none(result.get("count_score"))
             timing_score = _float_or_none(result.get("timing_score"))
-            coverage_ratio = min(
-                1.0,
+            observed_horizon_hours = min(
+                HORIZON_HOURS,
                 max(
                     0.0,
                     _float_or_none(retrospective.get("observed_horizon_hours")) or 0.0,
-                )
-                / HORIZON_HOURS,
+                ),
             )
+            coverage_ratio = observed_horizon_hours / HORIZON_HOURS
+            evidence_weight = _history_evidence_weight(observed_horizon_hours)
 
-            if score is not None:
-                aggregate["scores"].append(score)
+            if (
+                score is not None
+                and count_score is not None
+                and timing_score is not None
+            ):
+                aggregate["score_samples"].append((score, evidence_weight))
+                aggregate["count_samples"].append((count_score, evidence_weight))
+                aggregate["timing_samples"].append((timing_score, evidence_weight))
                 aggregate["coverage_ratios"].append(coverage_ratio)
                 if coverage_ratio >= 1.0:
                     aggregate["full_horizon_count"] += 1
-            if count_score is not None:
-                aggregate["count_scores"].append(count_score)
-            if timing_score is not None:
-                aggregate["timing_scores"].append(timing_score)
 
     summaries: list[HistoricalAccuracySummary] = []
     for slug, aggregate in aggregates.items():
-        scores = aggregate["scores"]
-        count_scores = aggregate["count_scores"]
-        timing_scores = aggregate["timing_scores"]
+        score_samples = aggregate["score_samples"]
+        count_samples = aggregate["count_samples"]
+        timing_samples = aggregate["timing_samples"]
         coverage_ratios = aggregate["coverage_ratios"]
-        if not scores and not count_scores and not timing_scores:
+        if not score_samples:
             continue
 
         summaries.append(
             HistoricalAccuracySummary(
                 name=str(aggregate["name"]),
                 slug=slug,
-                comparison_count=len(scores),
+                comparison_count=len(score_samples),
                 full_horizon_count=int(aggregate["full_horizon_count"]),
-                mean_score=_mean_or_none(scores),
-                mean_count_score=_mean_or_none(count_scores),
-                mean_timing_score=_mean_or_none(timing_scores),
+                mean_score=_weighted_mean_or_none(score_samples),
+                mean_count_score=_weighted_mean_or_none(count_samples),
+                mean_timing_score=_weighted_mean_or_none(timing_samples),
                 mean_coverage_ratio=_mean_or_none(coverage_ratios),
             )
         )
@@ -447,6 +457,35 @@ def _mean_or_none(values: list[float]) -> float | None:
     if not values:
         return None
     return float(fmean(values))
+
+
+def _weighted_mean_or_none(samples: list[tuple[float, float]]) -> float | None:
+    """Return the weighted mean or None for empty input."""
+    if not samples:
+        return None
+
+    total_weight = sum(weight for _, weight in samples)
+    if total_weight <= 0:
+        return None
+
+    weighted_total = sum(value * weight for value, weight in samples)
+    return weighted_total / total_weight
+
+
+def _history_evidence_weight(observed_horizon_hours: float) -> float:
+    """Return normalized retrospective evidence weight for one observed window.
+
+    The weighting mirrors the scorer's horizon decay, so early hours count more
+    heavily in history aggregation too.
+    """
+    if observed_horizon_hours <= 0:
+        return 0.0
+
+    numerator = 1.0 - 2.0 ** (
+        -observed_horizon_hours / DEFAULT_HORIZON_WEIGHT_HALF_LIFE_HOURS
+    )
+    denominator = 1.0 - 2.0 ** (-HORIZON_HOURS / DEFAULT_HORIZON_WEIGHT_HALF_LIFE_HOURS)
+    return numerator / denominator
 
 
 def _round_or_none(value: float | None) -> float | None:

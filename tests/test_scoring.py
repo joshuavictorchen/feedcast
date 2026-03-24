@@ -116,6 +116,38 @@ class ScoreForecastTests(unittest.TestCase):
         self.assertEqual(result.count_score, 0.0)
         self.assertEqual(result.timing_score, 0.0)
 
+    def test_multi_feed_assignment_handles_extra_actual_feed(self) -> None:
+        """Hungarian matching should recover the best set of real feed pairings."""
+        cutoff = datetime(2026, 3, 24, 8, 0, 0)
+        predicted_offsets = [2.0, 6.0, 10.0, 14.0, 18.0]
+        actual_offsets = [2.25, 6.5, 9.75, 14.25, 18.5, 22.5]
+        result = score_forecast(
+            predicted_points=[_point(cutoff, offset) for offset in predicted_offsets],
+            actual_events=[_event(cutoff, offset) for offset in actual_offsets],
+            prediction_time=cutoff,
+            observed_until=cutoff + timedelta(hours=24),
+        )
+
+        matched_actual_weights = [2 ** (-offset / 24) for offset in actual_offsets[:-1]]
+        recall = sum(matched_actual_weights) / sum(
+            2 ** (-offset / 24) for offset in actual_offsets
+        )
+        expected_count_score = 100 * (2 * recall / (1 + recall))
+        timing_credits = [2 ** (-error / 30) for error in [15, 30, 15, 15, 30]]
+        expected_timing_score = 100 * (
+            sum(
+                weight * credit
+                for weight, credit in zip(matched_actual_weights, timing_credits)
+            )
+            / sum(matched_actual_weights)
+        )
+
+        self.assertEqual(result.predicted_count, 5)
+        self.assertEqual(result.actual_count, 6)
+        self.assertEqual(result.matched_count, 5)
+        self.assertAlmostEqual(result.count_score, expected_count_score, places=3)
+        self.assertAlmostEqual(result.timing_score, expected_timing_score, places=3)
+
 
 if __name__ == "__main__":
     unittest.main()

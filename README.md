@@ -78,8 +78,6 @@ bottle feeds against the bottle feeds now visible in that export. Those
 retrospective results are stored in `tracker.json` and aggregated into a
 historical accuracy table in the report.
 
-## Retrospective Scoring
-
 The retrospective step uses the shared scorer in `feedcast/scoring.py`.
 The headline score is the geometric mean of:
 
@@ -90,10 +88,6 @@ The headline score is the geometric mean of:
 Both components weight earlier feeds more heavily than later ones. Partial
 horizons are scored on the observed window only and reported with explicit
 coverage, so the unresolved tail is neither guessed nor silently ignored.
-
-The featured forecast defaults to the consensus blend. If it's unavailable,
-the pipeline falls back to a static tiebreaker. Reruns against the same
-dataset replace the latest tracker entry instead of appending another copy.
 
 ## Quick Start
 

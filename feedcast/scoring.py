@@ -201,6 +201,8 @@ def _match_points(
                 error_minutes=error_minutes,
                 half_life_minutes=config.timing_credit_half_life_minutes,
             )
+            # The assignment should protect early-horizon matches when pairings
+            # conflict, because the final metric values those feeds more highly.
             pair_credit = (
                 (predicted_weights[predicted_index] + actual_weights[actual_index])
                 / 2.0
