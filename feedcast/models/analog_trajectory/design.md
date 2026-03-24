@@ -52,7 +52,7 @@ Two alignment approaches were tested:
 - **Gap-based**: average the gap sequences, then roll forward
 - **Time-offset**: average absolute time offsets from each state
 
-Gap-based MAE was 0.735h vs time-offset at 1.367h. Gap-based is much
+Gap-based MAE was 0.766h vs time-offset at 1.321h. Gap-based is much
 better because trajectories with different starting times but similar
 cadences align well by gap, but poorly by absolute offset.
 
