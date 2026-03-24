@@ -5,11 +5,11 @@ Nara Baby app exports, using an ensemble of scripted forecasting models
 and LLM agents. Feed timing is the primary target. Each run scores the
 prior run's predictions against what actually happened. No backtesting.
 
-Built by a tired dad with Claude and Codex, coordinated via
-[claodex](https://github.com/joshuavictorchen/claodex). My wife
-mentioned missing the sense of structure we used to have before Silas
-was born. Predicting feedings felt like a practical place to start.
-It also gave me a reason to experiment with agentic engineering.
+*Built by a tired dad with Claude and Codex between bottle feedings.
+Coordinated via [claodex](https://github.com/joshuavictorchen/claodex).
+My wife mentioned missing the sense of daily structure we used to have
+before Silas was born. Predicting feedings felt like a practical place
+to start. It also gave me a reason to experiment with agentic engineering.*
 
 ## Latest Forecast
 
@@ -105,7 +105,8 @@ python3 -m venv .venv
 ```
 
 LLM agent forecasts run `claude` and `codex` as local CLI tools with
-working auth. Use `--skip-agents` if they're unavailable.
+working auth (cheaper and easier than invoking API calls).
+Use `--skip-agents` if they're unavailable.
 
 Each run updates these artifacts:
 
