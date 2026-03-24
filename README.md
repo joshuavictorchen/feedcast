@@ -73,14 +73,15 @@ never auto-featured.
 
 ## Evaluation
 
-There is no historical backtesting. The only accuracy signal is **prospective
-performance**: each run compares the prior run's predictions to the actual
-feeds observed in the new export. Over time, these results accumulate in
-`tracker.json` and are aggregated into a historical accuracy table in the
-report.
+When a new export arrives, Feedcast scores the previous run's predicted
+bottle feeds against the bottle feeds now visible in that export. Those
+retrospective results are stored in `tracker.json` and aggregated into a
+historical accuracy table in the report.
 
-Retrospectives use a shared scorer in `feedcast/scoring.py`. The headline
-score is the geometric mean of:
+## Retrospective Scoring
+
+The retrospective step uses the shared scorer in `feedcast/scoring.py`.
+The headline score is the geometric mean of:
 
 - a weighted count F1 score, so over- and under-predicting feeds both hurt
 - a weighted timing score on matched feeds, with soft decay instead of a hard
@@ -188,10 +189,10 @@ tracker.json                   Run history with predictions and retrospectives
 
 ## Working with Models
 
-**Start here:** Read `feedcast/models/notes.md` first. It contains domain
-observations, the working theory behind the model lineup, cross-cutting
-design considerations, and open questions. It is the orientation document
-for anyone working on models.
+**Start here before touching model code:** Read `feedcast/models/notes.md`
+first. It contains domain observations, the working theory behind the
+model lineup, cross-cutting design considerations, and open questions.
+It is the orientation document for anyone working on models.
 
 **Model directory convention:** Each model lives in its own subdirectory
 under `feedcast/models/` with a standard set of files:
@@ -206,7 +207,9 @@ under `feedcast/models/` with a standard set of files:
 | `research_results.txt` | Saved output from the research script. Committed for reproducibility. |
 
 **Update a model:** When you change a model's behavior, assumptions, or
-tuning, add a new top entry to that model's `CHANGELOG.md`.
+tuning, add a new top entry to that model's `CHANGELOG.md`. If the change
+updates cross-cutting concerns, shared observations, or open questions
+across models, update `feedcast/models/notes.md` too.
 
 **Add a model:** Create the subdirectory with the files above, then add a
 `ModelSpec` entry to `feedcast/models/__init__.py`. See `slot_drift/` or
