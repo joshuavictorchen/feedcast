@@ -128,7 +128,9 @@ feedcast/
     shared.py                  Shared utilities used across models
     slot_drift/                Daily template with per-slot drift
       model.py                 Model implementation
-      methodology.md           Methodology, research, and design decisions
+      methodology.md           Report methodology text
+      design.md                Design decisions and rationale
+      research.py              Repeatable data analysis
   agents.py                    Agent runner (points to repo-level agents/)
   tracker.py                   Run persistence and retrospectives
   report.py                    Markdown rendering and atomic report swap
