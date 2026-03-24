@@ -84,12 +84,14 @@ def forecast_slot_drift(
     reference_date = cutoff.date()
     projections = _project_slots(day_matches, template, reference_date)
 
-    # Identify which of today's slots are already filled.
+    # Identify which of today's slots are already filled, matching
+    # against projected positions (not raw template) so drift doesn't
+    # cause misclassification.
     today_feeds = [
         event for event in history
         if event.time.date() == cutoff.date() and event.time <= cutoff
     ]
-    filled_today = _filled_slots_today(today_feeds, template)
+    filled_today = _filled_slots_today(today_feeds, projections)
 
     # Build forecast points for remaining today + tomorrow.
     points = _build_forecast_points(
@@ -372,12 +374,23 @@ def _weighted_linreg_1d(
 
 def _filled_slots_today(
     today_feeds: list[FeedEvent],
-    template: np.ndarray,
+    projections: list[dict],
 ) -> set[int]:
-    """Identify which template slots have already been filled today."""
+    """Identify which slots have already been filled today.
+
+    Matches against projected positions (not raw template) so that
+    drift doesn't cause misclassification of filled vs. unfilled slots.
+    Returns original slot_index values.
+    """
     if not today_feeds:
         return set()
-    matched, _ = _match_day_to_template(today_feeds, template)
+    # Build a template from projected positions, ordered by slot_index,
+    # so Hungarian match indices correspond to original slot indices.
+    slot_count = len(projections)
+    projected_template = np.zeros(slot_count)
+    for projection in projections:
+        projected_template[projection["slot_index"]] = projection["projected_hour"]
+    matched, _ = _match_day_to_template(today_feeds, projected_template)
     return set(matched.keys())
 
 

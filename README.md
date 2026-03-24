@@ -39,10 +39,11 @@ dataset.
 
 | Model | Approach |
 | ----- | -------- |
+| Slot Drift | Daily template with per-slot drift tracking and Hungarian matching |
 | Recent Cadence | Recency-weighted interval between full feeds, rolled forward at constant gap |
 | Phase Nowcast Hybrid | Phase-locked oscillator backbone with local regression nowcast for the first gap |
 | Gap-Conditional | Weighted linear regression on event state, rolled forward autoregressively |
-| Consensus Blend | Median-timestamp ensemble across the three scripted models |
+| Consensus Blend | Median-timestamp ensemble across the scripted models |
 
 **LLM agents** get the export CSV, a shared prompt, and a persistent workspace:
 
@@ -62,7 +63,7 @@ never auto-featured.
 | ---- | ----------- |
 | Parse Activities | Filter feeding events from the raw CSV export |
 | Build Events | Create bottle-centered events with optional breastfeed volume merging (per model) |
-| Run Models | Execute three scripted models independently |
+| Run Models | Execute scripted models independently |
 | Consensus Blend | Median-timestamp ensemble across scripted models |
 | Select Featured | Choose the consensus blend, or fall back to a static tiebreaker |
 | Run Agents | Claude and Codex produce independent forecasts (optional) |

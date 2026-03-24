@@ -50,8 +50,7 @@ from .shared import (
 CONSENSUS_BLEND_NAME = "Consensus Blend"
 CONSENSUS_BLEND_SLUG = "consensus_blend"
 CONSENSUS_BLEND_METHODOLOGY = """\
-Median-timestamp ensemble across the three scripted base models
-(Recent Cadence, Phase Nowcast Hybrid, Gap-Conditional). It does
+Median-timestamp ensemble across the scripted base models. It does
 not align forecasts by feed index, because different models may
 emit different numbers of future feeds. Instead, on each step it
 takes the next unconsumed point from every available model,
