@@ -113,19 +113,14 @@ for current counts.
 
 ## Volume-to-gap relationship
 
-The correlation between feed volume and next gap is 0.351. Modest but
-real:
+This model depends on the shared cross-cutting finding that larger feeds
+tend to be followed by longer gaps. See
+[`feedcast/research/volume_gap_relationship/findings.md`](../../research/volume_gap_relationship/findings.md)
+for the current evidence and committed artifacts.
 
-| Volume range | n | Mean gap |
-| ------------ | - | -------- |
-| [0, 1.5) oz  | 12 | 1.97h |
-| [1.5, 2.5) oz | 10 | 1.84h |
-| [2.5, 3.5) oz | 18 | 2.53h |
-| [3.5, 5.0) oz | 40 | 2.82h |
-
-The multiplicative satiety mechanism encodes this relationship
-directly: exp(−0.386 × 1.0) = 0.68 (small feed, modest reset) vs
-exp(−0.386 × 4.5) = 0.18 (large feed, deep reset).
+The multiplicative satiety mechanism encodes that relationship
+directly: `exp(-0.386 x 1.0) = 0.68` (small feed, modest reset) vs.
+`exp(-0.386 x 4.5) = 0.18` (large feed, deep reset).
 
 ## What this model is (and isn't)
 
@@ -138,9 +133,11 @@ Honest assessment: the primary value comes from two things:
 
 The "latent hunger state" framing is mechanistically motivated and
 avoids arbitrary snack thresholds, but the hidden state itself isn't
-doing heavy lifting. With r=0.35 volume-to-gap correlation, volume
-explains roughly 12% of gap variance. The rest is driven by factors
-outside the model's scope (sleep state, growth spurts, fussiness).
+doing heavy lifting. The shared
+[`volume_gap_relationship` research](../../research/volume_gap_relationship/findings.md)
+currently shows a real but modest effect size: volume helps, but much
+of the variance is still driven by factors outside the model's scope
+(sleep state, growth spurts, fussiness).
 
 The model beats naive baselines by ~20% and provides a structurally
 distinct frame for the ensemble — it reasons about feeding as a

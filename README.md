@@ -28,10 +28,11 @@ baby-tracking app. Sleep, growth spurts, and developmental leaps all
 affect when a baby eats, but none of that is in the data. The baby is
 growing fast, so patterns shift week to week.
 
-That said, there are real patterns. Larger feeds tend to be followed by
-longer gaps, and the daily feed count stays fairly stable even as timing
-shifts. The models try to find that structure in a small, shifting
-dataset.
+That said, there are patterns worth testing. Current cross-cutting
+research suggests larger feeds are often followed by longer gaps, but
+the effect is modest and should be treated as one signal among several.
+The models try to find whatever structure the data actually supports in
+a small, shifting dataset.
 
 ## Forecast Sources
 
@@ -127,8 +128,13 @@ scripts/
 feedcast/
   pipeline.py                  End-to-end orchestration
   data.py                      CSV parsing, domain types, fingerprinting
+  research/                    Cross-cutting research for models and agents
+    index.md                   Research hub and table of contents
+    volume_gap_relationship/   Feed volume vs. subsequent gap
+      analysis.py              Repeatable data analysis
+      findings.md              Concise write-up with methods and conclusions
+      artifacts/               Committed outputs used by the write-up
   models/                      Scripted forecasters and consensus blend
-    notes.md                   Brainstorm notes, observations, and model ideas
     shared.py                  Shared utilities used across models
     slot_drift/                Daily template with per-slot drift
       model.py                 Model implementation
@@ -179,12 +185,37 @@ report/                        Latest report (tracked, committed)
 tracker.json                   Run history with predictions and retrospectives
 ```
 
+## Working with Research
+
+**Start here for cross-cutting context:** Read
+[`feedcast/research/index.md`](feedcast/research/index.md). It is the
+shared research hub for repo-wide findings, current hypotheses, and open
+questions.
+
+Research is advisory, not binding. Models and agents may use these
+findings when helpful, but they are free to ignore them if a different
+approach is better supported.
+
+**Research directory convention:** Each research article lives in its own
+subdirectory under `feedcast/research/` with a standard set of files:
+
+| File | Purpose |
+| ---- | ------- |
+| `findings.md` | Concise write-up with hypothesis, methods, results, and conclusion. |
+| `analysis.py` | Repeatable data analysis. Run with `.venv/bin/python -m feedcast.research.<name>.analysis`. Uses shared data loading so results stay aligned with the repo's current event construction. |
+| `artifacts/` | Committed outputs used to support the write-up. Keep them reproducible and easy to inspect. |
+
+**Update research:** Re-run the article's `analysis.py`, commit refreshed
+artifacts, and update `findings.md` and `index.md` if the conclusion
+changes.
+
 ## Working with Models
 
-**Start here before touching model code:** Read `feedcast/models/notes.md`
-first. It contains domain observations, the working theory behind the
-model lineup, cross-cutting design considerations, and open questions.
-It is the orientation document for anyone working on models.
+**Start with the research hub, then read model-local docs:** Shared
+findings and open questions now live in
+[`feedcast/research/index.md`](feedcast/research/index.md). After that,
+read the specific model's `design.md`, `methodology.md`, and
+`research.py` if you are changing that model.
 
 **Model directory convention:** Each model lives in its own subdirectory
 under `feedcast/models/` with a standard set of files:
@@ -200,8 +231,9 @@ under `feedcast/models/` with a standard set of files:
 
 **Update a model:** When you change a model's behavior, assumptions, or
 tuning, add a new top entry to that model's `CHANGELOG.md`. If the change
-updates cross-cutting concerns, shared observations, or open questions
-across models, update `feedcast/models/notes.md` too.
+updates cross-cutting evidence, shared hypotheses, or open questions
+across models, update the relevant article under `feedcast/research/`
+and `feedcast/research/index.md` too.
 
 **Add a model:** Create the subdirectory with the files above, then add a
 `ModelSpec` entry to `feedcast/models/__init__.py`. See `slot_drift/` or
@@ -225,6 +257,10 @@ path.
 
 **Iterate on one agent's strategy:** Each agent's workspace persists across
 runs. Agents can keep durable strategy notes in separate workspace files.
+
+**Use shared research if helpful:** Agents may inspect
+`feedcast/research/` as optional reference material. Its findings can
+inform an approach, but they are not requirements.
 
 **Update an agent:** When you change an agent's behavior or instructions,
 add a new top entry to that agent's `CHANGELOG.md`.

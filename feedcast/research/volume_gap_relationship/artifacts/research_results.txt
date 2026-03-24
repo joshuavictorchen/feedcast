@@ -1,0 +1,21 @@
+Export: exports/export_narababy_silas_20260323.csv
+Dataset: sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0
+Source hash: sha256:e1658d2f4e1136a5ecc62dc3835f34e51102d541fe6d6e03b678b1bd0f9ed670
+Cutoff: 2026-03-23T11:41:13
+Run: 2026-03-24T17:31:17
+
+=== BOTTLE_ONLY ===
+Pairs: 80
+Pearson r: 0.357
+P-value: 0.0012
+Slope: 0.334 hours/oz
+
+=== MERGED_45_MIN ===
+Pairs: 80
+Pearson r: 0.351
+P-value: 0.0014
+Slope: 0.328 hours/oz
+
+Scatter plot: artifacts/bottle_only_volume_gap_scatter.png
+Summary JSON: artifacts/summary.json
+Results file: artifacts/research_results.txt
