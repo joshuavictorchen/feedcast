@@ -1,0 +1,44 @@
+Export: exports/export_narababy_silas_20260323.csv
+Dataset: sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0
+Cutoff: 2026-03-23 11:41:13
+Lookback: 7 days
+Run: 2026-03-23T23:32:36
+
+=== DAILY FEED COUNTS ===
+
+Date         Total  Full Snack  Feed times
+2026-03-16     13     8     5  01:49  05:14  08:42  10:50  11:18  11:52  14:02  14:58  15:19  16:53  17:34  20:19  21:13
+2026-03-17      8     7     1  00:40  04:52  08:17  10:43  12:30  15:58  18:01  21:05
+2026-03-18      8     8     0  00:30  04:02  07:20  09:51  14:23  17:52  20:25  22:51
+2026-03-19      9     9     0  01:25  04:02  07:00  10:14  12:18  15:27  17:02  19:35  21:28
+2026-03-20      8     8     0  00:13  03:15  06:40  09:40  12:37  15:38  18:31  21:10
+2026-03-21     10     9     1  00:27  03:17  06:21  09:39  12:02  13:18  14:48  15:28  19:02  22:36
+2026-03-22      9     7     2  02:22  05:30  08:53  11:54  13:06  16:36  17:53  19:28  23:27
+
+Total counts:     [13, 8, 8, 9, 8, 10, 9]
+  mean=9.3  median=9
+Full-feed counts: [8, 7, 8, 9, 8, 9, 7]
+  mean=8.0  median=8
+
+=== TEMPLATE (slot_count=9) ===
+
+Days used for template: [datetime.date(2026, 3, 19), datetime.date(2026, 3, 22)]
+  Slot 1: 01:53 (1.90h)
+  Slot 2: 04:46 (4.77h)
+  Slot 3: 07:57 (7.96h)
+  Slot 4: 11:04 (11.08h)
+  Slot 5: 12:42 (12.71h)
+  Slot 6: 16:01 (16.03h)
+  Slot 7: 17:28 (17.47h)
+  Slot 8: 19:31 (19.53h)
+  Slot 9: 22:28 (22.47h)
+
+=== TRIAL ALIGNMENT (threshold=2.0h) ===
+
+2026-03-16 (13 feeds): 9 matched, 4 unmatched, max_cost=1.25h
+2026-03-17 (8 feeds): 8 matched, 0 unmatched, max_cost=1.38h
+2026-03-18 (8 feeds): 8 matched, 0 unmatched, max_cost=1.64h
+2026-03-19 (9 feeds): 9 matched, 0 unmatched, max_cost=0.99h
+2026-03-20 (8 feeds): 8 matched, 0 unmatched, max_cost=1.67h
+2026-03-21 (10 feeds): 8 matched, 2 unmatched, max_cost=1.59h
+2026-03-22 (9 feeds): 9 matched, 0 unmatched, max_cost=0.99h
