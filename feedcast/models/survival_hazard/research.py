@@ -791,93 +791,103 @@ def main() -> None:
     # ================================================================
     # SECTION 8: Most recent 24h holdout
     # ================================================================
-    log("=== MOST RECENT 24H PREDICTION (holdout, day-part split) ===")
+    log("=== MOST RECENT 24H PREDICTION (holdout, shipped model) ===")
     log()
-    log("Uses day-part split Weibull with conditional survival for first feed.")
-    log("Shapes fit on pre-anchor data only (true holdout).")
+    log("Reproduces the shipped model exactly: fixed shapes from constants,")
+    log("runtime scale estimation, conditional survival for first feed.")
+    log("Only pre-holdout-cutoff events are used (true holdout).")
     log()
 
-    forecast_start = cutoff - timedelta(hours=24)
+    # The holdout simulates what the model would do if the real cutoff
+    # were 24h earlier. The "holdout cutoff" is cutoff - 24h. The last
+    # event before that is the anchor. Elapsed time from anchor to the
+    # holdout cutoff drives the conditional survival for the first feed.
+    holdout_cutoff = cutoff - timedelta(hours=24)
     anchor_idx = max(
-        (i for i, e in enumerate(events) if e.time <= forecast_start),
+        (i for i, e in enumerate(events) if e.time <= holdout_cutoff),
         default=None,
     )
     if anchor_idx is not None and anchor_idx >= MIN_FIT_GAPS + 1:
         anchor = events[anchor_idx]
         pre_events = events[:anchor_idx + 1]
-        pre_gaps = np.array([
-            (pre_events[j + 1].time - pre_events[j].time).total_seconds() / 3600
-            for j in range(len(pre_events) - 1)
-        ])
-        pre_hours = np.array([
-            hour_of_day(pre_events[j].time) for j in range(len(pre_events) - 1)
-        ])
-        pre_weights = np.array([
-            math.exp(-decay * (anchor.time - pre_events[j].time).total_seconds() / 3600)
-            for j in range(len(pre_events) - 1)
-        ])
+        elapsed = (holdout_cutoff - anchor.time).total_seconds() / 3600
 
-        # Fit separate day-part Weibulls on pre-anchor data.
-        ho_night_mask = (pre_hours >= 20) | (pre_hours < 8)
-        ho_day_mask = ~ho_night_mask
+        # Use FIXED shapes from model constants (not re-fit).
+        ho_k_night = OVERNIGHT_SHAPE
+        ho_k_day = DAYTIME_SHAPE
 
-        if ho_night_mask.sum() >= 3:
-            ho_night_fit = _fit_weibull(pre_gaps[ho_night_mask], pre_weights[ho_night_mask])
-            ho_k_night = ho_night_fit["shape"]
-        else:
-            ho_k_night = OVERNIGHT_SHAPE  # Fall back to research value.
-        if ho_day_mask.sum() >= 3:
-            ho_day_fit = _fit_weibull(pre_gaps[ho_day_mask], pre_weights[ho_day_mask])
-            ho_k_day = ho_day_fit["shape"]
-        else:
-            ho_k_day = DAYTIME_SHAPE
+        # Estimate scales from pre-holdout gaps using the model's
+        # lookback window and recency weighting, exactly as model.py does.
+        lookback_start = holdout_cutoff - timedelta(days=LOOKBACK_DAYS)
+        night_g, night_w, day_g, day_w = [], [], [], []
+        all_g, all_w = [], []
+        for j in range(len(pre_events) - 1):
+            ev = pre_events[j]
+            if ev.time < lookback_start:
+                continue
+            g = (pre_events[j + 1].time - ev.time).total_seconds() / 3600
+            if g <= 0:
+                continue
+            age = (holdout_cutoff - ev.time).total_seconds() / 3600
+            wt = math.exp(-decay * max(age, 0))
+            h_ev = hour_of_day(ev.time)
+            all_g.append(g)
+            all_w.append(wt)
+            if _is_overnight(h_ev):
+                night_g.append(g)
+                night_w.append(wt)
+            else:
+                day_g.append(g)
+                day_w.append(wt)
 
-        # Estimate scales from recent same-daypart gaps.
-        recent_pre = pre_gaps[-30:] if len(pre_gaps) > 30 else pre_gaps
-        recent_pre_h = pre_hours[-30:] if len(pre_hours) > 30 else pre_hours
-        recent_pre_w = pre_weights[-30:] if len(pre_weights) > 30 else pre_weights
-        rn_mask = (recent_pre_h >= 20) | (recent_pre_h < 8)
-        rd_mask = ~rn_mask
-        if rn_mask.sum() >= 3:
-            ho_night_scale = _estimate_scale(recent_pre[rn_mask], recent_pre_w[rn_mask], ho_k_night)
-        else:
-            ho_night_scale = _estimate_scale(recent_pre, recent_pre_w, ho_k_night)
-        if rd_mask.sum() >= 3:
-            ho_day_scale = _estimate_scale(recent_pre[rd_mask], recent_pre_w[rd_mask], ho_k_day)
-        else:
-            ho_day_scale = _estimate_scale(recent_pre, recent_pre_w, ho_k_day)
+        all_g_np = np.array(all_g) if all_g else np.array([2.5])
+        all_w_np = np.array(all_w) if all_w else np.array([1.0])
+        ho_night_scale = (
+            _estimate_scale(np.array(night_g), np.array(night_w), ho_k_night)
+            if len(night_g) >= 3
+            else _estimate_scale(all_g_np, all_w_np, ho_k_night)
+        )
+        ho_day_scale = (
+            _estimate_scale(np.array(day_g), np.array(day_w), ho_k_day)
+            if len(day_g) >= 3
+            else _estimate_scale(all_g_np, all_w_np, ho_k_day)
+        )
 
-        log(f"Anchor: {anchor.time.strftime('%m/%d %H:%M')} vol={anchor.volume_oz:.1f}oz")
-        log(f"Holdout-fit overnight: shape={ho_k_night:.4f} scale={ho_night_scale:.4f} "
+        log(f"Holdout cutoff: {holdout_cutoff.strftime('%m/%d %H:%M')}")
+        log(f"Last event (anchor): {anchor.time.strftime('%m/%d %H:%M')} "
+            f"vol={anchor.volume_oz:.1f}oz")
+        log(f"Elapsed since anchor: {elapsed:.2f}h")
+        log(f"Overnight: shape={ho_k_night} scale={ho_night_scale:.4f} "
             f"median={_weibull_median(ho_k_night, ho_night_scale):.3f}h")
-        log(f"Holdout-fit daytime:   shape={ho_k_day:.4f} scale={ho_day_scale:.4f} "
+        log(f"Daytime:   shape={ho_k_day} scale={ho_day_scale:.4f} "
             f"median={_weibull_median(ho_k_day, ho_day_scale):.3f}h")
         log()
 
-        def _ho_params(hour: float) -> tuple[float, float]:
-            if hour >= 20 or hour < 8:
-                return ho_k_night, ho_night_scale
-            return ho_k_day, ho_day_scale
-
-        # Simulate 24h forward with day-part switching and conditional first gap.
+        # First feed: conditional survival anchored to last_event.time,
+        # exactly as model.py does.
         anchor_hour = hour_of_day(anchor.time)
-        first_shape, first_scale = _ho_params(anchor_hour)
-        # No elapsed time at anchor (we're simulating from the anchor event).
-        first_gap = _weibull_median(first_shape, first_scale)
+        first_shape = ho_k_night if _is_overnight(anchor_hour) else ho_k_day
+        first_scale = ho_night_scale if _is_overnight(anchor_hour) else ho_day_scale
+        time_to_first = _weibull_conditional_remaining(first_shape, first_scale, elapsed)
+        log(f"First feed: conditional remaining = {time_to_first:.3f}h "
+            f"(daypart={'overnight' if _is_overnight(anchor_hour) else 'daytime'})")
+        log()
 
+        # Simulate 24h forward from holdout_cutoff with day-part switching.
         predicted_times = []
-        sim_t = first_gap
-        while sim_t < 24.0:
-            pred_time = anchor.time + timedelta(hours=sim_t)
-            predicted_times.append(pred_time)
-            pred_hour = hour_of_day(pred_time)
-            s_shape, s_scale = _ho_params(pred_hour)
+        feed_time = holdout_cutoff + timedelta(hours=time_to_first)
+        horizon_end = holdout_cutoff + timedelta(hours=24)
+        while feed_time < horizon_end:
+            predicted_times.append(feed_time)
+            feed_hour = hour_of_day(feed_time)
+            s_shape = ho_k_night if _is_overnight(feed_hour) else ho_k_day
+            s_scale = ho_night_scale if _is_overnight(feed_hour) else ho_day_scale
             gap = _weibull_median(s_shape, s_scale)
-            sim_t += gap
+            feed_time = feed_time + timedelta(hours=gap)
 
         actual_times = [
             e.time for e in events
-            if anchor.time < e.time <= anchor.time + timedelta(hours=24)
+            if holdout_cutoff < e.time <= horizon_end
         ]
         log(f"Predicted {len(predicted_times)} feeds, actual {len(actual_times)} feeds")
         log()

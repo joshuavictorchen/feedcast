@@ -1,7 +1,7 @@
 Export: exports/export_narababy_silas_20260323.csv
 Dataset: sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0
 Cutoff: 2026-03-23 11:41:13
-Run: 2026-03-24T12:32:03
+Run: 2026-03-24T12:35:24
 Events (with BF merge): 81
 Events (bottle only):   81
 
@@ -122,29 +122,35 @@ Weibull baseline (no vol)                     0.808
 Weibull + volume                              0.844
 Day-part split Weibull                        0.690
 
-=== MOST RECENT 24H PREDICTION (holdout, day-part split) ===
+=== MOST RECENT 24H PREDICTION (holdout, shipped model) ===
 
-Uses day-part split Weibull with conditional survival for first feed.
-Shapes fit on pre-anchor data only (true holdout).
+Reproduces the shipped model exactly: fixed shapes from constants,
+runtime scale estimation, conditional survival for first feed.
+Only pre-holdout-cutoff events are used (true holdout).
 
-Anchor: 03/22 08:53 vol=3.2oz
-Holdout-fit overnight: shape=6.9465 scale=3.2322 median=3.066h
-Holdout-fit daytime:   shape=2.4107 scale=2.5835 median=2.219h
+Holdout cutoff: 03/22 11:41
+Last event (anchor): 03/22 08:53 vol=3.2oz
+Elapsed since anchor: 2.79h
+Overnight: shape=7.31 scale=3.2731 median=3.113h
+Daytime:   shape=2.33 scale=2.5305 median=2.162h
 
-Predicted 9 feeds, actual 9 feeds
+First feed: conditional remaining = 0.579h (daypart=daytime)
 
-  pred=11:06  actual=11:54  err=0.80h
-  pred=13:20  actual=13:06  err=0.23h
-  pred=15:33  actual=16:36  err=1.05h
-  pred=17:46  actual=17:53  err=0.12h
-  pred=19:59  actual=19:28  err=0.52h
-  pred=22:12  actual=23:27  err=1.25h
-  pred=01:16  actual=02:30  err=1.22h
-  pred=04:20  actual=05:13  err=0.88h
-  pred=07:24  actual=08:48  err=1.39h
+Predicted 10 feeds, actual 11 feeds
 
-Paired 9, mean timing error: 0.83h
-Feed count error: 0
+  pred=12:15  actual=11:54  err=0.35h
+  pred=14:25  actual=13:06  err=1.32h
+  pred=16:35  actual=16:36  err=0.01h
+  pred=18:45  actual=19:28  err=0.72h
+  pred=20:54  actual=23:27  err=2.55h
+  pred=00:01  actual=02:30  err=2.47h
+  pred=03:08  actual=05:13  err=2.08h
+  pred=06:15  actual=08:48  err=2.55h
+  pred=09:22  actual=10:26  err=1.07h
+  pred=11:31  actual=11:41  err=0.16h
+
+Paired 10, mean timing error: 1.33h
+Feed count error: 1
 
 === FINAL SUMMARY ===
 
