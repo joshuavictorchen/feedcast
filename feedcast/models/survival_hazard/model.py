@@ -255,11 +255,16 @@ def forecast_survival_hazard(
     # Current state.
     last_event = events[-1]
     elapsed = (cutoff - last_event.time).total_seconds() / 3600
-    cutoff_hour = hour_of_day(cutoff)
 
-    # Select shape and scale for the current day-part.
-    current_shape = _shape_for_hour(cutoff_hour)
-    current_scale = overnight_scale if _is_overnight(cutoff_hour) else daytime_scale
+    # The first gap's day-part is anchored to when the gap started (the
+    # last feed), not the current wall clock. This prevents a discontinuity
+    # where waiting across an 08:00/20:00 boundary would jump to a
+    # different Weibull and increase the predicted remaining time.
+    last_feed_hour = hour_of_day(last_event.time)
+    current_shape = _shape_for_hour(last_feed_hour)
+    current_scale = (
+        overnight_scale if _is_overnight(last_feed_hour) else daytime_scale
+    )
 
     # First feed: conditional survival given elapsed time.
     time_to_first = _weibull_conditional_remaining(
@@ -292,7 +297,7 @@ def forecast_survival_hazard(
 
     diagnostics = _build_diagnostics(
         overnight_scale, daytime_scale, elapsed,
-        cutoff_hour, fit_details, recent_events,
+        last_feed_hour, fit_details, recent_events,
     )
 
     return Forecast(
@@ -313,7 +318,7 @@ def _build_diagnostics(
     overnight_scale: float,
     daytime_scale: float,
     elapsed_since_last: float,
-    cutoff_hour: float,
+    last_feed_hour: float,
     fit_details: list[dict],
     recent_events: list[FeedEvent],
 ) -> dict:
@@ -331,7 +336,7 @@ def _build_diagnostics(
         "daytime_median_hours": round(_weibull_median(DAYTIME_SHAPE, daytime_scale), 3),
         "daytime_fit_gaps": daytime_count,
         "elapsed_since_last_hours": round(elapsed_since_last, 3),
-        "cutoff_daypart": "overnight" if _is_overnight(cutoff_hour) else "daytime",
+        "first_gap_daypart": "overnight" if _is_overnight(last_feed_hour) else "daytime",
         "sim_volume_oz": round(
             float(np.median([e.volume_oz for e in recent_events])), 2
         ),

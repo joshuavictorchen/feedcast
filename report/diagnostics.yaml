@@ -1,4 +1,4 @@
-run_id: 20260324-122502
+run_id: 20260324-123151
 cutoff: '2026-03-23T11:41:13'
 featured_slug: consensus_blend
 forecasts:
@@ -222,7 +222,7 @@ forecasts:
     daytime_median_hours: 2.194
     daytime_fit_gaps: 37
     elapsed_since_last_hours: 0.0
-    cutoff_daypart: daytime
+    first_gap_daypart: daytime
     sim_volume_oz: 3.5
     total_fit_gaps: 64
     lookback_days: 7
@@ -301,6 +301,6 @@ retrospective:
   available: false
   same_dataset: true
   dataset_id_short: sha256:7b6cdd2f...
-  prior_run_id: 20260324-014714
+  prior_run_id: 20260324-122738
   observed_horizon_hours: 0.0
   results: []

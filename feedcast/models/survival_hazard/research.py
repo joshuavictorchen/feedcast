@@ -162,15 +162,8 @@ def _fit_weibull(
         }
 
 
-def _estimate_scale_closed_form(
-    gaps: np.ndarray, weights: np.ndarray, shape: float,
-) -> float:
-    """Closed-form MLE for Weibull scale given fixed shape.
-
-    λ_hat = (sum(w_i * t_i^k) / sum(w_i))^(1/k)
-    """
-    w_norm = weights / weights.sum()
-    return float((np.sum(w_norm * gaps ** shape)) ** (1.0 / shape))
+# Alias for backward compatibility within research script.
+_estimate_scale_closed_form = _estimate_scale
 
 
 # ====================================================================
@@ -676,17 +669,49 @@ def main() -> None:
         daypart_errors.append(abs(predicted - actual))
         daypart_weights_wf.append(w)
 
-        # 3-gap trajectory with daypart switching.
+        # Estimate both daypart scales for this event's lookback window.
+        night_g, night_w, day_g, day_w = [], [], [], []
+        for j in range(i):
+            if events[j].time < lookback_start or j + 1 > i:
+                continue
+            g = (events[j + 1].time - events[j].time).total_seconds() / 3600
+            if g <= 0:
+                continue
+            age = (event.time - events[j].time).total_seconds() / 3600
+            wt = math.exp(-decay * max(age, 0))
+            hj = hour_of_day(events[j].time)
+            if hj >= 20 or hj < 8:
+                night_g.append(g)
+                night_w.append(wt)
+            else:
+                day_g.append(g)
+                day_w.append(wt)
+        # Use all gaps as fallback for either daypart.
+        all_g_arr = np.array(night_g + day_g) if night_g or day_g else np.array(fit_g)
+        all_w_arr = np.array(night_w + day_w) if night_w or day_w else np.array(fit_w)
+        night_scale = (
+            _estimate_scale(np.array(night_g), np.array(night_w), k_night)
+            if len(night_g) >= 3
+            else _estimate_scale(all_g_arr, all_w_arr, k_night)
+        )
+        day_scale = (
+            _estimate_scale(np.array(day_g), np.array(day_w), k_day)
+            if len(day_g) >= 3
+            else _estimate_scale(all_g_arr, all_w_arr, k_day)
+        )
+
+        def _dp_scale(hour: float) -> float:
+            return night_scale if (hour >= 20 or hour < 8) else day_scale
+
+        # 3-gap trajectory with daypart switching using proper scales.
         if i + 3 < len(events):
-            sim_med_vol = float(np.median([e.volume_oz for e in events[max(0, i - 10):i + 1]]))
             preds = [predicted]
             sim_hour = h + predicted
             for _ in range(2):
                 sh = sim_hour % 24.0
                 sn = sh >= 20 or sh < 8
                 s_shape = k_night if sn else k_day
-                s_scale = scale_i  # Approximate: reuse the last estimated scale.
-                preds.append(_weibull_median(s_shape, s_scale))
+                preds.append(_weibull_median(s_shape, _dp_scale(sh)))
                 sim_hour += preds[-1]
             actuals_3 = [
                 (events[i + j + 1].time - events[i + j].time).total_seconds() / 3600
@@ -697,7 +722,7 @@ def main() -> None:
             ))))
             daypart_g3_weights.append(w)
 
-        # 24h feed count with daypart switching.
+        # 24h feed count with daypart switching using proper scales.
         sim_t = 0.0
         sim_count = 0
         sim_h = h
@@ -705,7 +730,7 @@ def main() -> None:
             sh = (sim_h + sim_t) % 24.0
             sn = sh >= 20 or sh < 8
             s_shape = k_night if sn else k_day
-            gap = _weibull_median(s_shape, scale_i)
+            gap = _weibull_median(s_shape, _dp_scale(sh))
             sim_t += gap
             if sim_t < 24.0:
                 sim_count += 1
@@ -766,9 +791,10 @@ def main() -> None:
     # ================================================================
     # SECTION 8: Most recent 24h holdout
     # ================================================================
-    log("=== MOST RECENT 24H PREDICTION (holdout) ===")
+    log("=== MOST RECENT 24H PREDICTION (holdout, day-part split) ===")
     log()
-    log("Parameters fit on pre-anchor data only (true holdout).")
+    log("Uses day-part split Weibull with conditional survival for first feed.")
+    log("Shapes fit on pre-anchor data only (true holdout).")
     log()
 
     forecast_start = cutoff - timedelta(hours=24)
@@ -783,37 +809,70 @@ def main() -> None:
             (pre_events[j + 1].time - pre_events[j].time).total_seconds() / 3600
             for j in range(len(pre_events) - 1)
         ])
-        pre_vols = np.array([pre_events[j].volume_oz for j in range(len(pre_events) - 1)])
+        pre_hours = np.array([
+            hour_of_day(pre_events[j].time) for j in range(len(pre_events) - 1)
+        ])
         pre_weights = np.array([
             math.exp(-decay * (anchor.time - pre_events[j].time).total_seconds() / 3600)
             for j in range(len(pre_events) - 1)
         ])
 
-        # Fit on pre-anchor data.
-        ho_fit = _fit_weibull(pre_gaps, pre_weights)
-        ho_k = ho_fit["shape"]
-        ho_lam = _estimate_scale_closed_form(
-            pre_gaps[-30:] if len(pre_gaps) > 30 else pre_gaps,
-            pre_weights[-30:] if len(pre_weights) > 30 else pre_weights,
-            ho_k,
-        )
+        # Fit separate day-part Weibulls on pre-anchor data.
+        ho_night_mask = (pre_hours >= 20) | (pre_hours < 8)
+        ho_day_mask = ~ho_night_mask
+
+        if ho_night_mask.sum() >= 3:
+            ho_night_fit = _fit_weibull(pre_gaps[ho_night_mask], pre_weights[ho_night_mask])
+            ho_k_night = ho_night_fit["shape"]
+        else:
+            ho_k_night = OVERNIGHT_SHAPE  # Fall back to research value.
+        if ho_day_mask.sum() >= 3:
+            ho_day_fit = _fit_weibull(pre_gaps[ho_day_mask], pre_weights[ho_day_mask])
+            ho_k_day = ho_day_fit["shape"]
+        else:
+            ho_k_day = DAYTIME_SHAPE
+
+        # Estimate scales from recent same-daypart gaps.
+        recent_pre = pre_gaps[-30:] if len(pre_gaps) > 30 else pre_gaps
+        recent_pre_h = pre_hours[-30:] if len(pre_hours) > 30 else pre_hours
+        recent_pre_w = pre_weights[-30:] if len(pre_weights) > 30 else pre_weights
+        rn_mask = (recent_pre_h >= 20) | (recent_pre_h < 8)
+        rd_mask = ~rn_mask
+        if rn_mask.sum() >= 3:
+            ho_night_scale = _estimate_scale(recent_pre[rn_mask], recent_pre_w[rn_mask], ho_k_night)
+        else:
+            ho_night_scale = _estimate_scale(recent_pre, recent_pre_w, ho_k_night)
+        if rd_mask.sum() >= 3:
+            ho_day_scale = _estimate_scale(recent_pre[rd_mask], recent_pre_w[rd_mask], ho_k_day)
+        else:
+            ho_day_scale = _estimate_scale(recent_pre, recent_pre_w, ho_k_day)
+
         log(f"Anchor: {anchor.time.strftime('%m/%d %H:%M')} vol={anchor.volume_oz:.1f}oz")
-        log(f"Holdout-fit: shape={ho_k:.4f} scale={ho_lam:.4f}")
-        log(f"  (vs full-data: shape={k_rec:.4f} scale={lam_rec:.4f})")
+        log(f"Holdout-fit overnight: shape={ho_k_night:.4f} scale={ho_night_scale:.4f} "
+            f"median={_weibull_median(ho_k_night, ho_night_scale):.3f}h")
+        log(f"Holdout-fit daytime:   shape={ho_k_day:.4f} scale={ho_day_scale:.4f} "
+            f"median={_weibull_median(ho_k_day, ho_day_scale):.3f}h")
         log()
 
-        # Simulate 24h forward.
-        sim_vol = float(np.median([e.volume_oz for e in pre_events[-15:]]))
+        def _ho_params(hour: float) -> tuple[float, float]:
+            if hour >= 20 or hour < 8:
+                return ho_k_night, ho_night_scale
+            return ho_k_day, ho_day_scale
+
+        # Simulate 24h forward with day-part switching and conditional first gap.
+        anchor_hour = hour_of_day(anchor.time)
+        first_shape, first_scale = _ho_params(anchor_hour)
+        # No elapsed time at anchor (we're simulating from the anchor event).
+        first_gap = _weibull_median(first_shape, first_scale)
+
         predicted_times = []
-        sim_t = 0.0
-        sim_v = anchor.volume_oz
-        # First gap: from anchor event.
-        gap = _weibull_median(ho_k, ho_lam)
-        sim_t += gap
+        sim_t = first_gap
         while sim_t < 24.0:
             pred_time = anchor.time + timedelta(hours=sim_t)
             predicted_times.append(pred_time)
-            gap = _weibull_median(ho_k, ho_lam)
+            pred_hour = hour_of_day(pred_time)
+            s_shape, s_scale = _ho_params(pred_hour)
+            gap = _weibull_median(s_shape, s_scale)
             sim_t += gap
 
         actual_times = [
