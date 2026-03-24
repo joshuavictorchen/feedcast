@@ -41,14 +41,11 @@ from .survival_hazard import (
     MODEL_SLUG as SURVIVAL_HAZARD_SLUG,
     forecast_survival_hazard,
 )
-from .shared import (
-    CONSENSUS_MATCH_WINDOW_MINUTES,
-    ForecastUnavailable,
-    normalize_forecast_points,
-)
+from .shared import ForecastUnavailable, normalize_forecast_points
 
 CONSENSUS_BLEND_NAME = "Consensus Blend"
 CONSENSUS_BLEND_SLUG = "consensus_blend"
+CONSENSUS_MATCH_WINDOW_MINUTES = 90
 CONSENSUS_BLEND_METHODOLOGY = """\
 Median-timestamp ensemble across the scripted base models. It does
 not align forecasts by feed index, because different models may

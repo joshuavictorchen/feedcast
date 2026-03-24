@@ -12,12 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from feedcast.data import (
-    ForecastPoint,
-    MIN_POINT_GAP_MINUTES,
-)
-
-CONSENSUS_MATCH_WINDOW_MINUTES = 90
+from feedcast.data import ForecastPoint, MIN_POINT_GAP_MINUTES
 
 
 class ForecastUnavailable(RuntimeError):
