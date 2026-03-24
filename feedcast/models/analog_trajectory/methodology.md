@@ -5,13 +5,16 @@ this before, and what happened next?" Instead of fitting a global
 function, the model treats each historical feed event as a reference
 state with a known 24-hour future trajectory.
 
-At forecast time the model summarizes the current state as a feature
-vector: recent gap and volume averages plus circular hour-of-day.
-It finds the most similar historical states using normalized Euclidean
-distance, weights them by a combination of proximity and recency
-(3-day half-life), and produces the forecast by averaging their
-actual future gap sequences. The predicted gaps are rolled forward
-from the cutoff time to produce absolute feed times.
+At forecast time the model summarizes the current state as a six-
+dimensional feature vector: last gap and last volume (instantaneous),
+rolling mean gap and rolling mean volume (computed over a 72-hour
+lookback window), and circular hour-of-day (sin/cos encoding). It
+finds the most similar historical states using weighted Euclidean
+distance with per-feature weights that emphasize hour-of-day over
+gap and volume. Neighbors are weighted by a combination of proximity
+and recency (36-hour half-life), and the forecast is produced by
+averaging their actual future gap sequences. The predicted gaps are
+rolled forward from the cutoff time to produce absolute feed times.
 
 Volume predictions use per-step weighted averages from the same
 neighbor trajectories. This lets volume reflect what actually happened

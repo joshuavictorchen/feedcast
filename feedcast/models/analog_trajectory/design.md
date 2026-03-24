@@ -1,76 +1,71 @@
 # Analog Trajectory Design Decisions
 
+## Tunable parameters
+
+All model parameters are tunable via research.py. The research script
+jointly sweeps all parameters in a single grid (no staged optimization)
+using leave-one-out evaluation with fold-causal normalization and
+full-trajectory comparison. Run research after new exports to validate
+or update constants in model.py.
+
+| Parameter | Value | Rationale |
+| --------- | ----- | --------- |
+| LOOKBACK_HOURS | 72 | 3-day rolling mean provides stable context |
+| FEATURE_WEIGHTS | hour_emphasis [1,1,1,1,2,2] | Hour-of-day is the strongest similarity signal |
+| K_NEIGHBORS | 7 | Consistent top performer across weight profiles |
+| RECENCY_HALF_LIFE_HOURS | 36 | Patterns shift fast enough that 36h beats longer half-lives |
+| TRAJECTORY_LENGTH_METHOD | median | Slight edge (0.748h) over mean (0.753h) on full trajectories |
+
 ## Feature selection
 
-The feature vector uses six dimensions: last gap, rolling 3-gap mean,
-last volume, rolling 3-volume mean, and circular hour-of-day (sin/cos).
+The feature vector uses six dimensions:
+- **last_gap** (instantaneous): gap before this event
+- **mean_gap** (72h lookback): mean of gaps within lookback window
+- **last_volume** (instantaneous): volume of this event
+- **mean_volume** (72h lookback): mean volume within lookback window
+- **sin_hour**, **cos_hour**: circular hour-of-day encoding
 
-Research (see research.py) tested seven feature combinations against
-leave-one-out MAE on the first predicted gap. Results:
+Feature weights control per-dimension influence on neighbor distance.
+The "hour_emphasis" profile (2.0 for sin/cos hour, 1.0 for all others)
+reflects that time-of-day is the strongest similarity signal in this
+dataset. Gap and volume features contribute equally at lower weight.
 
-| Features | k=3 MAE | k=5 MAE |
-| -------- | ------- | ------- |
-| gap+vol+mean+hour | 0.780h | 0.738h |
-| gap_mean+vol_mean+hour | 0.762h | 0.815h |
-| all (+ feeds_today) | 0.777h | 0.770h |
-| gap+vol+hour | 0.840h | 0.808h |
-| gap+vol | 0.873h | 0.876h |
-
-The six-feature set (gap+vol+mean+hour) with k=5 had the lowest
-gap1 MAE (0.738h) and traj3 MAE (0.766h). Adding feeds_today did
-not help; it adds a feature that changes discretely within a day
-and doesn't generalize well across days.
-
-## K=5 neighbors
-
-For the chosen six-feature set (gap+vol+mean+hour), k=5 had the
-lowest gap1 MAE (0.738h) and traj3 MAE (0.766h). Some other feature
-combos favored k=7, but k=5 was best or near-best across most
-configurations. k=3 is too sensitive to individual states; k=7
-starts averaging over dissimilar states given the small library
-size (~69 states).
+The top 20 configurations (out of 1,344 tested) are tightly clustered
+(0.748–0.763h full_traj_MAE), with k=7 and half_life=36h appearing in
+all of them. Lookback and weight profiles vary more, suggesting the
+model is relatively robust to those choices.
 
 ## Recency + distance weighting
 
-Three weighting approaches were tested:
+The combined weight is `recency / (distance + epsilon)` with a 36-hour
+half-life. Prior research also tested simple averaging and distance-only
+weighting; recency+distance was best. The current script optimizes the
+half-life parameter within the recency+distance approach.
 
-| Approach | k=5 MAE |
-| -------- | ------- |
-| recency + distance | 0.735h |
-| simple average | 0.738h |
-| distance only | 0.745h |
+## Gap-based trajectory alignment
 
-The combined weight is `recency / (distance + epsilon)` where recency
-uses a 72-hour (3-day) half-life. The improvement over simple averaging
-is modest but consistent, and the mechanism is sound: recent states
-better reflect the baby's current pattern.
-
-## Gap-based vs time-offset trajectory averaging
-
-Two alignment approaches were tested:
-
-- **Gap-based**: average the gap sequences, then roll forward
-- **Time-offset**: average absolute time offsets from each state
-
-Gap-based MAE was 0.766h vs time-offset at 1.321h. Gap-based is much
-better because trajectories with different starting times but similar
-cadences align well by gap, but poorly by absolute offset.
+Gap-based alignment (average gap sequences, then roll forward) significantly
+outperforms time-offset alignment (average absolute times). Gap-based
+full_traj MAE was 0.748h vs time-offset at ~1.96h across all top configs.
 
 ## Trajectory length
 
-The forecast uses the median trajectory length across neighbors. This
-avoids being pulled by unusually long or short trajectories. With
-current data, most states have 7-9 future events in 24 hours.
+The forecast uses the median trajectory length across neighbors. Median
+(0.748h) slightly outperforms mean (0.753h) and guards against outlier
+trajectories with unusual event counts.
 
 ## Bottle-only events
 
 Uses bottle-only events (merge_window_minutes=None). Breastfeeding
 volume estimation is noisy and the model uses volume as a similarity
 feature, not a causal input. Adding noise to similarity computation
-would degrade neighbor quality.
+would degrade neighbor quality. Revisit if the bottle/breast mix
+changes significantly.
 
 ## Minimum completeness threshold
 
 A state needs a future event at least 20 hours out to be "complete."
 This ensures trajectories represent a full daily cycle, not just a
-few hours before the export was taken.
+few hours before the export was taken. The model needs at least 10
+complete states to produce a forecast. Revisit if availability
+becomes an issue with future data.
