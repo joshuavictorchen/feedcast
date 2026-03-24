@@ -78,16 +78,12 @@ bottle feeds against the bottle feeds now visible in that export. Those
 retrospective results are stored in `tracker.json` and aggregated into a
 historical accuracy table in the report.
 
-The retrospective step uses the shared scorer in `feedcast/scoring.py`.
-The headline score is the geometric mean of:
-
-- a weighted count F1 score, so over- and under-predicting feeds both hurt
-- a weighted timing score on matched feeds, with soft decay instead of a hard
-  threshold
-
-Both components weight earlier feeds more heavily than later ones. Partial
-horizons are scored on the observed window only and reported with explicit
-coverage, so the unresolved tail is neither guessed nor silently ignored.
+The headline score is the geometric mean of a weighted count F1 (did you
+predict the right number of feeds?) and a weighted timing score (how close
+were the timestamps?). Both components weight earlier feeds more heavily.
+Partial horizons are scored on the observed window only and reported with
+explicit coverage. Full methodology:
+[`feedcast/evaluation/methodology.md`](feedcast/evaluation/methodology.md).
 
 ## Quick Start
 
@@ -162,8 +158,10 @@ feedcast/
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
       research_results.txt     Saved research output
+  evaluation/                  Retrospective forecast scoring
+    scoring.py                 Shared scorer (Hungarian matching, weighted F1 + timing)
+    methodology.md             Scoring design rationale and parameter choices
   agents.py                    Agent runner (points to repo-level agents/)
-  scoring.py                   Shared retrospective forecast scorer
   tracker.py                   Run persistence and retrospectives
   report.py                    Markdown rendering and atomic report swap
   plots.py                     Schedule and trajectory chart generation

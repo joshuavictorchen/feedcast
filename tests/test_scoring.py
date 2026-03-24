@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime, timedelta
 
 from feedcast.data import FeedEvent, ForecastPoint
-from feedcast.scoring import score_forecast
+from feedcast.evaluation.scoring import score_forecast
 
 
 def _point(cutoff: datetime, offset_hours: float) -> ForecastPoint:

@@ -22,7 +22,7 @@ from feedcast.data import (
     HORIZON_HOURS,
     build_feed_events,
 )
-from feedcast.scoring import (
+from feedcast.evaluation.scoring import (
     DEFAULT_HORIZON_WEIGHT_HALF_LIFE_HOURS,
     score_forecast,
 )
