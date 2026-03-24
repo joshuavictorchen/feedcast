@@ -130,24 +130,28 @@ feedcast/
     shared.py                  Shared utilities used across models
     slot_drift/                Daily template with per-slot drift
       model.py                 Model implementation
+      CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
       research_results.txt     Saved research output
     analog_trajectory/         Instance-based ML from similar states
       model.py                 Model implementation
+      CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
       research_results.txt     Saved research output
     latent_hunger/             Mechanistic hidden hunger state
       model.py                 Model implementation
+      CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
       research_results.txt     Saved research output
     survival_hazard/           Day-part Weibull survival model
       model.py                 Model implementation
+      CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
@@ -162,7 +166,9 @@ agents/
   run.sh                       Shell dispatcher for Claude/Codex CLIs
   prompt/prompt.md             Shared agent prompt
   claude/                      Claude persistent workspace
+    CHANGELOG.md               Reverse-chronological behavior changes
   codex/                       Codex persistent workspace
+    CHANGELOG.md               Reverse-chronological behavior changes
 exports/                       Raw Nara CSV drops (untracked)
 report/                        Latest report (tracked, committed)
 tracker.json                   Run history with predictions and retrospectives
@@ -181,10 +187,14 @@ under `feedcast/models/` with a standard set of files:
 | File | Purpose |
 | ---- | ------- |
 | `model.py` | Implementation. Exports `MODEL_NAME`, `MODEL_SLUG`, `MODEL_METHODOLOGY`, and a forecast function with signature `(history, cutoff, horizon_hours) -> Forecast`. Tuning constants live here, not in `shared.py`. |
+| `CHANGELOG.md` | Reverse-chronological behavior log. Update it whenever the model's behavior, assumptions, or tuning changes. Use a one-line summary with `Problem` and `Solution` sections. |
 | `methodology.md` | Report-facing text. Content before the first `##` heading is loaded by `load_methodology()` and rendered into the forecast report. |
 | `design.md` | Design decisions and rationale. Documents why the model works the way it does. |
 | `research.py` | Repeatable data analysis. Run with `.venv/bin/python -m feedcast.models.<name>.research`. Uses the same export selection, data parsing, and constants as the model so its output matches what the model sees. |
 | `research_results.txt` | Saved output from the research script. Committed for reproducibility. |
+
+**Update a model:** When you change a model's behavior, assumptions, or
+tuning, add a new top entry to that model's `CHANGELOG.md`.
 
 **Add a model:** Create the subdirectory with the files above, then add a
 `ModelSpec` entry to `feedcast/models/__init__.py`. See `slot_drift/` or
@@ -208,6 +218,9 @@ path.
 
 **Iterate on one agent's strategy:** Each agent's workspace persists across
 runs. Agents can keep durable strategy notes in separate workspace files.
+
+**Update an agent:** When you change an agent's behavior or instructions,
+add a new top entry to that agent's `CHANGELOG.md`.
 
 **Add or swap an agent:** Edit the `AGENTS` list in `feedcast/agents.py` and
 add a corresponding case to `agents/run.sh`.
