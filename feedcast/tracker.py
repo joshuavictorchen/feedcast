@@ -10,11 +10,10 @@ from __future__ import annotations
 import json
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
+from statistics import fmean
 from typing import Any
-
-import numpy as np
 
 from feedcast.data import (
     ExportSnapshot,
@@ -23,8 +22,7 @@ from feedcast.data import (
     HORIZON_HOURS,
     build_feed_events,
 )
-
-UNMATCHED_PENALTY_MINUTES = 180.0
+from feedcast.scoring import score_forecast
 
 
 @dataclass(frozen=True)
@@ -33,8 +31,12 @@ class RetrospectiveResult:
 
     name: str
     slug: str
-    first_feed_error_minutes: float | None
-    timing_mae_minutes: float | None
+    score: float | None
+    count_score: float | None
+    timing_score: float | None
+    predicted_feed_count: int
+    actual_feed_count: int
+    matched_feed_count: int
     status: str
 
 
@@ -58,8 +60,10 @@ class HistoricalAccuracySummary:
     slug: str
     comparison_count: int
     full_horizon_count: int
-    mean_first_feed_error_minutes: float | None
-    mean_timing_mae_minutes: float | None
+    mean_score: float | None
+    mean_count_score: float | None
+    mean_timing_score: float | None
+    mean_coverage_ratio: float | None
 
 
 def load_tracker(path: Path = Path("tracker.json")) -> dict[str, list[dict[str, Any]]]:
@@ -160,25 +164,14 @@ def compute_retrospective(
         current_snapshot.activities,
         merge_window_minutes=None,
     )
-    actual_after_cutoff = [
-        event for event in actual_events if event.time > prior_cutoff
-    ]
-
-    observed_horizon_hours = 0.0
-    if actual_after_cutoff:
-        observed_horizon_hours = max(
-            0.0,
-            min(
-                HORIZON_HOURS,
-                (actual_after_cutoff[-1].time - prior_cutoff).total_seconds() / 3600,
-            ),
-        )
-
-    actual_within_horizon = [
-        event
-        for event in actual_after_cutoff
-        if event.time <= prior_cutoff + timedelta(hours=HORIZON_HOURS)
-    ]
+    observed_horizon_hours = max(
+        0.0,
+        min(
+            HORIZON_HOURS,
+            (current_snapshot.latest_activity_time - prior_cutoff).total_seconds()
+            / 3600.0,
+        ),
+    )
 
     results: list[RetrospectiveResult] = []
     model_names = prior_run.get("model_names", {})
@@ -192,8 +185,12 @@ def compute_retrospective(
                 RetrospectiveResult(
                     name=name,
                     slug=slug,
-                    first_feed_error_minutes=None,
-                    timing_mae_minutes=None,
+                    score=None,
+                    count_score=None,
+                    timing_score=None,
+                    predicted_feed_count=0,
+                    actual_feed_count=0,
+                    matched_feed_count=0,
                     status="Unavailable in prior run",
                 )
             )
@@ -205,42 +202,53 @@ def compute_retrospective(
                 RetrospectiveResult(
                     name=name,
                     slug=slug,
-                    first_feed_error_minutes=None,
-                    timing_mae_minutes=None,
+                    score=None,
+                    count_score=None,
+                    timing_score=None,
+                    predicted_feed_count=0,
+                    actual_feed_count=0,
+                    matched_feed_count=0,
                     status="No predictions emitted",
                 )
             )
             continue
 
-        first_feed_error_minutes = None
-        if actual_within_horizon:
-            first_feed_error_minutes = (
-                abs(
-                    (
-                        predicted_points[0].time - actual_within_horizon[0].time
-                    ).total_seconds()
+        if observed_horizon_hours <= 0:
+            results.append(
+                RetrospectiveResult(
+                    name=name,
+                    slug=slug,
+                    score=None,
+                    count_score=None,
+                    timing_score=None,
+                    predicted_feed_count=0,
+                    actual_feed_count=0,
+                    matched_feed_count=0,
+                    status="No observed horizon yet",
                 )
-                / 60
             )
+            continue
 
-        timing_mae_minutes = None
-        status = "No bottle feeds observed yet"
-        if actual_within_horizon:
-            if observed_horizon_hours >= HORIZON_HOURS:
-                timing_mae_minutes, _, _ = _align_forecast_to_actual(
-                    predicted_points,
-                    actual_within_horizon,
-                )
-                status = "Full 24h observed"
-            else:
-                status = f"Partial horizon ({observed_horizon_hours:.1f}h observed)"
+        forecast_score = score_forecast(
+            predicted_points=predicted_points,
+            actual_events=actual_events,
+            prediction_time=prior_cutoff,
+            observed_until=current_snapshot.latest_activity_time,
+        )
+        status = "Full 24h observed"
+        if observed_horizon_hours < HORIZON_HOURS:
+            status = f"Partial horizon ({observed_horizon_hours:.1f}h observed)"
 
         results.append(
             RetrospectiveResult(
                 name=name,
                 slug=slug,
-                first_feed_error_minutes=first_feed_error_minutes,
-                timing_mae_minutes=timing_mae_minutes,
+                score=forecast_score.score,
+                count_score=forecast_score.count_score,
+                timing_score=forecast_score.timing_score,
+                predicted_feed_count=forecast_score.predicted_count,
+                actual_feed_count=forecast_score.actual_count,
+                matched_feed_count=forecast_score.matched_count,
                 status=status,
             )
         )
@@ -284,40 +292,63 @@ def summarize_retrospective_history(
                 slug,
                 {
                     "name": name,
-                    "first_feed_errors": [],
-                    "timing_errors": [],
+                    "scores": [],
+                    "count_scores": [],
+                    "timing_scores": [],
+                    "coverage_ratios": [],
+                    "full_horizon_count": 0,
                 },
             )
-            first_feed_error = _float_or_none(result.get("first_feed_error_minutes"))
-            timing_error = _float_or_none(result.get("timing_mae_minutes"))
-            if first_feed_error is not None:
-                aggregate["first_feed_errors"].append(first_feed_error)
-            if timing_error is not None:
-                aggregate["timing_errors"].append(timing_error)
+            score = _float_or_none(result.get("score"))
+            count_score = _float_or_none(result.get("count_score"))
+            timing_score = _float_or_none(result.get("timing_score"))
+            coverage_ratio = min(
+                1.0,
+                max(
+                    0.0,
+                    _float_or_none(retrospective.get("observed_horizon_hours")) or 0.0,
+                )
+                / HORIZON_HOURS,
+            )
+
+            if score is not None:
+                aggregate["scores"].append(score)
+                aggregate["coverage_ratios"].append(coverage_ratio)
+                if coverage_ratio >= 1.0:
+                    aggregate["full_horizon_count"] += 1
+            if count_score is not None:
+                aggregate["count_scores"].append(count_score)
+            if timing_score is not None:
+                aggregate["timing_scores"].append(timing_score)
 
     summaries: list[HistoricalAccuracySummary] = []
     for slug, aggregate in aggregates.items():
-        first_feed_errors = aggregate["first_feed_errors"]
-        timing_errors = aggregate["timing_errors"]
-        if not first_feed_errors and not timing_errors:
+        scores = aggregate["scores"]
+        count_scores = aggregate["count_scores"]
+        timing_scores = aggregate["timing_scores"]
+        coverage_ratios = aggregate["coverage_ratios"]
+        if not scores and not count_scores and not timing_scores:
             continue
 
         summaries.append(
             HistoricalAccuracySummary(
                 name=str(aggregate["name"]),
                 slug=slug,
-                comparison_count=len(first_feed_errors),
-                full_horizon_count=len(timing_errors),
-                mean_first_feed_error_minutes=_mean_or_none(first_feed_errors),
-                mean_timing_mae_minutes=_mean_or_none(timing_errors),
+                comparison_count=len(scores),
+                full_horizon_count=int(aggregate["full_horizon_count"]),
+                mean_score=_mean_or_none(scores),
+                mean_count_score=_mean_or_none(count_scores),
+                mean_timing_score=_mean_or_none(timing_scores),
+                mean_coverage_ratio=_mean_or_none(coverage_ratios),
             )
         )
 
     return sorted(
         summaries,
         key=lambda summary: (
-            _sortable_metric(summary.mean_first_feed_error_minutes),
-            _sortable_metric(summary.mean_timing_mae_minutes),
+            -_sortable_score(summary.mean_score),
+            -_sortable_score(summary.mean_timing_score),
+            -_sortable_score(summary.mean_count_score),
             summary.name,
         ),
     )
@@ -335,10 +366,12 @@ def _serialize_retrospective(retrospective: Retrospective) -> dict[str, Any]:
             {
                 "name": result.name,
                 "slug": result.slug,
-                "first_feed_error_minutes": _round_or_none(
-                    result.first_feed_error_minutes
-                ),
-                "timing_mae_minutes": _round_or_none(result.timing_mae_minutes),
+                "score": _round_or_none(result.score),
+                "count_score": _round_or_none(result.count_score),
+                "timing_score": _round_or_none(result.timing_score),
+                "predicted_feed_count": result.predicted_feed_count,
+                "actual_feed_count": result.actual_feed_count,
+                "matched_feed_count": result.matched_feed_count,
                 "status": result.status,
             }
             for result in retrospective.results
@@ -360,102 +393,6 @@ def _deserialize_forecast_points(
             )
         )
     return points
-
-
-def _align_forecast_to_actual(
-    predicted: list[ForecastPoint],
-    actual: list[Any],
-) -> tuple[float | None, int, int]:
-    """Align two ordered feed sequences with an order-preserving dynamic program.
-
-    This is an edit-distance style alignment over two time-ordered feed lists.
-    At each cell (i, j) the DP chooses the cheapest of three moves:
-
-      - Match: pair predicted[i] with actual[j]; cost = abs time difference.
-      - Skip predicted: leave predicted[i] unmatched; cost = UNMATCHED_PENALTY.
-      - Skip actual: leave actual[j] unmatched; cost = UNMATCHED_PENALTY.
-
-    After filling the table, the traceback recovers the optimal alignment and
-    returns the mean timing error across matched pairs.
-    """
-    if not predicted and not actual:
-        return None, 0, 0
-
-    predicted_count = len(predicted)
-    actual_count = len(actual)
-
-    # dp[i][j] = minimum total cost to align predicted[:i] with actual[:j].
-    # step[i][j] records which move was taken to reach (i, j).
-    dp = np.full((predicted_count + 1, actual_count + 1), np.inf)
-    step = np.empty((predicted_count + 1, actual_count + 1), dtype=object)
-    dp[0, 0] = 0.0
-
-    # Forward pass: fill the cost table.
-    for predicted_index in range(predicted_count + 1):
-        for actual_index in range(actual_count + 1):
-            base_cost = dp[predicted_index, actual_index]
-            if np.isinf(base_cost):
-                continue
-
-            if predicted_index < predicted_count and actual_index < actual_count:
-                match_cost = (
-                    abs(
-                        (
-                            predicted[predicted_index].time - actual[actual_index].time
-                        ).total_seconds()
-                    )
-                    / 60
-                )
-                if base_cost + match_cost < dp[predicted_index + 1, actual_index + 1]:
-                    dp[predicted_index + 1, actual_index + 1] = base_cost + match_cost
-                    step[predicted_index + 1, actual_index + 1] = "match"
-
-            if predicted_index < predicted_count:
-                skip_predicted_cost = base_cost + UNMATCHED_PENALTY_MINUTES
-                if skip_predicted_cost < dp[predicted_index + 1, actual_index]:
-                    dp[predicted_index + 1, actual_index] = skip_predicted_cost
-                    step[predicted_index + 1, actual_index] = "skip_predicted"
-
-            if actual_index < actual_count:
-                skip_actual_cost = base_cost + UNMATCHED_PENALTY_MINUTES
-                if skip_actual_cost < dp[predicted_index, actual_index + 1]:
-                    dp[predicted_index, actual_index + 1] = skip_actual_cost
-                    step[predicted_index, actual_index + 1] = "skip_actual"
-
-    # Backward pass: trace back through the step table to recover the alignment.
-    predicted_index = predicted_count
-    actual_index = actual_count
-    matched_time_errors: list[float] = []
-    unmatched_predicted = 0
-    unmatched_actual = 0
-
-    while predicted_index > 0 or actual_index > 0:
-        action = step[predicted_index, actual_index]
-        if action == "match":
-            matched_time_errors.append(
-                abs(
-                    (
-                        predicted[predicted_index - 1].time
-                        - actual[actual_index - 1].time
-                    ).total_seconds()
-                )
-                / 60
-            )
-            predicted_index -= 1
-            actual_index -= 1
-            continue
-        if action == "skip_predicted":
-            unmatched_predicted += 1
-            predicted_index -= 1
-            continue
-        if action == "skip_actual":
-            unmatched_actual += 1
-            actual_index -= 1
-            continue
-        break
-
-    matched_time_errors.reverse()
-    return _mean_or_none(matched_time_errors), unmatched_predicted, unmatched_actual
 
 
 def _git_commit() -> str:
@@ -509,7 +446,7 @@ def _mean_or_none(values: list[float]) -> float | None:
     """Return the arithmetic mean or None for empty input."""
     if not values:
         return None
-    return float(np.mean(values))
+    return float(fmean(values))
 
 
 def _round_or_none(value: float | None) -> float | None:
@@ -519,6 +456,6 @@ def _round_or_none(value: float | None) -> float | None:
     return round(value, 3)
 
 
-def _sortable_metric(value: float | None) -> float:
-    """Convert a missing metric to infinity for stable sorting."""
-    return float("inf") if value is None else value
+def _sortable_score(value: float | None) -> float:
+    """Convert missing scores to a sentinel that sorts last."""
+    return float("-inf") if value is None else value

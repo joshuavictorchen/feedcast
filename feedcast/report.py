@@ -23,6 +23,7 @@ from feedcast.data import (
     ExportSnapshot,
     FeedEvent,
     Forecast,
+    HORIZON_HOURS,
 )
 from feedcast.plots import write_schedule_plot, write_spaghetti_plot
 from feedcast.tracker import HistoricalAccuracySummary, Retrospective
@@ -146,8 +147,10 @@ def _render_report(
                 "name": row.name,
                 "comparisons": row.comparison_count,
                 "full_horizon": row.full_horizon_count,
-                "first_feed_display": _fmt_minutes(row.mean_first_feed_error_minutes),
-                "timing_mae_display": _fmt_minutes(row.mean_timing_mae_minutes),
+                "score_display": _fmt_score(row.mean_score),
+                "count_display": _fmt_score(row.mean_count_score),
+                "timing_display": _fmt_score(row.mean_timing_score),
+                "coverage_display": _fmt_ratio(row.mean_coverage_ratio),
             }
             for row in historical_accuracy
         ],
@@ -224,11 +227,22 @@ def _prepare_retrospective(retrospective: Retrospective) -> dict[str, Any]:
         "dataset_id_short": retrospective.dataset_id_short,
         "prior_run_id": retrospective.prior_run_id,
         "observed_horizon_hours": retrospective.observed_horizon_hours,
+        "coverage_display": _fmt_ratio(
+            retrospective.observed_horizon_hours / HORIZON_HOURS
+            if retrospective.available
+            else None
+        ),
         "results": [
             {
                 "name": result.name,
-                "first_feed_display": _fmt_minutes(result.first_feed_error_minutes),
-                "timing_mae_display": _fmt_minutes(result.timing_mae_minutes),
+                "score_display": _fmt_score(result.score),
+                "count_display": _fmt_score(result.count_score),
+                "timing_display": _fmt_score(result.timing_score),
+                "feeds_display": (
+                    f"{result.predicted_feed_count}/{result.actual_feed_count}/{result.matched_feed_count}"
+                    if result.score is not None
+                    else "n/a"
+                ),
                 "status": result.status,
             }
             for result in retrospective.results
@@ -269,8 +283,12 @@ def _write_diagnostics(
                 {
                     "name": result.name,
                     "slug": result.slug,
-                    "first_feed_error_minutes": result.first_feed_error_minutes,
-                    "timing_mae_minutes": result.timing_mae_minutes,
+                    "score": result.score,
+                    "count_score": result.count_score,
+                    "timing_score": result.timing_score,
+                    "predicted_feed_count": result.predicted_feed_count,
+                    "actual_feed_count": result.actual_feed_count,
+                    "matched_feed_count": result.matched_feed_count,
                     "status": result.status,
                 }
                 for result in retrospective.results
@@ -364,9 +382,14 @@ def _clean_value(value: Any) -> Any:
     return str(value)
 
 
-def _fmt_minutes(value: float | None) -> str:
-    """Format a minutes metric for display."""
-    return "n/a" if value is None else f"{value:.0f} min"
+def _fmt_score(value: float | None) -> str:
+    """Format a 0-100 score for display."""
+    return "n/a" if value is None else f"{value:.1f}"
+
+
+def _fmt_ratio(value: float | None) -> str:
+    """Format a unit interval as a percentage."""
+    return "n/a" if value is None else f"{value * 100:.0f}%"
 
 
 def _git_commit_display(tracker_meta: dict[str, Any]) -> str:

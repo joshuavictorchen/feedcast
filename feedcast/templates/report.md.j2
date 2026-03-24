@@ -40,16 +40,17 @@ No prior run available yet.
 Comparing prior run `{{ retrospective.prior_run_id }}` predictions
 against actual bottle feeds observed in the current export
 (observed horizon:
-{{ "%.1f" | format(retrospective.observed_horizon_hours) }}h).
+{{ "%.1f" | format(retrospective.observed_horizon_hours) }}h,
+coverage: {{ retrospective.coverage_display }}).
 
-| Model | 1st-Feed Error | 24h MAE | Status |
-| ----- | -------------- | ------- | ------ |
+| Model | Score | Count | Timing | Pred/Actual/Matched | Status |
+| ----- | ----- | ----- | ------ | ------------------- | ------ |
 {% for result in retrospective.results -%}
-| {{ result.name }} | {{ result.first_feed_display }} | {{ result.timing_mae_display }} | {{ result.status }} |
+| {{ result.name }} | {{ result.score_display }} | {{ result.count_display }} | {{ result.timing_display }} | {{ result.feeds_display }} | {{ result.status }} |
 {% endfor %}
 {% if retrospective.observed_horizon_hours < 24 %}
-Partial horizon only. Full-24h MAE is unavailable until a
-complete 24-hour window is observed.
+Scores are normalized to the observed window. Coverage shows how much of
+the 24-hour horizon has actually resolved so far.
 {% endif -%}
 {% endif %}
 
@@ -59,10 +60,10 @@ complete 24-hour window is observed.
 Aggregated from stored prior-run retrospectives. These scores
 reflect the model versions that made those earlier predictions.
 
-| Model | Comparisons | Full 24h Runs | Mean 1st-Feed Error | Mean 24h MAE |
-| ----- | ----------- | ------------- | ------------------- | ------------ |
+| Model | Comparisons | Full 24h Runs | Mean Score | Mean Count | Mean Timing | Avg Coverage |
+| ----- | ----------- | ------------- | ---------- | ---------- | ----------- | ------------ |
 {% for row in historical_accuracy -%}
-| {{ row.name }} | {{ row.comparisons }} | {{ row.full_horizon }} | {{ row.first_feed_display }} | {{ row.timing_mae_display }} |
+| {{ row.name }} | {{ row.comparisons }} | {{ row.full_horizon }} | {{ row.score_display }} | {{ row.count_display }} | {{ row.timing_display }} | {{ row.coverage_display }} |
 {% endfor %}
 {% else -%}
 No completed retrospective history yet.

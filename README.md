@@ -79,6 +79,17 @@ feeds observed in the new export. Over time, these results accumulate in
 `tracker.json` and are aggregated into a historical accuracy table in the
 report.
 
+Retrospectives use a shared scorer in `feedcast/scoring.py`. The headline
+score is the geometric mean of:
+
+- a weighted count F1 score, so over- and under-predicting feeds both hurt
+- a weighted timing score on matched feeds, with soft decay instead of a hard
+  threshold
+
+Both components weight earlier feeds more heavily than later ones. Partial
+horizons are scored on the observed window only and reported with explicit
+coverage, so the unresolved tail is neither guessed nor silently ignored.
+
 The featured forecast defaults to the consensus blend. If it's unavailable,
 the pipeline falls back to a static tiebreaker. Reruns against the same
 dataset replace the latest tracker entry instead of appending another copy.
@@ -157,6 +168,7 @@ feedcast/
       research.py              Repeatable data analysis
       research_results.txt     Saved research output
   agents.py                    Agent runner (points to repo-level agents/)
+  scoring.py                   Shared retrospective forecast scorer
   tracker.py                   Run persistence and retrospectives
   report.py                    Markdown rendering and atomic report swap
   plots.py                     Schedule and trajectory chart generation
