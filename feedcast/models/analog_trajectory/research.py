@@ -286,6 +286,86 @@ def main() -> None:
             )
     log()
 
+    # --- Gap-based vs time-offset trajectory alignment ---
+    log("=== GAP-BASED VS TIME-OFFSET ALIGNMENT (k=5) ===")
+    log()
+
+    feat_normed_align = (feat_matrix - feat_means) / feat_stds
+    gap_errors: list[float] = []
+    offset_errors: list[float] = []
+
+    for test_idx in range(10, len(complete_states)):
+        test_state = complete_states[test_idx]
+        test_vec = feat_normed_align[test_idx]
+        candidates = [
+            (i, float(np.linalg.norm(test_vec - feat_normed_align[i])))
+            for i in range(test_idx)
+        ]
+        candidates.sort(key=lambda x: x[1])
+        nearest = candidates[:5]
+
+        # Actual first 3 gaps.
+        actual_gaps_align: list[float] = []
+        for j in range(min(3, len(test_state["future_events"]))):
+            prev = (
+                test_state["time"]
+                if j == 0
+                else test_state["future_events"][j - 1].time
+            )
+            actual_gaps_align.append(
+                (test_state["future_events"][j].time - prev).total_seconds() / 3600
+            )
+
+        # Actual first 3 time offsets from state.
+        actual_offsets: list[float] = [
+            (fe.time - test_state["time"]).total_seconds() / 3600
+            for fe in test_state["future_events"][:3]
+        ]
+
+        # Gap-based: average gaps, compare.
+        nn_gap_trajs: list[list[float]] = []
+        for ni, _ in nearest:
+            ns = complete_states[ni]
+            ng: list[float] = []
+            for j in range(min(3, len(ns["future_events"]))):
+                prev = ns["time"] if j == 0 else ns["future_events"][j - 1].time
+                ng.append((ns["future_events"][j].time - prev).total_seconds() / 3600)
+            if len(ng) == 3:
+                nn_gap_trajs.append(ng)
+
+        # Time-offset: average absolute offsets, compare.
+        nn_offset_trajs: list[list[float]] = []
+        for ni, _ in nearest:
+            ns = complete_states[ni]
+            offsets = [
+                (fe.time - ns["time"]).total_seconds() / 3600
+                for fe in ns["future_events"][:3]
+            ]
+            if len(offsets) == 3:
+                nn_offset_trajs.append(offsets)
+
+        if nn_gap_trajs and len(actual_gaps_align) == 3:
+            avg_gaps = np.mean(nn_gap_trajs, axis=0)
+            gap_errors.append(
+                float(np.mean(np.abs(np.array(actual_gaps_align) - avg_gaps)))
+            )
+
+        if nn_offset_trajs and len(actual_offsets) == 3:
+            avg_offsets = np.median(nn_offset_trajs, axis=0)
+            offset_errors.append(
+                float(np.mean(np.abs(np.array(actual_offsets) - avg_offsets)))
+            )
+
+    log(
+        f"Gap-based alignment:    traj3_MAE={np.mean(gap_errors):.3f}h "
+        f"(n={len(gap_errors)})"
+    )
+    log(
+        f"Time-offset alignment:  traj3_MAE={np.mean(offset_errors):.3f}h "
+        f"(n={len(offset_errors)})"
+    )
+    log()
+
     # --- Leave-one-out neighbor quality ---
     log("=== RECENT STATE NEIGHBOR QUALITY (last 10 complete states) ===")
     log()

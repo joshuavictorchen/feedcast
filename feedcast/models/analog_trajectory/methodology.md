@@ -19,5 +19,6 @@ in analogous situations rather than relying on a global time-of-day
 profile.
 
 Uses bottle-only events (no breastfeed merge). The model needs at
-least 10 historical states with complete 24-hour futures to produce
-a forecast.
+least 10 historical states whose trajectories extend at least 20
+hours past the state time (with at least 3 future events) to
+produce a forecast.

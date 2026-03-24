@@ -89,7 +89,16 @@ def forecast_analog_trajectory(
     )
 
     # Blend neighbor trajectories into a forecast.
-    points = _blend_trajectories(neighbors, cutoff, horizon_hours)
+    # The cutoff may be later than the last bottle event (e.g., if a
+    # breastfeed ended after the last bottle). The blended gaps measure
+    # time from last bottle to next bottle, so we subtract the elapsed
+    # time since the last bottle from the first blended gap.
+    elapsed_since_last_bottle = (
+        cutoff - history[-1].time
+    ).total_seconds() / 3600
+    points = _blend_trajectories(
+        neighbors, cutoff, horizon_hours, elapsed_since_last_bottle,
+    )
 
     return Forecast(
         name=MODEL_NAME,
@@ -98,6 +107,7 @@ def forecast_analog_trajectory(
         methodology=MODEL_METHODOLOGY,
         diagnostics=_build_diagnostics(
             query, neighbors, complete_states, feature_means, feature_stds,
+            elapsed_since_last_bottle,
         ),
     )
 
@@ -259,12 +269,17 @@ def _blend_trajectories(
     neighbors: list[dict],
     cutoff: datetime,
     horizon_hours: int,
+    elapsed_since_last_bottle: float,
 ) -> list[ForecastPoint]:
     """Blend neighbor trajectories into forecast points.
 
     Each neighbor's trajectory is represented as a sequence of (gap, volume)
     pairs. The blended forecast averages these gap-by-gap using neighbor
     weights, then rolls forward from the cutoff to produce absolute times.
+
+    The first blended gap is reduced by elapsed_since_last_bottle to account
+    for time already passed between the last bottle and the cutoff (which
+    may differ when the latest activity is a breastfeed).
     """
     # Extract gap/volume trajectories from each neighbor.
     trajectories: list[list[tuple[float, float]]] = []
@@ -319,6 +334,11 @@ def _blend_trajectories(
         blended_gap = float(np.average(step_gaps, weights=step_weight_array))
         blended_volume = float(np.average(step_volumes, weights=step_weight_array))
 
+        # On the first step, subtract time already elapsed since the last
+        # bottle so the forecast starts from cutoff, not from the last bottle.
+        if step == 0 and elapsed_since_last_bottle > 0:
+            blended_gap = blended_gap - elapsed_since_last_bottle
+
         # Enforce minimum gap to avoid degenerate predictions.
         blended_gap = max(blended_gap, 0.5)
         blended_volume = max(blended_volume, 0.5)
@@ -350,6 +370,7 @@ def _build_diagnostics(
     complete_states: list[dict],
     feature_means: np.ndarray,
     feature_stds: np.ndarray,
+    elapsed_since_last_bottle: float,
 ) -> dict:
     """Build diagnostics dict for the report and debugging."""
     feature_names = [
@@ -360,6 +381,7 @@ def _build_diagnostics(
     return {
         "complete_states": len(complete_states),
         "k_neighbors": K_NEIGHBORS,
+        "elapsed_since_last_bottle_hours": round(elapsed_since_last_bottle, 3),
         "query_features": {
             name: round(float(val), 3)
             for name, val in zip(feature_names, query["features"])

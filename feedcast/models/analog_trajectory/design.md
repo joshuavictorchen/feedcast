@@ -23,9 +23,12 @@ and doesn't generalize well across days.
 
 ## K=5 neighbors
 
-k=5 consistently outperformed k=3 and k=7 across all feature combos.
-k=3 is too sensitive to individual states; k=7 starts averaging over
-dissimilar states given the small library size (~69 states).
+For the chosen six-feature set (gap+vol+mean+hour), k=5 had the
+lowest gap1 MAE (0.738h) and traj3 MAE (0.766h). Some other feature
+combos favored k=7, but k=5 was best or near-best across most
+configurations. k=3 is too sensitive to individual states; k=7
+starts averaging over dissimilar states given the small library
+size (~69 states).
 
 ## Recency + distance weighting
 

@@ -2,7 +2,7 @@ Export: exports/export_narababy_silas_20260323.csv
 Dataset: sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0
 Cutoff: 2026-03-23 11:41:13
 Total bottle events: 81
-Run: 2026-03-23T23:52:51
+Run: 2026-03-24T00:03:01
 
 === STATE LIBRARY ===
 
@@ -51,6 +51,11 @@ dist_weighted             k=7: gap1_MAE=0.761h  (n=59)
 recency+dist_weighted     k=3: gap1_MAE=0.773h  (n=59)
 recency+dist_weighted     k=5: gap1_MAE=0.735h  (n=59)
 recency+dist_weighted     k=7: gap1_MAE=0.746h  (n=59)
+
+=== GAP-BASED VS TIME-OFFSET ALIGNMENT (k=5) ===
+
+Gap-based alignment:    traj3_MAE=0.766h (n=59)
+Time-offset alignment:  traj3_MAE=1.321h (n=59)
 
 === RECENT STATE NEIGHBOR QUALITY (last 10 complete states) ===
 
