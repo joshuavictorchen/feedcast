@@ -70,7 +70,7 @@ never auto-featured.
 | Run Agents | Claude and Codex produce independent forecasts (optional) |
 | Retrospective | Score the prior run's predictions against newly observed actuals |
 | Render Report | Generate the markdown report, charts, and diagnostics |
-| Save Tracker | Append predictions and retrospective to `tracker.json` |
+| Save Tracker | Persist predictions and retrospective to `tracker.json` |
 
 ## Evaluation
 
@@ -81,7 +81,8 @@ feeds observed in the new export. Over time, these results accumulate in
 report.
 
 The featured forecast defaults to the consensus blend. If it's unavailable,
-the pipeline falls back to a static tiebreaker.
+the pipeline falls back to a static tiebreaker. Reruns against the same
+dataset replace the latest tracker entry instead of appending another copy.
 
 ## Quick Start
 
@@ -133,11 +134,13 @@ feedcast/
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
+      research_results.txt     Saved research output
     analog_trajectory/         Instance-based ML from similar states
       model.py                 Model implementation
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
+      research_results.txt     Saved research output
   agents.py                    Agent runner (points to repo-level agents/)
   tracker.py                   Run persistence and retrospectives
   report.py                    Markdown rendering and atomic report swap
@@ -207,7 +210,7 @@ add a corresponding case to `agents/run.sh`.
 | Featured forecast | Consensus > static tiebreaker | Simple default; manually overridable via `FEATURED_DEFAULT` |
 | Agent failure | Fail fast | Use `--skip-agents` to work around; no silent fallback |
 | Model registration | Explicit `MODELS` list | No auto-discovery; you see what runs by reading one list |
-| Report tracking | `report/` and `tracker.json` committed | One workspace; latest report always accessible; diffs are readable |
+| Report tracking | `report/` and `tracker.json` committed | One workspace; latest report always accessible; tracker keeps the latest run per dataset rather than every retry |
 | Exports | Untracked raw drops | Reproducibility via `tracker.json` dataset fingerprints |
 | Report write | Atomic swap with rollback | If rendering fails, the prior report is preserved |
 

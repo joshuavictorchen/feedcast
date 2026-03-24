@@ -75,9 +75,14 @@ def load_tracker(path: Path = Path("tracker.json")) -> dict[str, list[dict[str, 
 
 
 def save_run(path: Path, run_entry: dict[str, Any]) -> None:
-    """Append one completed run entry to tracker history."""
+    """Persist one completed run entry to tracker history.
+
+    Consecutive reruns against the same dataset replace the prior entry
+    instead of appending. This keeps committed history focused on new
+    observations rather than iterative retries on the same export.
+    """
     tracker = load_tracker(path)
-    tracker["runs"].append(run_entry)
+    tracker["runs"] = _compact_run_history([*tracker["runs"], run_entry])
     path.write_text(json.dumps(tracker, indent=2) + "\n", encoding="utf-8")
 
 
@@ -114,6 +119,22 @@ def build_run_entry(
         "predictions": predictions,
         "retrospective": _serialize_retrospective(retrospective),
     }
+
+
+def _compact_run_history(runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse consecutive reruns of the same dataset to the latest entry."""
+    compacted: list[dict[str, Any]] = []
+    for run in runs:
+        dataset_id = run.get("dataset_id")
+        if (
+            compacted
+            and isinstance(dataset_id, str)
+            and compacted[-1].get("dataset_id") == dataset_id
+        ):
+            compacted[-1] = run
+            continue
+        compacted.append(run)
+    return compacted
 
 
 def compute_retrospective(
