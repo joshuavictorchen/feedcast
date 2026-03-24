@@ -40,6 +40,7 @@ dataset.
 | Model | Approach |
 | ----- | -------- |
 | Slot Drift | Daily template with per-slot drift tracking and Hungarian matching |
+| Analog Trajectory | Instance-based ML: finds similar historical states and averages their futures |
 | Recent Cadence | Recency-weighted interval between full feeds, rolled forward at constant gap |
 | Phase Nowcast Hybrid | Phase-locked oscillator backbone with local regression nowcast for the first gap |
 | Gap-Conditional | Weighted linear regression on event state, rolled forward autoregressively |
@@ -128,6 +129,11 @@ feedcast/
     notes.md                   Brainstorm notes, observations, and model ideas
     shared.py                  Shared utilities used across models
     slot_drift/                Daily template with per-slot drift
+      model.py                 Model implementation
+      methodology.md           Report methodology text
+      design.md                Design decisions and rationale
+      research.py              Repeatable data analysis
+    analog_trajectory/         Instance-based ML from similar states
       model.py                 Model implementation
       methodology.md           Report methodology text
       design.md                Design decisions and rationale

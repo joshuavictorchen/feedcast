@@ -35,6 +35,12 @@ from .recent_cadence import (
     MODEL_SLUG as RECENT_CADENCE_SLUG,
     forecast_recent_cadence,
 )
+from .analog_trajectory import (
+    MODEL_METHODOLOGY as ANALOG_TRAJECTORY_METHODOLOGY,
+    MODEL_NAME as ANALOG_TRAJECTORY_NAME,
+    MODEL_SLUG as ANALOG_TRAJECTORY_SLUG,
+    forecast_analog_trajectory,
+)
 from .slot_drift import (
     MODEL_METHODOLOGY as SLOT_DRIFT_METHODOLOGY,
     MODEL_NAME as SLOT_DRIFT_NAME,
@@ -91,6 +97,13 @@ MODELS = [
         forecast_fn=forecast_slot_drift,
     ),
     ModelSpec(
+        name=ANALOG_TRAJECTORY_NAME,
+        slug=ANALOG_TRAJECTORY_SLUG,
+        methodology=ANALOG_TRAJECTORY_METHODOLOGY,
+        merge_window_minutes=None,
+        forecast_fn=forecast_analog_trajectory,
+    ),
+    ModelSpec(
         name=RECENT_CADENCE_NAME,
         slug=RECENT_CADENCE_SLUG,
         methodology=RECENT_CADENCE_METHODOLOGY,
@@ -115,6 +128,7 @@ MODELS = [
 
 STATIC_FEATURED_TIEBREAKER = [
     SLOT_DRIFT_SLUG,
+    ANALOG_TRAJECTORY_SLUG,
     PHASE_NOWCAST_SLUG,
     GAP_CONDITIONAL_SLUG,
     RECENT_CADENCE_SLUG,
