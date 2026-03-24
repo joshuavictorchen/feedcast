@@ -167,19 +167,19 @@ feedcast/
   evaluation/                  Retrospective forecast scoring
     scoring.py                 Shared scorer (Hungarian matching, weighted F1 + timing)
     methodology.md             Scoring design rationale and parameter choices
-  agents.py                    Agent runner (points to repo-level agents/)
+  agents/                      LLM agent workspaces, prompt, and runner
+    __init__.py                Agent orchestration and output validation
+    run.sh                     Shell dispatcher for Claude/Codex CLIs
+    prompt/prompt.md           Shared agent prompt
+    claude/                    Claude persistent workspace
+      CHANGELOG.md             Reverse-chronological behavior changes
+    codex/                     Codex persistent workspace
+      CHANGELOG.md             Reverse-chronological behavior changes
   tracker.py                   Run persistence and retrospectives
   report.py                    Markdown rendering and atomic report swap
   plots.py                     Schedule and trajectory chart generation
   templates/
     report.md.j2               Jinja2 report template
-agents/
-  run.sh                       Shell dispatcher for Claude/Codex CLIs
-  prompt/prompt.md             Shared agent prompt
-  claude/                      Claude persistent workspace
-    CHANGELOG.md               Reverse-chronological behavior changes
-  codex/                       Codex persistent workspace
-    CHANGELOG.md               Reverse-chronological behavior changes
 exports/                       Raw Nara CSV drops (untracked)
 report/                        Latest report (tracked, committed)
 tracker.json                   Run history with predictions and retrospectives
@@ -251,9 +251,9 @@ are not model concepts.
 
 ## Working with Agents
 
-**Edit the shared prompt:** Modify `agents/prompt/prompt.md`. Both agents
-receive the same prompt, prepended with the resolved export path and workspace
-path.
+**Edit the shared prompt:** Modify `feedcast/agents/prompt/prompt.md`. Both
+agents receive the same prompt, prepended with the resolved export path and
+workspace path.
 
 **Iterate on one agent's strategy:** Each agent's workspace persists across
 runs. Agents can keep durable strategy notes in separate workspace files.
@@ -265,8 +265,8 @@ inform an approach, but they are not requirements.
 **Update an agent:** When you change an agent's behavior or instructions,
 add a new top entry to that agent's `CHANGELOG.md`.
 
-**Add or swap an agent:** Edit the `AGENTS` list in `feedcast/agents.py` and
-add a corresponding case to `agents/run.sh`.
+**Add or swap an agent:** Edit the `AGENTS` list in `feedcast/agents/__init__.py`
+and add a corresponding case to `feedcast/agents/run.sh`.
 
 ## Design Decisions
 

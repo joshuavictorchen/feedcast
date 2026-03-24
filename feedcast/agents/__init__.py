@@ -1,8 +1,7 @@
-"""Run the repo-level Claude and Codex forecasting workspaces.
+"""Run the Claude and Codex forecasting workspaces.
 
-The agent code here is importable package logic. The mutable workspaces,
-shared prompt, and shell dispatcher stay in the top-level `agents/` directory
-so they remain easy to inspect and edit directly.
+Mutable workspaces, the shared prompt, and the shell dispatcher live alongside
+this module in `feedcast/agents/`.
 """
 
 from __future__ import annotations
@@ -204,10 +203,10 @@ def _remove_stale_outputs(*paths: Path) -> None:
 
 
 def _agents_dir() -> Path:
-    """Return the repo-level tracked agents directory."""
-    return _repo_root() / "agents"
+    """Return the agents directory (this package)."""
+    return Path(__file__).resolve().parent
 
 
 def _repo_root() -> Path:
     """Return the repository root."""
-    return Path(__file__).resolve().parent.parent
+    return _agents_dir().parent.parent

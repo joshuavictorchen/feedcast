@@ -4,7 +4,7 @@ set -euo pipefail
 AGENT="${1:?agent workspace name required}"
 PROMPT="$(cat)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$REPO_DIR"
 
