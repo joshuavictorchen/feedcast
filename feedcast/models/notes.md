@@ -182,5 +182,10 @@ shared infrastructure.
 - **Gaussian Process regression:** adds a heavy dependency and
   hyperparameter-search surface for little conceptual gain over a
   simpler small-data ML approach.
-- **Trend-Aware Cadence:** too close to a cleaner version of the
-  original Recent Cadence to earn a slot in a rebuilt lineup.
+- **Trend-Aware Cadence:** too close to a gap regressor to earn a
+  slot in a lineup that already has mechanistic and probabilistic
+  models.
+- **Legacy models (Recent Cadence, Phase Nowcast, Gap-Conditional):**
+  removed. These were transition-era baselines superseded by the
+  current lineup. Each new model provides a structurally distinct
+  frame rather than a variation on gap regression.

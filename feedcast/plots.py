@@ -44,12 +44,13 @@ PROJ_FILL = "#FFF7ED"
 DISPLAY_DAYS = 7
 
 MODEL_COLORS = {
-    "recent_cadence": "#8E8E93",
-    "phase_nowcast": BLUE,
-    "gap_conditional": ORANGE,
+    "slot_drift": BLUE,
+    "analog_trajectory": ORANGE,
+    "latent_hunger": PURPLE,
+    "survival_hazard": TEAL,
     "consensus_blend": RED,
-    "claude_forecast": PURPLE,
-    "codex_forecast": TEAL,
+    "claude_forecast": "#8E8E93",
+    "codex_forecast": "#64D2FF",
 }
 FEATURED_COLOR = GREEN
 

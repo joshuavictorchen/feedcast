@@ -43,9 +43,6 @@ dataset.
 | Analog Trajectory | Instance-based ML: finds similar historical states and averages their futures |
 | Latent Hunger State | Mechanistic hidden state: hunger rises over time, feeds reset it proportional to volume |
 | Survival Hazard | Day-part Weibull hazard: feeding probability increases with elapsed time |
-| Recent Cadence | Recency-weighted interval between full feeds, rolled forward at constant gap |
-| Phase Nowcast Hybrid | Phase-locked oscillator backbone with local regression nowcast for the first gap |
-| Gap-Conditional | Weighted linear regression on event state, rolled forward autoregressively |
 | Consensus Blend | Median-timestamp ensemble across the scripted models |
 
 **LLM agents** get the export CSV, a shared prompt, and a persistent workspace:

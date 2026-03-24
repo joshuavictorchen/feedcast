@@ -17,24 +17,6 @@ from feedcast.data import (
     MIN_INTERVAL_HOURS,
     build_feed_events,
 )
-from .gap_conditional import (
-    MODEL_METHODOLOGY as GAP_CONDITIONAL_METHODOLOGY,
-    MODEL_NAME as GAP_CONDITIONAL_NAME,
-    MODEL_SLUG as GAP_CONDITIONAL_SLUG,
-    forecast_gap_conditional,
-)
-from .phase_nowcast import (
-    MODEL_METHODOLOGY as PHASE_NOWCAST_METHODOLOGY,
-    MODEL_NAME as PHASE_NOWCAST_NAME,
-    MODEL_SLUG as PHASE_NOWCAST_SLUG,
-    forecast_phase_nowcast_hybrid,
-)
-from .recent_cadence import (
-    MODEL_METHODOLOGY as RECENT_CADENCE_METHODOLOGY,
-    MODEL_NAME as RECENT_CADENCE_NAME,
-    MODEL_SLUG as RECENT_CADENCE_SLUG,
-    forecast_recent_cadence,
-)
 from .analog_trajectory import (
     MODEL_METHODOLOGY as ANALOG_TRAJECTORY_METHODOLOGY,
     MODEL_NAME as ANALOG_TRAJECTORY_NAME,
@@ -129,27 +111,6 @@ MODELS = [
         merge_window_minutes=None,
         forecast_fn=forecast_survival_hazard,
     ),
-    ModelSpec(
-        name=RECENT_CADENCE_NAME,
-        slug=RECENT_CADENCE_SLUG,
-        methodology=RECENT_CADENCE_METHODOLOGY,
-        merge_window_minutes=None,
-        forecast_fn=forecast_recent_cadence,
-    ),
-    ModelSpec(
-        name=PHASE_NOWCAST_NAME,
-        slug=PHASE_NOWCAST_SLUG,
-        methodology=PHASE_NOWCAST_METHODOLOGY,
-        merge_window_minutes=DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
-        forecast_fn=forecast_phase_nowcast_hybrid,
-    ),
-    ModelSpec(
-        name=GAP_CONDITIONAL_NAME,
-        slug=GAP_CONDITIONAL_SLUG,
-        methodology=GAP_CONDITIONAL_METHODOLOGY,
-        merge_window_minutes=DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
-        forecast_fn=forecast_gap_conditional,
-    ),
 ]
 
 STATIC_FEATURED_TIEBREAKER = [
@@ -157,9 +118,6 @@ STATIC_FEATURED_TIEBREAKER = [
     ANALOG_TRAJECTORY_SLUG,
     LATENT_HUNGER_SLUG,
     SURVIVAL_HAZARD_SLUG,
-    PHASE_NOWCAST_SLUG,
-    GAP_CONDITIONAL_SLUG,
-    RECENT_CADENCE_SLUG,
 ]
 FEATURED_DEFAULT = CONSENSUS_BLEND_SLUG
 
