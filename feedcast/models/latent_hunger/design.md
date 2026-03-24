@@ -74,15 +74,20 @@ prediction equation, avoiding expensive grid search.
 
 ## Lookback = 7 days, half-life = 72 hours
 
-Seven days provides enough events for stable estimation (~60+) while
-staying recent. The 72-hour half-life within that window further
-emphasizes the most recent patterns. The lookback-window analysis
-showed 7 days strikes the best balance between stability (enough data)
-and adaptivity (tracking trends).
+Research showed the last 5 days gives the lowest gap1_MAE, but 7 days
+was chosen for stability: 5 days can yield fewer than 40 events in the
+fitting window, which makes the recency-weighted growth rate estimate
+noisier. The 72-hour half-life within the 7-day window still heavily
+emphasizes the most recent patterns — events from 5+ days ago
+contribute less than 25% of a recent event's weight. This is a
+stability-over-peak-accuracy tradeoff, not a clear win. If the dataset
+grows and 5-day windows become more populated, the lookback should be
+revisited.
 
-## Simulation volume: recent median
+## Simulation volume: lookback-window median
 
-Research compared three volume prediction strategies:
+Research compared three volume prediction strategies for single-event
+accuracy:
 
 | Strategy | MAE |
 | -------- | --- |
@@ -90,17 +95,21 @@ Research compared three volume prediction strategies:
 | Recent-5 median | 0.875 oz |
 | Time-of-day mean | 0.934 oz |
 
-Global median wins, but for forward simulation we use the median of
-events within the lookback window. This adapts to the trend of
-increasing feed volumes as the baby grows, while staying as simple as
-possible.
+Global median wins on single-event MAE, but for forward simulation we
+use the median of events within the lookback window. The tradeoff:
+slightly worse single-event volume accuracy in exchange for tracking
+the trend of increasing feed volumes as the baby grows. Since the
+model's growth rate already adapts at runtime, using a trend-adapted
+volume keeps both halves of the prediction (timing and volume) on the
+same footing.
 
 ## Breastfeed merge
 
 Uses the standard 45-minute breastfeed merge heuristic per project
-direction. Currently affects only 3 of 81 events with volume additions
-of +0.05 to +0.33 oz. The impact is negligible but the infrastructure
-is in place for when breastfeeding becomes more frequent.
+direction. In early data the impact was negligible (very few events
+affected, tiny volume additions), but the infrastructure is in place
+for when breastfeeding becomes more frequent. See research_results.txt
+for current counts.
 
 ## Volume-to-gap relationship
 

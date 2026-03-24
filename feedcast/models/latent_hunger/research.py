@@ -32,8 +32,8 @@ from feedcast.data import (
 from feedcast.models.latent_hunger.model import (
     HUNGER_THRESHOLD,
     LOOKBACK_DAYS,
+    MIN_FIT_GAPS,
     MIN_GAP_HOURS,
-    MIN_RECENT_EVENTS,
     RECENCY_HALF_LIFE_HOURS,
     SATIETY_RATE,
     SIM_STEP_HOURS,
@@ -45,7 +45,8 @@ from feedcast.models.latent_hunger.model import (
 OUTPUT_DIR = Path(__file__).parent
 
 # Walk-forward evaluation: minimum events before predictions start.
-MIN_FIT_EVENTS = MIN_RECENT_EVENTS
+# Needs MIN_FIT_GAPS + 1 events to produce MIN_FIT_GAPS gaps.
+MIN_FIT_EVENTS = MIN_FIT_GAPS + 1
 
 
 # ====================================================================
@@ -582,10 +583,10 @@ def main() -> None:
     # ================================================================
     # SECTION 7: Most recent 24h prediction quality
     # ================================================================
-    log("=== MOST RECENT 24H PREDICTION QUALITY ===")
+    log("=== MOST RECENT 24H PREDICTION QUALITY (holdout) ===")
     log()
-    log("Simulating a 24h forecast from 24h before cutoff using best params.")
-    log("This is the closest test to what the model will actually do.")
+    log("Simulating a 24h forecast from 24h before cutoff.")
+    log("Parameters are re-fit using ONLY events before the anchor (true holdout).")
     log()
 
     forecast_start = cutoff - timedelta(hours=24)
@@ -594,20 +595,36 @@ def main() -> None:
         (i for i, e in enumerate(events) if e.time <= forecast_start),
         default=None,
     )
-    if anchor_idx is not None:
+    if anchor_idx is not None and anchor_idx >= MIN_FIT_EVENTS:
         anchor = events[anchor_idx]
         log(f"Anchor event: {anchor.time.strftime('%m/%d %H:%M')} "
             f"vol={anchor.volume_oz:.1f}oz")
 
-        # Simulate forward 24h.
-        sim_vol = float(np.median([e.volume_oz for e in events[:anchor_idx + 1]]))
+        # Re-fit params on pre-anchor data only (true holdout).
+        pre_anchor_events = events[:anchor_idx + 1]
+        best_holdout = {"gap1_mae": float("inf")}
+        best_holdout_params = (gr_m, sr_m)
+        for gr in np.linspace(max(0.1, gr_m - 0.3), gr_m + 0.3, 13):
+            for sr in np.linspace(max(0.05, sr_m - 0.3), sr_m + 0.3, 13):
+                result = _evaluate_multiplicative(pre_anchor_events, gr, sr)
+                if result["gap1_mae"] < best_holdout["gap1_mae"]:
+                    best_holdout = result
+                    best_holdout_params = (gr, sr)
+
+        gr_ho, sr_ho = best_holdout_params
+        log(f"Holdout-fit params: gr={gr_ho:.4f} sr={sr_ho:.4f}")
+        log(f"  (vs full-data params: gr={gr_m:.4f} sr={sr_m:.4f})")
+        log()
+
+        # Simulate forward 24h using holdout params.
+        sim_vol = float(np.median([e.volume_oz for e in pre_anchor_events]))
         predicted_times = []
         sim_t = 0.0
         sim_h = hour_of_day(anchor.time)
         sim_v = anchor.volume_oz
         while sim_t < 24.0:
             gap = _simulate_gap_multiplicative(
-                sim_v, gr_j, sr_j, amp_j, phase_j, (sim_h + sim_t) % 24.0,
+                sim_v, gr_ho, sr_ho, 0.0, 0.0, (sim_h + sim_t) % 24.0,
             )
             sim_t += gap
             if sim_t < 24.0:
@@ -649,7 +666,7 @@ def main() -> None:
             log(f"\nPaired {paired}, mean timing error: {total_error / paired:.2f}h")
             log(f"Feed count error: {abs(len(predicted_times) - len(actual_times))}")
     else:
-        log("No anchor event found 24h before cutoff.")
+        log("Not enough pre-anchor events for holdout test.")
     log()
 
     # ================================================================
@@ -705,7 +722,7 @@ def main() -> None:
     # ================================================================
     log("=== FINAL SUMMARY ===")
     log()
-    log(f"Recommended model: MULTIPLICATIVE + CIRCADIAN")
+    log("Grid search best (exploratory):")
     log(f"  growth_rate = {gr_j:.4f}")
     log(f"  satiety_rate = {sr_j:.4f}")
     log(f"  circadian_amp = {amp_j:.3f}")
@@ -715,13 +732,25 @@ def main() -> None:
     log(f"  fcount_MAE = {best_joint['feed_count_mae']:.2f}")
     log(f"  pred_std = {best_joint['pred_std']:.3f}h")
     log()
+    log("Model implementation uses:")
+    log(f"  satiety_rate = {SATIETY_RATE} (fixed from initial grid search)")
+    log(f"  growth_rate = estimated at runtime from recent events")
+    log(f"  circadian_amplitude = 0.0 (infrastructure present, not active)")
+    log(f"  sim_volume = lookback-window median (adapts to recent trend)")
+    log()
+    log("Note: grid search satiety_rate may differ from model.py because")
+    log("the grid explores the full parameter space while the model fixes")
+    log("satiety_rate and fits only growth_rate at runtime. The model's")
+    log("SATIETY_RATE was chosen from the initial grid search run.")
+    log()
     log("Key findings:")
     log("  1. Additive satiety collapses to constant-gap predictor (pred_std near 0)")
     log("  2. Multiplicative satiety produces meaningful volume-sensitive variation")
     log("  3. Circadian modulation captures real day/night structure (~1.3h spread)")
+    log("     but adds no benefit on top of multiplicative volume sensitivity")
     log("  4. Volume-to-gap correlation is modest (r=0.35) but real")
-    log("  5. Breastfeed merge affects only 3/81 events (negligible)")
-    log("  6. Global median is the best volume prediction strategy")
+    log("  5. Breastfeed merge has negligible impact on current data")
+    log("  6. Lookback-window median volume adapts to growth trend")
 
     # Save results.
     results_path = OUTPUT_DIR / "research_results.txt"

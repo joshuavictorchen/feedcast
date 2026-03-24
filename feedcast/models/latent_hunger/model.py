@@ -44,8 +44,9 @@ SATIETY_RATE = 0.386
 # How many days of recent history to use for growth rate estimation.
 LOOKBACK_DAYS = 7
 
-# Minimum events within the lookback window to produce a forecast.
-MIN_RECENT_EVENTS = 5
+# Minimum observed gaps (consecutive event pairs) in the lookback window
+# required to produce a forecast. N events yield N-1 gaps.
+MIN_FIT_GAPS = 5
 
 # Recency half-life for weighting events in growth rate estimation.
 RECENCY_HALF_LIFE_HOURS = 72
@@ -249,17 +250,17 @@ def forecast_latent_hunger(
     """
     # Filter to events before cutoff.
     events = [e for e in history if e.time <= cutoff]
-    if len(events) < MIN_RECENT_EVENTS:
+    if len(events) < MIN_FIT_GAPS + 1:
         raise ForecastUnavailable(
-            f"Need at least {MIN_RECENT_EVENTS} events, have {len(events)}"
+            f"Need at least {MIN_FIT_GAPS + 1} events, have {len(events)}"
         )
 
     # Estimate growth rate from recent events.
     growth_rate, fit_details = _estimate_growth_rate(events, cutoff)
 
-    if len(fit_details) < MIN_RECENT_EVENTS:
+    if len(fit_details) < MIN_FIT_GAPS:
         raise ForecastUnavailable(
-            f"Need at least {MIN_RECENT_EVENTS} events in lookback window, "
+            f"Need at least {MIN_FIT_GAPS} gaps in lookback window, "
             f"have {len(fit_details)}"
         )
 

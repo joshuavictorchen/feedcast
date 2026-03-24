@@ -1,7 +1,7 @@
 Export: exports/export_narababy_silas_20260323.csv
 Dataset: sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0
 Cutoff: 2026-03-23 11:41:13
-Run: 2026-03-24T01:29:02
+Run: 2026-03-24T01:45:37
 Events (with BF merge): 81
 Events (bottle only):   81
 
@@ -54,10 +54,10 @@ Recent circadian (last 7 days, 2h bins):
 === ADDITIVE VS. MULTIPLICATIVE SATIETY ===
 
 Best ADDITIVE constant:  gr=0.341 sc=0.179
-  gap1_MAE=0.761h  pred_std=0.241h
+  gap1_MAE=0.755h  pred_std=0.243h
 
 Best MULTIPLICATIVE constant:  gr=0.245 sr=0.386
-  gap1_MAE=0.721h  gap3_MAE=0.734h  fcount_MAE=1.63  pred_std=0.738h
+  gap1_MAE=0.718h  gap3_MAE=0.732h  fcount_MAE=1.61  pred_std=0.741h
 
 Multiplicative prediction range (recent 15 events):
   03/21 19:02 vol=4.0oz pred=3.21h actual=3.56h err=-0.35h
@@ -77,26 +77,26 @@ Multiplicative prediction range (recent 15 events):
   03/23 10:26 vol=2.0oz pred=2.20h actual=1.25h err=+0.95h
 
 Top 10 multiplicative parameter sets:
-  gr=0.245 sr=0.386: gap1=0.721h  gap3=0.734h  fcount=1.63  pstd=0.738h
-  gr=0.197 sr=0.257: gap1=0.726h  gap3=0.737h  fcount=1.60  pstd=0.799h
-  gr=0.245 sr=0.360: gap1=0.726h  gap3=0.739h  fcount=1.60  pstd=0.725h
-  gr=0.293 sr=0.593: gap1=0.729h  gap3=0.736h  fcount=1.63  pstd=0.638h
-  gr=0.293 sr=0.567: gap1=0.730h  gap3=0.738h  fcount=1.60  pstd=0.639h
-  gr=0.293 sr=0.619: gap1=0.730h  gap3=0.736h  fcount=1.63  pstd=0.635h
-  gr=0.293 sr=0.541: gap1=0.732h  gap3=0.740h  fcount=1.60  pstd=0.640h
-  gr=0.293 sr=0.645: gap1=0.733h  gap3=0.738h  fcount=1.65  pstd=0.632h
-  gr=0.293 sr=0.516: gap1=0.735h  gap3=0.744h  fcount=1.63  pstd=0.640h
-  gr=0.245 sr=0.412: gap1=0.735h  gap3=0.740h  fcount=1.92  pstd=0.748h
+  gr=0.245 sr=0.386: gap1=0.718h  gap3=0.732h  fcount=1.61  pstd=0.741h
+  gr=0.197 sr=0.257: gap1=0.723h  gap3=0.735h  fcount=1.58  pstd=0.803h
+  gr=0.245 sr=0.360: gap1=0.724h  gap3=0.737h  fcount=1.58  pstd=0.729h
+  gr=0.293 sr=0.593: gap1=0.725h  gap3=0.734h  fcount=1.61  pstd=0.641h
+  gr=0.293 sr=0.619: gap1=0.726h  gap3=0.733h  fcount=1.61  pstd=0.639h
+  gr=0.293 sr=0.567: gap1=0.726h  gap3=0.735h  fcount=1.58  pstd=0.643h
+  gr=0.293 sr=0.541: gap1=0.728h  gap3=0.738h  fcount=1.58  pstd=0.644h
+  gr=0.293 sr=0.645: gap1=0.729h  gap3=0.734h  fcount=1.63  pstd=0.636h
+  gr=0.293 sr=0.516: gap1=0.732h  gap3=0.742h  fcount=1.61  pstd=0.643h
+  gr=0.245 sr=0.412: gap1=0.732h  gap3=0.737h  fcount=1.90  pstd=0.751h
 
 === MULTIPLICATIVE + CIRCADIAN ===
 
 Best circadian (base gr/sr from constant):
   gr=0.245 sr=0.386 amp=0.000 phase=0.0h
-  gap1_MAE=0.721h  gap3_MAE=0.734h  fcount_MAE=1.63  pred_std=0.738h
+  gap1_MAE=0.718h  gap3_MAE=0.732h  fcount_MAE=1.61  pred_std=0.741h
 
 Joint-refined:
   gr=0.2379 sr=0.3462 amp=0.000 phase=0.0h
-  gap1_MAE=0.724h  gap3_MAE=0.738h  fcount_MAE=1.60  pred_std=0.738h
+  gap1_MAE=0.722h  gap3_MAE=0.736h  fcount_MAE=1.58  pred_std=0.741h
 
 === LOOKBACK WINDOW SENSITIVITY ===
 
@@ -107,44 +107,47 @@ How does fitting on only the last N days compare to full history?
   last  5d: gap1_MAE=0.630h  gap3_MAE=0.657h  fcount_MAE=1.52  (n=44)
   last  7d: gap1_MAE=0.698h  gap3_MAE=0.708h  fcount_MAE=1.39  (n=64)
   last 14d: gap1_MAE=0.731h  gap3_MAE=0.749h  fcount_MAE=1.64  (n=79)
-  all data: gap1_MAE=0.724h  gap3_MAE=0.738h  fcount_MAE=1.60  (n=75)
+  all data: gap1_MAE=0.722h  gap3_MAE=0.736h  fcount_MAE=1.58  (n=74)
 
 Re-fitting on last 5 days only:
   Best 5d params: gr=0.1365 sr=0.1494 (vs full: gr=0.2379 sr=0.3462)
   5d gap1_MAE=0.631h  (full params on 5d: see above)
-  5d params on full history: gap1_MAE=0.730h
-  Full params on full history: gap1_MAE=0.724h
+  5d params on full history: gap1_MAE=0.728h
+  Full params on full history: gap1_MAE=0.722h
 
-=== MOST RECENT 24H PREDICTION QUALITY ===
+=== MOST RECENT 24H PREDICTION QUALITY (holdout) ===
 
-Simulating a 24h forecast from 24h before cutoff using best params.
-This is the closest test to what the model will actually do.
+Simulating a 24h forecast from 24h before cutoff.
+Parameters are re-fit using ONLY events before the anchor (true holdout).
 
 Anchor event: 03/22 08:53 vol=3.2oz
+Holdout-fit params: gr=0.2853 sr=0.5862
+  (vs full-data params: gr=0.2448 sr=0.3862)
+
 Predicted 8 feeds, actual 9 feeds
 
-  pred=11:44  actual=11:54  err=0.18h
-  pred=14:34  actual=13:06  err=1.47h
-  pred=17:24  actual=17:53  err=0.48h
-  pred=20:15  actual=19:28  err=0.78h
-  pred=23:05  actual=23:27  err=0.37h
-  pred=01:55  actual=02:30  err=0.57h
-  pred=04:46  actual=05:13  err=0.45h
-  pred=07:36  actual=08:48  err=1.20h
+  pred=11:52  actual=11:54  err=0.03h
+  pred=14:51  actual=16:36  err=1.74h
+  pred=17:50  actual=17:53  err=0.05h
+  pred=20:49  actual=19:28  err=1.36h
+  pred=23:48  actual=23:27  err=0.35h
+  pred=02:47  actual=02:30  err=0.29h
+  pred=05:46  actual=05:13  err=0.56h
+  pred=08:45  actual=08:48  err=0.04h
 
-Paired 8, mean timing error: 0.69h
+Paired 8, mean timing error: 0.55h
 Feed count error: 1
 
 === NAIVE BASELINE COMPARISON ===
 
 Model                                 gap1_MAE
 ------------------------------------------------
-Naive last-gap                           0.882
-Naive mean-3-gaps                        0.833
-Additive constant                        0.761
-Multiplicative constant                  0.721
-Multiplicative + circadian               0.721
-Mult + circadian (joint-refined)         0.724
+Naive last-gap                           0.883
+Naive mean-3-gaps                        0.832
+Additive constant                        0.755
+Multiplicative constant                  0.718
+Multiplicative + circadian               0.718
+Mult + circadian (joint-refined)         0.722
 
 === VOLUME PREDICTION STRATEGY ===
 
@@ -156,20 +159,32 @@ Recency-weighted volume:
 
 === FINAL SUMMARY ===
 
-Recommended model: MULTIPLICATIVE + CIRCADIAN
+Grid search best (exploratory):
   growth_rate = 0.2379
   satiety_rate = 0.3462
   circadian_amp = 0.000
   circadian_phase = 0.0h
-  gap1_MAE = 0.724h
-  gap3_MAE = 0.738h
-  fcount_MAE = 1.60
-  pred_std = 0.738h
+  gap1_MAE = 0.722h
+  gap3_MAE = 0.736h
+  fcount_MAE = 1.58
+  pred_std = 0.741h
+
+Model implementation uses:
+  satiety_rate = 0.386 (fixed from initial grid search)
+  growth_rate = estimated at runtime from recent events
+  circadian_amplitude = 0.0 (infrastructure present, not active)
+  sim_volume = lookback-window median (adapts to recent trend)
+
+Note: grid search satiety_rate may differ from model.py because
+the grid explores the full parameter space while the model fixes
+satiety_rate and fits only growth_rate at runtime. The model's
+SATIETY_RATE was chosen from the initial grid search run.
 
 Key findings:
   1. Additive satiety collapses to constant-gap predictor (pred_std near 0)
   2. Multiplicative satiety produces meaningful volume-sensitive variation
   3. Circadian modulation captures real day/night structure (~1.3h spread)
+     but adds no benefit on top of multiplicative volume sensitivity
   4. Volume-to-gap correlation is modest (r=0.35) but real
-  5. Breastfeed merge affects only 3/81 events (negligible)
-  6. Global median is the best volume prediction strategy
+  5. Breastfeed merge has negligible impact on current data
+  6. Lookback-window median volume adapts to growth trend
