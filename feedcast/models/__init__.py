@@ -41,6 +41,12 @@ from .analog_trajectory import (
     MODEL_SLUG as ANALOG_TRAJECTORY_SLUG,
     forecast_analog_trajectory,
 )
+from .latent_hunger import (
+    MODEL_METHODOLOGY as LATENT_HUNGER_METHODOLOGY,
+    MODEL_NAME as LATENT_HUNGER_NAME,
+    MODEL_SLUG as LATENT_HUNGER_SLUG,
+    forecast_latent_hunger,
+)
 from .slot_drift import (
     MODEL_METHODOLOGY as SLOT_DRIFT_METHODOLOGY,
     MODEL_NAME as SLOT_DRIFT_NAME,
@@ -104,6 +110,13 @@ MODELS = [
         forecast_fn=forecast_analog_trajectory,
     ),
     ModelSpec(
+        name=LATENT_HUNGER_NAME,
+        slug=LATENT_HUNGER_SLUG,
+        methodology=LATENT_HUNGER_METHODOLOGY,
+        merge_window_minutes=DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
+        forecast_fn=forecast_latent_hunger,
+    ),
+    ModelSpec(
         name=RECENT_CADENCE_NAME,
         slug=RECENT_CADENCE_SLUG,
         methodology=RECENT_CADENCE_METHODOLOGY,
@@ -129,6 +142,7 @@ MODELS = [
 STATIC_FEATURED_TIEBREAKER = [
     SLOT_DRIFT_SLUG,
     ANALOG_TRAJECTORY_SLUG,
+    LATENT_HUNGER_SLUG,
     PHASE_NOWCAST_SLUG,
     GAP_CONDITIONAL_SLUG,
     RECENT_CADENCE_SLUG,

@@ -1,9 +1,9 @@
 {
   "runs": [
     {
-      "run_id": "20260324-001702",
-      "timestamp": "2026-03-24T00:17:02",
-      "git_commit": "ee8364c",
+      "run_id": "20260324-012932",
+      "timestamp": "2026-03-24T01:29:32",
+      "git_commit": "934b9de",
       "git_dirty": true,
       "dataset_id": "sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0",
       "source_file": "export_narababy_silas_20260323.csv",
@@ -13,6 +13,7 @@
       "model_slugs": [
         "slot_drift",
         "analog_trajectory",
+        "latent_hunger",
         "recent_cadence",
         "phase_nowcast",
         "gap_conditional",
@@ -21,6 +22,7 @@
       "model_names": {
         "slot_drift": "Slot Drift",
         "analog_trajectory": "Analog Trajectory",
+        "latent_hunger": "Latent Hunger State",
         "recent_cadence": "Recent Cadence",
         "phase_nowcast": "Phase Nowcast Hybrid",
         "gap_conditional": "Gap-Conditional",
@@ -115,6 +117,53 @@
             "time": "2026-03-24T10:13:16.869921",
             "volume_oz": 1.757,
             "gap_hours": 1.46
+          }
+        ],
+        "latent_hunger": [
+          {
+            "time": "2026-03-23T13:34:48.758789",
+            "volume_oz": 3.5,
+            "gap_hours": 1.893
+          },
+          {
+            "time": "2026-03-23T16:04:50.136376",
+            "volume_oz": 3.5,
+            "gap_hours": 2.5
+          },
+          {
+            "time": "2026-03-23T18:34:51.513963",
+            "volume_oz": 3.5,
+            "gap_hours": 2.5
+          },
+          {
+            "time": "2026-03-23T21:04:52.891550",
+            "volume_oz": 3.5,
+            "gap_hours": 2.5
+          },
+          {
+            "time": "2026-03-23T23:34:54.269137",
+            "volume_oz": 3.5,
+            "gap_hours": 2.5
+          },
+          {
+            "time": "2026-03-24T02:04:55.646724",
+            "volume_oz": 3.5,
+            "gap_hours": 2.5
+          },
+          {
+            "time": "2026-03-24T04:34:57.024311",
+            "volume_oz": 3.5,
+            "gap_hours": 2.5
+          },
+          {
+            "time": "2026-03-24T07:04:58.401898",
+            "volume_oz": 3.5,
+            "gap_hours": 2.5
+          },
+          {
+            "time": "2026-03-24T09:34:59.779485",
+            "volume_oz": 3.5,
+            "gap_hours": 2.5
           }
         ],
         "recent_cadence": [
@@ -245,49 +294,49 @@
         ],
         "consensus_blend": [
           {
-            "time": "2026-03-23T14:03:33.649351",
-            "volume_oz": 2.43,
-            "gap_hours": 2.372
+            "time": "2026-03-23T13:48:23.144590",
+            "volume_oz": 2.644,
+            "gap_hours": 2.119
           },
           {
-            "time": "2026-03-23T15:53:28.736123",
-            "volume_oz": 2.738,
-            "gap_hours": 1.832
+            "time": "2026-03-23T16:04:50.136376",
+            "volume_oz": 2.891,
+            "gap_hours": 2.274
           },
           {
-            "time": "2026-03-23T18:02:21.627358",
-            "volume_oz": 2.996,
-            "gap_hours": 2.148
+            "time": "2026-03-23T18:02:40.106371",
+            "volume_oz": 3.08,
+            "gap_hours": 1.964
           },
           {
-            "time": "2026-03-23T21:11:19.090811",
-            "volume_oz": 3.071,
-            "gap_hours": 3.149
+            "time": "2026-03-23T21:09:15.317017",
+            "volume_oz": 3.157,
+            "gap_hours": 3.11
           },
           {
-            "time": "2026-03-24T00:17:47.477466",
-            "volume_oz": 3.482,
-            "gap_hours": 3.108
+            "time": "2026-03-23T23:56:20.873302",
+            "volume_oz": 3.485,
+            "gap_hours": 2.785
           },
           {
-            "time": "2026-03-24T03:05:55.221770",
-            "volume_oz": 3.59,
-            "gap_hours": 2.802
+            "time": "2026-03-24T02:38:38.009166",
+            "volume_oz": 3.575,
+            "gap_hours": 2.705
           },
           {
-            "time": "2026-03-24T05:54:50.770989",
-            "volume_oz": 3.755,
-            "gap_hours": 2.815
+            "time": "2026-03-24T05:38:24.856382",
+            "volume_oz": 3.713,
+            "gap_hours": 2.996
           },
           {
-            "time": "2026-03-24T08:45:41.665413",
-            "volume_oz": 3.413,
-            "gap_hours": 2.847
+            "time": "2026-03-24T08:50:32.023326",
+            "volume_oz": 3.427,
+            "gap_hours": 3.202
           },
           {
             "time": "2026-03-24T10:52:59.670610",
             "volume_oz": 2.448,
-            "gap_hours": 2.122
+            "gap_hours": 2.041
           }
         ]
       },
@@ -295,7 +344,7 @@
         "available": false,
         "same_dataset": true,
         "dataset_id_short": "sha256:7b6cdd2f...",
-        "prior_run_id": "20260324-000254",
+        "prior_run_id": "20260324-012712",
         "observed_horizon_hours": 0.0,
         "results": []
       }

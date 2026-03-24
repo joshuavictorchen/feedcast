@@ -41,6 +41,7 @@ dataset.
 | ----- | -------- |
 | Slot Drift | Daily template with per-slot drift tracking and Hungarian matching |
 | Analog Trajectory | Instance-based ML: finds similar historical states and averages their futures |
+| Latent Hunger State | Mechanistic hidden state: hunger rises over time, feeds reset it proportional to volume |
 | Recent Cadence | Recency-weighted interval between full feeds, rolled forward at constant gap |
 | Phase Nowcast Hybrid | Phase-locked oscillator backbone with local regression nowcast for the first gap |
 | Gap-Conditional | Weighted linear regression on event state, rolled forward autoregressively |
@@ -141,6 +142,12 @@ feedcast/
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
       research_results.txt     Saved research output
+    latent_hunger/             Mechanistic hidden hunger state
+      model.py                 Model implementation
+      methodology.md           Report methodology text
+      design.md                Design decisions and rationale
+      research.py              Repeatable data analysis
+      research_results.txt     Saved research output
   agents.py                    Agent runner (points to repo-level agents/)
   tracker.py                   Run persistence and retrospectives
   report.py                    Markdown rendering and atomic report swap
@@ -205,7 +212,7 @@ add a corresponding case to `agents/run.sh`.
 
 | Decision | Choice | Rationale |
 | -------- | ------ | --------- |
-| Scripted models | Distinct conceptual frames | Template, instance-based ML, and gap-regression approaches for ensemble diversity |
+| Scripted models | Distinct conceptual frames | Template, instance-based ML, mechanistic, and gap-regression approaches for ensemble diversity |
 | Ensemble | Consensus uses scripted models only | Agents excluded until retrospectives demonstrate consistent value |
 | Featured forecast | Consensus > static tiebreaker | Simple default; manually overridable via `FEATURED_DEFAULT` |
 | Agent failure | Fail fast | Use `--skip-agents` to work around; no silent fallback |

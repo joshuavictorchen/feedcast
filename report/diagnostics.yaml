@@ -1,4 +1,4 @@
-run_id: 20260324-001702
+run_id: 20260324-012932
 cutoff: '2026-03-23T11:41:13'
 featured_slug: consensus_blend
 forecasts:
@@ -187,6 +187,27 @@ forecasts:
       recency_weight: 0.198
       weight: 0.145
       trajectory_length: 12
+- name: Latent Hunger State
+  slug: latent_hunger
+  available: true
+  error_message: null
+  diagnostics:
+    growth_rate: 0.296
+    satiety_rate: 0.386
+    circadian_amplitude: 0.0
+    circadian_phase_hour: 0.0
+    hunger_threshold: 1.0
+    sim_volume_oz: 3.5
+    current_hunger: 0.439
+    elapsed_since_last_hours: 0.0
+    recent_events_in_window: 65
+    fit_events_used: 64
+    implied_growth_rate_range:
+      min: 0.081
+      max: 0.827
+      std: 0.153
+    lookback_days: 7
+    recency_half_life_hours: 72
 - name: Recent Cadence
   slug: recent_cadence
   available: true
@@ -236,21 +257,23 @@ forecasts:
     component_models:
     - slot_drift
     - analog_trajectory
+    - latent_hunger
     - recent_cadence
     - phase_nowcast
     - gap_conditional
     component_forecast_counts:
       slot_drift: 8
       analog_trajectory: 9
+      latent_hunger: 9
       recent_cadence: 7
       phase_nowcast: 8
       gap_conditional: 9
     unavailable_components: {}
-    skipped_outlier_points: 1
+    skipped_outlier_points: 2
 retrospective:
   available: false
   same_dataset: true
   dataset_id_short: sha256:7b6cdd2f...
-  prior_run_id: 20260324-000254
+  prior_run_id: 20260324-012712
   observed_horizon_hours: 0.0
   results: []

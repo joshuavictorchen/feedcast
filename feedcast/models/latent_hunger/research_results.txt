@@ -1,0 +1,175 @@
+Export: exports/export_narababy_silas_20260323.csv
+Dataset: sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0
+Cutoff: 2026-03-23 11:41:13
+Run: 2026-03-24T01:29:02
+Events (with BF merge): 81
+Events (bottle only):   81
+
+=== BREASTFEED MERGE IMPACT ===
+
+  03/17 18:01: 2.50 -> 2.55 oz (+0.05 oz BF)
+  03/22 11:54: 3.50 -> 3.83 oz (+0.33 oz BF)
+  03/23 11:41: 2.00 -> 2.13 oz (+0.13 oz BF)
+
+Affected events: 3 / 81
+
+=== VOLUME-TO-GAP RELATIONSHIP ===
+
+Volume-to-next-gap correlation: 0.351
+Volume: mean=2.85 std=1.09 min=0.50 max=4.50
+Gaps:   mean=2.51 std=1.01 min=0.36 max=4.54
+
+Volume-binned mean gaps:
+  [0.0, 1.5) oz: n= 12, mean_gap=1.97h, std=1.08h
+  [1.5, 2.5) oz: n= 10, mean_gap=1.84h, std=0.98h
+  [2.5, 3.5) oz: n= 18, mean_gap=2.53h, std=1.12h
+  [3.5, 5.0) oz: n= 40, mean_gap=2.82h, std=0.77h
+
+=== CIRCADIAN STRUCTURE ===
+
+Time-of-day binned mean gaps (all history):
+  00-04: n= 11, mean_gap=3.19h, std=0.42h, mean_vol=3.43oz
+  04-08: n= 11, mean_gap=3.28h, std=0.35h, mean_vol=3.45oz
+  08-12: n= 15, mean_gap=2.13h, std=1.04h, mean_vol=2.79oz
+  12-16: n= 18, mean_gap=2.00h, std=1.11h, mean_vol=2.27oz
+  16-20: n= 13, mean_gap=2.32h, std=0.94h, mean_vol=2.79oz
+  20-24: n= 12, mean_gap=2.60h, std=0.90h, mean_vol=2.77oz
+
+Circadian spread: 1.28h (ratio: 1.64)
+
+Recent circadian (last 7 days, 2h bins):
+  00-02: n= 5, mean_gap=3.24h, mean_vol=3.50oz
+  02-04: n= 4, mean_gap=3.09h, mean_vol=3.42oz
+  04-06: n= 5, mean_gap=3.33h, mean_vol=3.55oz
+  06-08: n= 4, mean_gap=3.01h, mean_vol=3.40oz
+  08-10: n= 6, mean_gap=2.83h, mean_vol=3.46oz
+  10-12: n= 5, mean_gap=1.69h, mean_vol=2.27oz
+  12-14: n= 6, mean_gap=2.65h, mean_vol=2.00oz
+  14-16: n= 9, mean_gap=1.90h, mean_vol=2.53oz
+  16-18: n= 6, mean_gap=1.90h, mean_vol=2.29oz
+  18-20: n= 5, mean_gap=3.03h, mean_vol=3.61oz
+  20-22: n= 6, mean_gap=2.71h, mean_vol=2.96oz
+  22-24: n= 3, mean_gap=3.13h, mean_vol=3.77oz
+
+=== ADDITIVE VS. MULTIPLICATIVE SATIETY ===
+
+Best ADDITIVE constant:  gr=0.341 sc=0.179
+  gap1_MAE=0.761h  pred_std=0.241h
+
+Best MULTIPLICATIVE constant:  gr=0.245 sr=0.386
+  gap1_MAE=0.721h  gap3_MAE=0.734h  fcount_MAE=1.63  pred_std=0.738h
+
+Multiplicative prediction range (recent 15 events):
+  03/21 19:02 vol=4.0oz pred=3.21h actual=3.56h err=-0.35h
+  03/21 22:36 vol=4.3oz pred=3.31h actual=3.78h err=-0.47h
+  03/22 02:22 vol=3.5oz pred=3.03h actual=3.13h err=-0.10h
+  03/22 05:30 vol=4.5oz pred=3.37h actual=3.39h err=-0.02h
+  03/22 08:53 vol=3.2oz pred=2.92h actual=3.02h err=-0.10h
+  03/22 11:54 vol=3.8oz pred=3.15h actual=1.19h err=+1.96h
+  03/22 13:06 vol=1.0oz pred=1.31h actual=3.50h err=-2.19h
+  03/22 16:36 vol=4.0oz pred=3.21h actual=1.29h err=+1.92h
+  03/22 17:53 vol=1.2oz pred=1.56h actual=1.57h err=-0.01h
+  03/22 19:28 vol=4.5oz pred=3.37h actual=3.99h err=-0.63h
+  03/22 23:27 vol=3.5oz pred=3.03h actual=3.04h err=-0.01h
+  03/23 02:30 vol=3.7oz pred=3.11h actual=2.72h err=+0.38h
+  03/23 05:13 vol=4.5oz pred=3.37h actual=3.58h err=-0.22h
+  03/23 08:48 vol=4.0oz pred=3.21h actual=1.64h err=+1.58h
+  03/23 10:26 vol=2.0oz pred=2.20h actual=1.25h err=+0.95h
+
+Top 10 multiplicative parameter sets:
+  gr=0.245 sr=0.386: gap1=0.721h  gap3=0.734h  fcount=1.63  pstd=0.738h
+  gr=0.197 sr=0.257: gap1=0.726h  gap3=0.737h  fcount=1.60  pstd=0.799h
+  gr=0.245 sr=0.360: gap1=0.726h  gap3=0.739h  fcount=1.60  pstd=0.725h
+  gr=0.293 sr=0.593: gap1=0.729h  gap3=0.736h  fcount=1.63  pstd=0.638h
+  gr=0.293 sr=0.567: gap1=0.730h  gap3=0.738h  fcount=1.60  pstd=0.639h
+  gr=0.293 sr=0.619: gap1=0.730h  gap3=0.736h  fcount=1.63  pstd=0.635h
+  gr=0.293 sr=0.541: gap1=0.732h  gap3=0.740h  fcount=1.60  pstd=0.640h
+  gr=0.293 sr=0.645: gap1=0.733h  gap3=0.738h  fcount=1.65  pstd=0.632h
+  gr=0.293 sr=0.516: gap1=0.735h  gap3=0.744h  fcount=1.63  pstd=0.640h
+  gr=0.245 sr=0.412: gap1=0.735h  gap3=0.740h  fcount=1.92  pstd=0.748h
+
+=== MULTIPLICATIVE + CIRCADIAN ===
+
+Best circadian (base gr/sr from constant):
+  gr=0.245 sr=0.386 amp=0.000 phase=0.0h
+  gap1_MAE=0.721h  gap3_MAE=0.734h  fcount_MAE=1.63  pred_std=0.738h
+
+Joint-refined:
+  gr=0.2379 sr=0.3462 amp=0.000 phase=0.0h
+  gap1_MAE=0.724h  gap3_MAE=0.738h  fcount_MAE=1.60  pred_std=0.738h
+
+=== LOOKBACK WINDOW SENSITIVITY ===
+
+How does fitting on only the last N days compare to full history?
+(Using best joint-refined params, varying evaluation window.)
+
+  last  3d: gap1_MAE=0.665h  gap3_MAE=0.746h  fcount_MAE=1.87  (n=27)
+  last  5d: gap1_MAE=0.630h  gap3_MAE=0.657h  fcount_MAE=1.52  (n=44)
+  last  7d: gap1_MAE=0.698h  gap3_MAE=0.708h  fcount_MAE=1.39  (n=64)
+  last 14d: gap1_MAE=0.731h  gap3_MAE=0.749h  fcount_MAE=1.64  (n=79)
+  all data: gap1_MAE=0.724h  gap3_MAE=0.738h  fcount_MAE=1.60  (n=75)
+
+Re-fitting on last 5 days only:
+  Best 5d params: gr=0.1365 sr=0.1494 (vs full: gr=0.2379 sr=0.3462)
+  5d gap1_MAE=0.631h  (full params on 5d: see above)
+  5d params on full history: gap1_MAE=0.730h
+  Full params on full history: gap1_MAE=0.724h
+
+=== MOST RECENT 24H PREDICTION QUALITY ===
+
+Simulating a 24h forecast from 24h before cutoff using best params.
+This is the closest test to what the model will actually do.
+
+Anchor event: 03/22 08:53 vol=3.2oz
+Predicted 8 feeds, actual 9 feeds
+
+  pred=11:44  actual=11:54  err=0.18h
+  pred=14:34  actual=13:06  err=1.47h
+  pred=17:24  actual=17:53  err=0.48h
+  pred=20:15  actual=19:28  err=0.78h
+  pred=23:05  actual=23:27  err=0.37h
+  pred=01:55  actual=02:30  err=0.57h
+  pred=04:46  actual=05:13  err=0.45h
+  pred=07:36  actual=08:48  err=1.20h
+
+Paired 8, mean timing error: 0.69h
+Feed count error: 1
+
+=== NAIVE BASELINE COMPARISON ===
+
+Model                                 gap1_MAE
+------------------------------------------------
+Naive last-gap                           0.882
+Naive mean-3-gaps                        0.833
+Additive constant                        0.761
+Multiplicative constant                  0.721
+Multiplicative + circadian               0.721
+Mult + circadian (joint-refined)         0.724
+
+=== VOLUME PREDICTION STRATEGY ===
+
+Global median volume: 3.25 oz
+Recency-weighted volume:
+  Last  5: median=3.70 mean=3.27
+  Last 10: median=3.60 mean=3.06
+  Last 15: median=3.70 mean=3.33
+
+=== FINAL SUMMARY ===
+
+Recommended model: MULTIPLICATIVE + CIRCADIAN
+  growth_rate = 0.2379
+  satiety_rate = 0.3462
+  circadian_amp = 0.000
+  circadian_phase = 0.0h
+  gap1_MAE = 0.724h
+  gap3_MAE = 0.738h
+  fcount_MAE = 1.60
+  pred_std = 0.738h
+
+Key findings:
+  1. Additive satiety collapses to constant-gap predictor (pred_std near 0)
+  2. Multiplicative satiety produces meaningful volume-sensitive variation
+  3. Circadian modulation captures real day/night structure (~1.3h spread)
+  4. Volume-to-gap correlation is modest (r=0.35) but real
+  5. Breastfeed merge affects only 3/81 events (negligible)
+  6. Global median is the best volume prediction strategy

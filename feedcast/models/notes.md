@@ -56,13 +56,13 @@ requirements. Each is intended to be distinct in how it frames the
 prediction problem, not just in the math used to produce another
 next-gap estimate.
 
-| Model | Frame | Key distinction |
-| ----- | ----- | --------------- |
-| Slot Drift | Daily template | Predicts the whole day in slot space |
-| Analog Trajectory Retrieval | Instance-based ML | Reuses futures from similar historical states |
-| Survival / Hazard Model | Probabilistic event process | Predicts feeding probability over time |
-| Latent Hunger State | Mechanistic hidden state | Models an internal driver rather than surface patterns |
-| Consensus Blend | Ensemble | Combines forecasts from distinct model families |
+| Model | Frame | Key distinction | Status |
+| ----- | ----- | --------------- | ------ |
+| Slot Drift | Daily template | Predicts the whole day in slot space | Implemented |
+| Analog Trajectory Retrieval | Instance-based ML | Reuses futures from similar historical states | Implemented |
+| Latent Hunger State | Mechanistic hidden state | Models an internal driver rather than surface patterns | Implemented |
+| Survival / Hazard Model | Probabilistic event process | Predicts feeding probability over time | Next |
+| Consensus Blend | Ensemble | Combines forecasts from distinct model families | Implemented |
 
 If multiple models agree despite these different frames, the agreement
 is more meaningful than if we keep building variations of the same

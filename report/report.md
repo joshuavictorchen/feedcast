@@ -5,19 +5,19 @@
 ## Next Feeds
 
 **Consensus Blend** predicts **9 feeds**
-over the next 24 hours, totaling **27.9 oz**.
+over the next 24 hours, totaling **28.4 oz**.
 
 | Feed | Time | Gap | Volume |
 | ---- | ---- | --- | ------ |
-| 1 | **2:03 PM** | 2.4h | 2.4 oz |
-| 2 | **3:53 PM** | 1.8h | 2.7 oz |
-| 3 | **6:02 PM** | 2.1h | 3.0 oz |
-| 4 | **9:11 PM** | 3.1h | 3.1 oz |
-| 5 | **12:17 AM** | 3.1h | 3.5 oz |
-| 6 | **3:05 AM** | 2.8h | 3.6 oz |
-| 7 | **5:54 AM** | 2.8h | 3.8 oz |
-| 8 | **8:45 AM** | 2.8h | 3.4 oz |
-| 9 | **10:52 AM** | 2.1h | 2.4 oz |
+| 1 | **1:48 PM** | 2.1h | 2.6 oz |
+| 2 | **4:04 PM** | 2.3h | 2.9 oz |
+| 3 | **6:02 PM** | 2.0h | 3.1 oz |
+| 4 | **9:09 PM** | 3.1h | 3.2 oz |
+| 5 | **11:56 PM** | 2.8h | 3.5 oz |
+| 6 | **2:38 AM** | 2.7h | 3.6 oz |
+| 7 | **5:38 AM** | 3.0h | 3.7 oz |
+| 8 | **8:50 AM** | 3.2h | 3.4 oz |
+| 9 | **10:52 AM** | 2.0h | 2.4 oz |
 
 ![Featured Forecast](schedule.png)
 
@@ -31,10 +31,11 @@ over the next 24 hours, totaling **27.9 oz**.
 | ----- | ------ | ---------- | ---------- |
 | Slot Drift | Available | 4:22 PM | 4:22 PM, 6:02 PM, 7:02 PM, 11:20 PM, 1:46 AM, 4:25 AM, 7:39 AM, 11:10 AM |
 | Analog Trajectory | Available | 2:18 PM | 2:18 PM, 3:37 PM, 6:02 PM, 9:13 PM, 12:21 AM, 3:09 AM, 6:29 AM, 8:45 AM, 10:13 AM |
+| Latent Hunger State | Available | 1:34 PM | 1:34 PM, 4:04 PM, 6:34 PM, 9:04 PM, 11:34 PM, 2:04 AM, 4:34 AM, 7:04 AM, 9:34 AM |
 | Recent Cadence | Available | 2:50 PM | 2:50 PM, 5:59 PM, 9:09 PM, 12:18 AM, 3:27 AM, 6:37 AM, 9:46 AM |
 | Phase Nowcast Hybrid | Available | 1:46 PM | 1:46 PM, 4:09 PM, 6:44 PM, 9:41 PM, 12:17 AM, 3:05 AM, 5:54 AM, 8:55 AM |
 | Gap-Conditional | Available | 1:48 PM | 1:48 PM, 3:30 PM, 5:40 PM, 8:00 PM, 10:52 PM, 2:11 AM, 5:21 AM, 8:29 AM, 10:52 AM |
-| Consensus Blend | Featured | 2:03 PM | 2:03 PM, 3:53 PM, 6:02 PM, 9:11 PM, 12:17 AM, 3:05 AM, 5:54 AM, 8:45 AM, 10:52 AM |
+| Consensus Blend | Featured | 1:48 PM | 1:48 PM, 4:04 PM, 6:02 PM, 9:09 PM, 11:56 PM, 2:38 AM, 5:38 AM, 8:50 AM, 10:52 AM |
 
 ## Prior Run Retrospective
 
@@ -97,6 +98,32 @@ Uses bottle-only events (no breastfeed merge). The model needs at
 least 10 historical states whose trajectories extend at least 20
 hours past the state time (with at least 3 future events) to
 produce a forecast.
+
+### Latent Hunger State
+
+Mechanistic model that treats hunger as a hidden variable rising over
+time and partially reset by each feed. A larger feed drives hunger
+lower, so the next feed takes longer. The model simulates this process
+forward to produce a 24-hour schedule.
+
+The satiety reset is multiplicative: after a feed of V ounces, hunger
+drops to threshold × exp(−rate × V). This guarantees partial resets —
+no feed fully zeroes hunger — so volume always influences the predicted
+gap. The growth rate (how fast hunger rebuilds) is estimated from
+recent events using a recency-weighted average, allowing the model to
+track the baby's changing metabolic pace.
+
+At forecast time the model computes the current hunger level from the
+last observed feed and elapsed time, then simulates forward: hunger
+grows until it crosses the threshold, a feed fires at the simulation
+median volume, hunger resets, and the cycle repeats.
+
+Uses breastfeed-merged events (45-minute merge window). Currently
+affects only 3 of 81 events with negligible volume additions.
+Infrastructure is in place for smooth circadian modulation of the
+growth rate, but research found no benefit over the multiplicative
+model's inherent volume-driven day/night sensitivity — larger
+overnight feeds already produce longer predicted gaps.
 
 ### Recent Cadence
 
@@ -210,5 +237,5 @@ others.
 ---
 
 *Export: `export_narababy_silas_20260323.csv` · Dataset: `sha256:7b6cdd2f...`
-· Commit: `ee8364c (dirty)`
-· Generated: 2026-03-24 00:17:02*
+· Commit: `934b9de (dirty)`
+· Generated: 2026-03-24 01:29:32*
