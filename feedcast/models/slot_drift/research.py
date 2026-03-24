@@ -22,9 +22,8 @@ from scipy.optimize import linear_sum_assignment
 
 from feedcast.data import (
     build_feed_events,
-    find_latest_export,
     hour_of_day,
-    load_activities,
+    load_export_snapshot,
     SNACK_THRESHOLD_OZ,
 )
 from feedcast.models.slot_drift.model import (
@@ -38,12 +37,10 @@ from feedcast.models.slot_drift.model import (
 
 def main() -> None:
     """Run the analysis using the same data window as the model."""
-    export_path = find_latest_export()
-    print(f"Export: {export_path}\n")
-
-    activities = load_activities(export_path)
-    events = build_feed_events(activities, merge_window_minutes=None)
-    cutoff = events[-1].time
+    snapshot = load_export_snapshot()
+    cutoff = snapshot.latest_activity_time
+    events = build_feed_events(snapshot.activities, merge_window_minutes=None)
+    print(f"Export: {snapshot.export_path}")
     print(f"Cutoff: {cutoff}")
     print(f"Lookback: {LOOKBACK_DAYS} days\n")
 
