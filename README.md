@@ -42,6 +42,7 @@ dataset.
 | Slot Drift | Daily template with per-slot drift tracking and Hungarian matching |
 | Analog Trajectory | Instance-based ML: finds similar historical states and averages their futures |
 | Latent Hunger State | Mechanistic hidden state: hunger rises over time, feeds reset it proportional to volume |
+| Survival Hazard | Day-part Weibull hazard: feeding probability increases with elapsed time |
 | Recent Cadence | Recency-weighted interval between full feeds, rolled forward at constant gap |
 | Phase Nowcast Hybrid | Phase-locked oscillator backbone with local regression nowcast for the first gap |
 | Gap-Conditional | Weighted linear regression on event state, rolled forward autoregressively |
@@ -143,6 +144,12 @@ feedcast/
       research.py              Repeatable data analysis
       research_results.txt     Saved research output
     latent_hunger/             Mechanistic hidden hunger state
+      model.py                 Model implementation
+      methodology.md           Report methodology text
+      design.md                Design decisions and rationale
+      research.py              Repeatable data analysis
+      research_results.txt     Saved research output
+    survival_hazard/           Day-part Weibull survival model
       model.py                 Model implementation
       methodology.md           Report methodology text
       design.md                Design decisions and rationale

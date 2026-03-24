@@ -5,19 +5,19 @@
 ## Next Feeds
 
 **Consensus Blend** predicts **9 feeds**
-over the next 24 hours, totaling **28.4 oz**.
+over the next 24 hours, totaling **29.0 oz**.
 
 | Feed | Time | Gap | Volume |
 | ---- | ---- | --- | ------ |
-| 1 | **1:48 PM** | 2.1h | 2.6 oz |
-| 2 | **4:04 PM** | 2.3h | 2.9 oz |
+| 1 | **1:50 PM** | 2.2h | 2.8 oz |
+| 2 | **4:04 PM** | 2.2h | 3.0 oz |
 | 3 | **6:02 PM** | 2.0h | 3.1 oz |
-| 4 | **9:09 PM** | 3.1h | 3.2 oz |
-| 5 | **11:56 PM** | 2.8h | 3.5 oz |
-| 6 | **2:38 AM** | 2.7h | 3.6 oz |
-| 7 | **5:38 AM** | 3.0h | 3.7 oz |
-| 8 | **8:50 AM** | 3.2h | 3.4 oz |
-| 9 | **10:52 AM** | 2.0h | 2.4 oz |
+| 4 | **9:07 PM** | 3.1h | 3.2 oz |
+| 5 | **11:34 PM** | 2.5h | 3.5 oz |
+| 6 | **2:41 AM** | 3.1h | 3.6 oz |
+| 7 | **5:48 AM** | 3.1h | 3.7 oz |
+| 8 | **8:55 AM** | 3.1h | 3.4 oz |
+| 9 | **11:00 AM** | 2.1h | 2.7 oz |
 
 ![Featured Forecast](schedule.png)
 
@@ -32,10 +32,11 @@ over the next 24 hours, totaling **28.4 oz**.
 | Slot Drift | Available | 4:22 PM | 4:22 PM, 6:02 PM, 7:02 PM, 11:20 PM, 1:46 AM, 4:25 AM, 7:39 AM, 11:10 AM |
 | Analog Trajectory | Available | 2:18 PM | 2:18 PM, 3:37 PM, 6:02 PM, 9:13 PM, 12:21 AM, 3:09 AM, 6:29 AM, 8:45 AM, 10:13 AM |
 | Latent Hunger State | Available | 1:34 PM | 1:34 PM, 4:04 PM, 6:34 PM, 9:04 PM, 11:34 PM, 2:04 AM, 4:34 AM, 7:04 AM, 9:34 AM |
+| Survival Hazard | Available | 1:52 PM | 1:52 PM, 4:04 PM, 6:16 PM, 8:27 PM, 11:34 PM, 2:41 AM, 5:48 AM, 8:55 AM, 11:07 AM |
 | Recent Cadence | Available | 2:50 PM | 2:50 PM, 5:59 PM, 9:09 PM, 12:18 AM, 3:27 AM, 6:37 AM, 9:46 AM |
 | Phase Nowcast Hybrid | Available | 1:46 PM | 1:46 PM, 4:09 PM, 6:44 PM, 9:41 PM, 12:17 AM, 3:05 AM, 5:54 AM, 8:55 AM |
 | Gap-Conditional | Available | 1:48 PM | 1:48 PM, 3:30 PM, 5:40 PM, 8:00 PM, 10:52 PM, 2:11 AM, 5:21 AM, 8:29 AM, 10:52 AM |
-| Consensus Blend | Featured | 1:48 PM | 1:48 PM, 4:04 PM, 6:02 PM, 9:09 PM, 11:56 PM, 2:38 AM, 5:38 AM, 8:50 AM, 10:52 AM |
+| Consensus Blend | Featured | 1:50 PM | 1:50 PM, 4:04 PM, 6:02 PM, 9:07 PM, 11:34 PM, 2:41 AM, 5:48 AM, 8:55 AM, 11:00 AM |
 
 ## Prior Run Retrospective
 
@@ -119,11 +120,35 @@ grows until it crosses the threshold, a feed fires at the simulation
 median volume, hunger resets, and the cycle repeats.
 
 Uses breastfeed-merged events (45-minute merge window) so that
-nearby breastfeed volume is attributed to the preceding bottle.
+nearby breastfeed volume is attributed to the next bottle event.
 Infrastructure is in place for smooth circadian modulation of the
 growth rate, but research found no benefit over the multiplicative
 model's inherent volume-driven day/night sensitivity — larger
 overnight feeds already produce longer predicted gaps.
+
+### Survival Hazard
+
+Probabilistic model that frames each feeding as a survival event whose
+likelihood increases with elapsed time. Uses a Weibull hazard function
+with separate shapes for overnight and daytime periods to capture the
+structurally different feeding regimes.
+
+Overnight feeds (20:00–08:00) follow a high-shape Weibull: very
+regular timing with tight clustering around the median gap. Daytime
+feeds (08:00–20:00) follow a lower-shape Weibull: more variable timing
+with a broader distribution. The scale parameter for each period is
+estimated at runtime from recent same-period gaps, allowing the model
+to track the baby's changing pace.
+
+The forecast uses the median of the Weibull survival function as the
+point prediction — the time at which there is a 50% probability the
+next feed has occurred. The first predicted feed accounts for the time
+already elapsed since the last observed feed using the conditional
+survival function.
+
+Uses bottle-only events (no breastfeed merge). Volume was tested as a
+covariate but was not statistically significant and did not improve
+walk-forward accuracy beyond the day-part split.
 
 ### Recent Cadence
 
@@ -237,5 +262,5 @@ others.
 ---
 
 *Export: `export_narababy_silas_20260323.csv` · Dataset: `sha256:7b6cdd2f...`
-· Commit: `20bc2e8`
-· Generated: 2026-03-24 01:47:14*
+· Commit: `41a8267 (dirty)`
+· Generated: 2026-03-24 12:25:02*

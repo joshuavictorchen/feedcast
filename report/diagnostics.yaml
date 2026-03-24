@@ -1,4 +1,4 @@
-run_id: 20260324-014714
+run_id: 20260324-122502
 cutoff: '2026-03-23T11:41:13'
 featured_slug: consensus_blend
 forecasts:
@@ -208,6 +208,31 @@ forecasts:
       std: 0.153
     lookback_days: 7
     recency_half_life_hours: 72
+- name: Survival Hazard
+  slug: survival_hazard
+  available: true
+  error_message: null
+  diagnostics:
+    overnight_shape: 7.31
+    overnight_scale: 3.278
+    overnight_median_hours: 3.117
+    overnight_fit_gaps: 27
+    daytime_shape: 2.33
+    daytime_scale: 2.567
+    daytime_median_hours: 2.194
+    daytime_fit_gaps: 37
+    elapsed_since_last_hours: 0.0
+    cutoff_daypart: daytime
+    sim_volume_oz: 3.5
+    total_fit_gaps: 64
+    lookback_days: 7
+    recency_half_life_hours: 72
+    uncertainty_25_75_overnight:
+      p25_hours: 2.764
+      p75_hours: 3.427
+    uncertainty_25_75_daytime:
+      p25_hours: 1.504
+      p75_hours: 2.954
 - name: Recent Cadence
   slug: recent_cadence
   available: true
@@ -258,6 +283,7 @@ forecasts:
     - slot_drift
     - analog_trajectory
     - latent_hunger
+    - survival_hazard
     - recent_cadence
     - phase_nowcast
     - gap_conditional
@@ -265,6 +291,7 @@ forecasts:
       slot_drift: 8
       analog_trajectory: 9
       latent_hunger: 9
+      survival_hazard: 9
       recent_cadence: 7
       phase_nowcast: 8
       gap_conditional: 9
@@ -274,6 +301,6 @@ retrospective:
   available: false
   same_dataset: true
   dataset_id_short: sha256:7b6cdd2f...
-  prior_run_id: 20260324-014536
+  prior_run_id: 20260324-014714
   observed_horizon_hours: 0.0
   results: []

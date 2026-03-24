@@ -53,6 +53,12 @@ from .slot_drift import (
     MODEL_SLUG as SLOT_DRIFT_SLUG,
     forecast_slot_drift,
 )
+from .survival_hazard import (
+    MODEL_METHODOLOGY as SURVIVAL_HAZARD_METHODOLOGY,
+    MODEL_NAME as SURVIVAL_HAZARD_NAME,
+    MODEL_SLUG as SURVIVAL_HAZARD_SLUG,
+    forecast_survival_hazard,
+)
 from .shared import (
     CONSENSUS_MATCH_WINDOW_MINUTES,
     ForecastUnavailable,
@@ -117,6 +123,13 @@ MODELS = [
         forecast_fn=forecast_latent_hunger,
     ),
     ModelSpec(
+        name=SURVIVAL_HAZARD_NAME,
+        slug=SURVIVAL_HAZARD_SLUG,
+        methodology=SURVIVAL_HAZARD_METHODOLOGY,
+        merge_window_minutes=None,
+        forecast_fn=forecast_survival_hazard,
+    ),
+    ModelSpec(
         name=RECENT_CADENCE_NAME,
         slug=RECENT_CADENCE_SLUG,
         methodology=RECENT_CADENCE_METHODOLOGY,
@@ -143,6 +156,7 @@ STATIC_FEATURED_TIEBREAKER = [
     SLOT_DRIFT_SLUG,
     ANALOG_TRAJECTORY_SLUG,
     LATENT_HUNGER_SLUG,
+    SURVIVAL_HAZARD_SLUG,
     PHASE_NOWCAST_SLUG,
     GAP_CONDITIONAL_SLUG,
     RECENT_CADENCE_SLUG,

@@ -1,0 +1,166 @@
+Export: exports/export_narababy_silas_20260323.csv
+Dataset: sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0
+Cutoff: 2026-03-23 11:41:13
+Run: 2026-03-24T12:25:45
+Events (with BF merge): 81
+Events (bottle only):   81
+
+=== GAP DISTRIBUTION ===
+
+Total gaps: 80
+Mean: 2.508h  Std: 1.013h
+Min: 0.356h  Max: 4.540h
+Median: 2.732h
+Coefficient of variation: 0.404
+
+Gap histogram (0.5h bins):
+  [0.0, 0.5):   2 ##
+  [0.5, 1.0):   8 ########
+  [1.0, 1.5):   6 ######
+  [1.5, 2.0):   8 ########
+  [2.0, 2.5):   7 #######
+  [2.5, 3.0):  16 ################
+  [3.0, 3.5):  24 ########################
+  [3.5, 4.0):   7 #######
+  [4.0, 4.5):   1 #
+  [4.5, 5.0):   1 #
+  [5.0, 5.5):   0 
+  [5.5+):     0 
+
+=== WEIBULL FIT — BASELINE ===
+
+All data (uniform weights):
+  shape=2.7486  scale=2.8124
+  median=2.461h  mean=2.503h
+  neg_loglik=115.20  success=True
+
+Recency-weighted (half-life=72h):
+  shape=3.0807  scale=2.8882
+  median=2.564h  mean=2.582h
+
+Last 5d (recency-weighted):
+  shape=3.5930  scale=2.9313  median=2.647h  (n=44)
+Last 7d (recency-weighted):
+  shape=3.3172  scale=2.9365  median=2.629h  (n=64)
+
+Shape > 1 means hazard increases with elapsed time.
+  shape=3.08: increasing hazard
+  This means: the longer you wait, the more likely the next feed
+
+=== WEIBULL + VOLUME COVARIATE ===
+
+Recency-weighted with volume covariate:
+  shape=3.1349  scale=2.2618  beta=0.0771
+  success=True
+
+Volume effect on median gap:
+  vol=1.0oz: effective_scale=2.443  median=2.174h
+  vol=2.0oz: effective_scale=2.639  median=2.348h
+  vol=3.0oz: effective_scale=2.851  median=2.536h
+  vol=4.0oz: effective_scale=3.079  median=2.739h
+
+Likelihood ratio test (1 df):
+  baseline neg_loglik: 46.62
+  +volume neg_loglik:  45.54
+  LR statistic: 2.153 (>3.84 for p<0.05)
+  Volume not significant at p<0.05
+
+=== WEIBULL BY DAY-PART ===
+
+Overnight (20-08) (n=34):
+  shape=7.3075  scale=3.2805  median=3.120h
+Daytime (08-20) (n=46):
+  shape=2.3317  scale=2.5185  median=2.152h
+
+=== DISCRETE-TIME HAZARD ===
+
+Discrete hazard rates (recency-weighted):
+  [ 0.0,  0.5): h=0.026 #
+  [ 0.5,  1.0): h=0.072 ###
+  [ 1.0,  1.5): h=0.140 #######
+  [ 1.5,  2.0): h=0.138 ######
+  [ 2.0,  2.5): h=0.110 #####
+  [ 2.5,  3.0): h=0.312 ###############
+  [ 3.0,  3.5): h=0.673 #################################
+  [ 3.5,  4.0): h=0.821 #########################################
+  [ 4.0,  5.0): h=0.674 #################################
+  [ 5.0,  6.0): h=0.500 #########################
+  [ 6.0,  inf): h=0.500 #########################
+
+Discrete median survival: 2.750h
+Weibull median survival: 2.564h
+
+Walk-forward discrete-time hazard (gap1 MAE):
+  Discrete gap1_MAE: 0.790h (n=74)
+
+=== WALK-FORWARD WEIBULL COMPARISON ===
+
+Weibull shape=3.081 lookback=5d: gap1=0.803h  gap3=0.799h  fcount=1.86  (n=74)
+Weibull shape=3.081 lookback=7d: gap1=0.808h  gap3=0.805h  fcount=1.86  (n=74)
+Weibull shape=2.749 lookback=5d: gap1=0.824h  gap3=0.822h  fcount=1.87  (n=74)
+Weibull shape=2.749 lookback=7d: gap1=0.830h  gap3=0.829h  fcount=1.87  (n=74)
+
+Weibull+vol shape=3.135 beta=0.077: gap1=0.844h  gap3=0.836h  fcount=1.81
+Weibull+vol shape=3.135 beta=0.039: gap1=0.749h  gap3=0.741h  fcount=1.53
+Weibull+vol shape=3.081 beta=0.077: gap1=0.838h  gap3=0.830h  fcount=1.81
+Weibull+vol shape=3.081 beta=0.039: gap1=0.749h  gap3=0.741h  fcount=1.53
+
+=== DAY-PART SPLIT WALK-FORWARD ===
+
+Day-part split Weibull:
+  overnight shape=7.307  daytime shape=2.332
+  gap1_MAE=0.690h  gap3_MAE=0.736h  fcount_MAE=2.41  (n=71)
+
+=== NAIVE BASELINE COMPARISON ===
+
+Model                                      gap1_MAE
+-----------------------------------------------------
+Naive last-gap                                0.883
+Naive mean-3-gaps                             0.832
+Discrete-time hazard                          0.790
+Weibull baseline (no vol)                     0.808
+Weibull + volume                              0.844
+Day-part split Weibull                        0.690
+
+=== MOST RECENT 24H PREDICTION (holdout) ===
+
+Parameters fit on pre-anchor data only (true holdout).
+
+Anchor: 03/22 08:53 vol=3.2oz
+Holdout-fit: shape=3.3025 scale=2.9497
+  (vs full-data: shape=3.0807 scale=2.8882)
+
+Predicted 9 feeds, actual 9 feeds
+
+  pred=11:32  actual=11:54  err=0.38h
+  pred=14:10  actual=13:06  err=1.07h
+  pred=16:49  actual=16:36  err=0.21h
+  pred=19:27  actual=19:28  err=0.01h
+  pred=22:05  actual=23:27  err=1.37h
+  pred=00:44  actual=02:30  err=1.76h
+  pred=03:22  actual=05:13  err=1.85h
+  pred=06:00  actual=08:48  err=2.79h
+  pred=08:39  actual=17:53  err=14.76h
+
+Paired 9, mean timing error: 2.69h
+Feed count error: 0
+
+=== FINAL SUMMARY ===
+
+Weibull shape (recency-weighted): 3.0807
+Weibull scale (recency-weighted): 2.8882
+Volume beta: 0.0771
+Volume significant: no (LR=2.153)
+
+Best walk-forward gap1_MAE:
+  Weibull baseline:   0.808h
+  Weibull + volume:   0.844h
+  Discrete hazard:    0.790h
+  Day-part split:     0.690h
+
+Model implementation will use:
+  Day-part split Weibull (overnight shape=7.307, daytime shape=2.332)
+  Scale estimated at runtime from same-daypart recent gaps
+  Median survival time for point predictions
+  Conditional survival for first predicted feed
+  Breastfeed merge: follows volume covariate decision

@@ -61,7 +61,7 @@ next-gap estimate.
 | Slot Drift | Daily template | Predicts the whole day in slot space | Implemented |
 | Analog Trajectory Retrieval | Instance-based ML | Reuses futures from similar historical states | Implemented |
 | Latent Hunger State | Mechanistic hidden state | Models an internal driver rather than surface patterns | Implemented |
-| Survival / Hazard Model | Probabilistic event process | Predicts feeding probability over time | Next |
+| Survival / Hazard Model | Probabilistic event process | Predicts feeding probability over time | Implemented |
 | Consensus Blend | Ensemble | Combines forecasts from distinct model families | Implemented |
 
 If multiple models agree despite these different frames, the agreement
