@@ -156,14 +156,28 @@ tracker.json                   Run history with predictions and retrospectives
 
 ## Working with Models
 
-**Add a model:** Create a subdirectory in `feedcast/models/` with `model.py`
-and `methodology.md`. Implement a forecast function with the signature
-`(history, cutoff, horizon_hours) -> Forecast` and define `MODEL_NAME` and
-`MODEL_SLUG`. The methodology text for the report is loaded from
-`methodology.md`. Add a `ModelSpec` entry to `feedcast/models/__init__.py`.
+**Start here:** Read `feedcast/models/notes.md` first. It contains domain
+observations, the working theory behind the model lineup, cross-cutting
+design considerations, and open questions. It is the orientation document
+for anyone working on models.
+
+**Model directory convention:** Each model lives in its own subdirectory
+under `feedcast/models/` with a standard set of files:
+
+| File | Purpose |
+| ---- | ------- |
+| `model.py` | Implementation. Exports `MODEL_NAME`, `MODEL_SLUG`, `MODEL_METHODOLOGY`, and a forecast function with signature `(history, cutoff, horizon_hours) -> Forecast`. Tuning constants live here, not in `shared.py`. |
+| `methodology.md` | Report-facing text. Content before the first `##` heading is loaded by `load_methodology()` and rendered into the forecast report. |
+| `design.md` | Design decisions and rationale. Documents why the model works the way it does. |
+| `research.py` | Repeatable data analysis. Run with `.venv/bin/python -m feedcast.models.<name>.research`. Uses the same export selection, data parsing, and constants as the model so its output matches what the model sees. |
+| `research_results.txt` | Saved output from the research script. Committed for reproducibility. |
+
+**Add a model:** Create the subdirectory with the files above, then add a
+`ModelSpec` entry to `feedcast/models/__init__.py`. See `slot_drift/` or
+`analog_trajectory/` as reference implementations.
 
 **Remove a model:** Delete its `ModelSpec` from the `MODELS` list. Optionally
-delete the file.
+delete the directory.
 
 **Tune parameters:** Keep model-specific constants in the model file that
 uses them. Reserve `feedcast/models/shared.py` for reusable utilities that
@@ -171,10 +185,6 @@ are not model concepts.
 
 **Change the featured default:** Set `FEATURED_DEFAULT` in
 `feedcast/models/__init__.py` to any available model slug.
-
-**Domain notes:** Observations about feeding patterns and model critique are
-captured in `feedcast/models/notes.md`. These are a reference point for
-model design, not a binding constraint.
 
 ## Working with Agents
 
@@ -192,7 +202,7 @@ add a corresponding case to `agents/run.sh`.
 
 | Decision | Choice | Rationale |
 | -------- | ------ | --------- |
-| Scripted models | 3 distinct approaches | Interval baseline, recursive state-space, event regression for ensemble diversity |
+| Scripted models | Distinct conceptual frames | Template, instance-based ML, and gap-regression approaches for ensemble diversity |
 | Ensemble | Consensus uses scripted models only | Agents excluded until retrospectives demonstrate consistent value |
 | Featured forecast | Consensus > static tiebreaker | Simple default; manually overridable via `FEATURED_DEFAULT` |
 | Agent failure | Fail fast | Use `--skip-agents` to work around; no silent fallback |

@@ -1,7 +1,192 @@
-run_id: 20260323-161542
+run_id: 20260324-000254
 cutoff: '2026-03-23T11:41:13'
 featured_slug: consensus_blend
 forecasts:
+- name: Slot Drift
+  slug: slot_drift
+  available: true
+  error_message: null
+  diagnostics:
+    slot_count: 9
+    template_hours:
+    - 1.07
+    - 4.32
+    - 7.61
+    - 10.82
+    - 12.62
+    - 15.55
+    - 17.68
+    - 19.56
+    - 21.98
+    template_times:
+    - 01:04
+    - 04:19
+    - 07:36
+    - '10:49'
+    - '12:37'
+    - '15:33'
+    - '17:40'
+    - '19:33'
+    - '21:58'
+    complete_days_used: 7
+    daily_feed_counts:
+      '2026-03-16': 13
+      '2026-03-17': 8
+      '2026-03-18': 8
+      '2026-03-19': 9
+      '2026-03-20': 8
+      '2026-03-21': 10
+      '2026-03-22': 9
+    per_slot:
+    - slot: 1
+      template: 01:04
+      projected: 01:37
+      drift_hours_per_day: 0.151
+      avg_volume_oz: 3.5
+      observations: 7
+    - slot: 2
+      template: 04:19
+      projected: 04:23
+      drift_hours_per_day: 0.035
+      avg_volume_oz: 3.43
+      observations: 7
+    - slot: 3
+      template: 07:36
+      projected: 07:38
+      drift_hours_per_day: 0.025
+      avg_volume_oz: 3.45
+      observations: 7
+    - slot: 4
+      template: '10:49'
+      projected: '11:00'
+      drift_hours_per_day: 0.164
+      avg_volume_oz: 3.09
+      observations: 7
+    - slot: 5
+      template: '12:37'
+      projected: '12:53'
+      drift_hours_per_day: 0.129
+      avg_volume_oz: 1.71
+      observations: 6
+    - slot: 6
+      template: '15:33'
+      projected: '16:22'
+      drift_hours_per_day: 0.213
+      avg_volume_oz: 3.41
+      observations: 7
+    - slot: 7
+      template: '17:40'
+      projected: '18:02'
+      drift_hours_per_day: 0.05
+      avg_volume_oz: 2.27
+      observations: 6
+    - slot: 8
+      template: '19:33'
+      projected: '19:02'
+      drift_hours_per_day: -0.191
+      avg_volume_oz: 3.98
+      observations: 5
+    - slot: 9
+      template: '21:58'
+      projected: '23:20'
+      drift_hours_per_day: 0.347
+      avg_volume_oz: 3.38
+      observations: 7
+    per_day_match_quality:
+      '2026-03-16':
+        total_feeds: 13
+        matched: 9
+        unmatched: 4
+      '2026-03-17':
+        total_feeds: 8
+        matched: 8
+        unmatched: 0
+      '2026-03-18':
+        total_feeds: 8
+        matched: 8
+        unmatched: 0
+      '2026-03-19':
+        total_feeds: 9
+        matched: 9
+        unmatched: 0
+      '2026-03-20':
+        total_feeds: 8
+        matched: 8
+        unmatched: 0
+      '2026-03-21':
+        total_feeds: 10
+        matched: 8
+        unmatched: 2
+      '2026-03-22':
+        total_feeds: 9
+        matched: 9
+        unmatched: 0
+    filled_slots_today:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+- name: Analog Trajectory
+  slug: analog_trajectory
+  available: true
+  error_message: null
+  diagnostics:
+    complete_states: 69
+    k_neighbors: 5
+    elapsed_since_last_bottle_hours: 0.0
+    query_features:
+      last_gap: 1.247
+      mean_gap_3: 2.155
+      last_volume: 2.0
+      mean_volume_3: 2.667
+      sin_hour: 0.082
+      cos_hour: -0.997
+    feature_normalization:
+      last_gap:
+        mean: 2.477
+        std: 1.008
+      mean_gap_3:
+        mean: 2.505
+        std: 0.767
+      last_volume:
+        mean: 2.76
+        std: 1.078
+      mean_volume_3:
+        mean: 2.78
+        std: 0.755
+      sin_hour:
+        mean: -0.118
+        std: 0.681
+      cos_hour:
+        mean: -0.105
+        std: 0.715
+    neighbors:
+    - state_time: '2026-03-21T13:18:08'
+      distance: 1.154
+      recency_weight: 0.64
+      weight: 0.55
+      trajectory_length: 9
+    - state_time: '2026-03-22T13:06:30'
+      distance: 1.189
+      recency_weight: 0.805
+      weight: 0.671
+      trajectory_length: 9
+    - state_time: '2026-03-17T12:30:35'
+      distance: 1.246
+      recency_weight: 0.252
+      weight: 0.201
+      trajectory_length: 7
+    - state_time: '2026-03-19T12:18:10'
+      distance: 1.258
+      recency_weight: 0.399
+      weight: 0.315
+      trajectory_length: 8
+    - state_time: '2026-03-16T11:18:20'
+      distance: 1.351
+      recency_weight: 0.198
+      weight: 0.145
+      trajectory_length: 12
 - name: Recent Cadence
   slug: recent_cadence
   available: true
@@ -49,19 +234,23 @@ forecasts:
   error_message: null
   diagnostics:
     component_models:
+    - slot_drift
+    - analog_trajectory
     - recent_cadence
     - phase_nowcast
     - gap_conditional
     component_forecast_counts:
+      slot_drift: 8
+      analog_trajectory: 9
       recent_cadence: 7
       phase_nowcast: 8
       gap_conditional: 9
     unavailable_components: {}
-    skipped_outlier_points: 0
+    skipped_outlier_points: 1
 retrospective:
   available: false
   same_dataset: true
   dataset_id_short: sha256:7b6cdd2f...
-  prior_run_id: 20260323-161501
+  prior_run_id: 20260323-235437
   observed_horizon_hours: 0.0
   results: []

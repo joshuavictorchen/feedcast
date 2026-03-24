@@ -4,19 +4,20 @@
 
 ## Next Feeds
 
-**Consensus Blend** predicts **8 feeds**
-over the next 24 hours, totaling **25.6 oz**.
+**Consensus Blend** predicts **9 feeds**
+over the next 24 hours, totaling **27.9 oz**.
 
 | Feed | Time | Gap | Volume |
 | ---- | ---- | --- | ------ |
-| 1 | **1:48 PM** | 2.1h | 2.3 oz |
-| 2 | **3:49 PM** | 2.0h | 2.7 oz |
-| 3 | **5:59 PM** | 2.2h | 3.0 oz |
-| 4 | **9:09 PM** | 3.2h | 2.9 oz |
+| 1 | **2:03 PM** | 2.4h | 2.4 oz |
+| 2 | **3:53 PM** | 1.8h | 2.7 oz |
+| 3 | **6:02 PM** | 2.1h | 3.0 oz |
+| 4 | **9:11 PM** | 3.1h | 3.1 oz |
 | 5 | **12:17 AM** | 3.1h | 3.5 oz |
-| 6 | **3:05 AM** | 2.8h | 3.5 oz |
-| 7 | **5:54 AM** | 2.8h | 4.0 oz |
-| 8 | **8:55 AM** | 3.0h | 3.6 oz |
+| 6 | **3:05 AM** | 2.8h | 3.6 oz |
+| 7 | **5:54 AM** | 2.8h | 3.8 oz |
+| 8 | **8:45 AM** | 2.8h | 3.4 oz |
+| 9 | **10:52 AM** | 2.1h | 2.4 oz |
 
 ![Featured Forecast](schedule.png)
 
@@ -28,10 +29,12 @@ over the next 24 hours, totaling **25.6 oz**.
 
 | Model | Status | First Feed | Feed Times |
 | ----- | ------ | ---------- | ---------- |
+| Slot Drift | Available | 4:22 PM | 4:22 PM, 6:02 PM, 7:02 PM, 11:20 PM, 1:46 AM, 4:25 AM, 7:39 AM, 11:10 AM |
+| Analog Trajectory | Available | 2:18 PM | 2:18 PM, 3:37 PM, 6:02 PM, 9:13 PM, 12:21 AM, 3:09 AM, 6:29 AM, 8:45 AM, 10:13 AM |
 | Recent Cadence | Available | 2:50 PM | 2:50 PM, 5:59 PM, 9:09 PM, 12:18 AM, 3:27 AM, 6:37 AM, 9:46 AM |
 | Phase Nowcast Hybrid | Available | 1:46 PM | 1:46 PM, 4:09 PM, 6:44 PM, 9:41 PM, 12:17 AM, 3:05 AM, 5:54 AM, 8:55 AM |
 | Gap-Conditional | Available | 1:48 PM | 1:48 PM, 3:30 PM, 5:40 PM, 8:00 PM, 10:52 PM, 2:11 AM, 5:21 AM, 8:29 AM, 10:52 AM |
-| Consensus Blend | Featured | 1:48 PM | 1:48 PM, 3:49 PM, 5:59 PM, 9:09 PM, 12:17 AM, 3:05 AM, 5:54 AM, 8:55 AM |
+| Consensus Blend | Featured | 2:03 PM | 2:03 PM, 3:53 PM, 6:02 PM, 9:11 PM, 12:17 AM, 3:05 AM, 5:54 AM, 8:45 AM, 10:52 AM |
 
 ## Prior Run Retrospective
 
@@ -44,6 +47,56 @@ No completed retrospective history yet.
 
 ## Methodologies
 
+
+### Slot Drift
+
+Daily template model that identifies recurring feed slots and tracks
+their drift over time. Instead of predicting individual gaps, it asks:
+"what does a typical day look like, and how is it shifting?"
+
+The model groups recent history into calendar days, determines a
+canonical slot count (median daily feed count over the lookback
+window), and builds a template of slot positions by taking the median
+hour-of-day for each ordinal position across days that match the
+canonical count. Each day's feeds are then aligned to the template
+using the Hungarian algorithm with circular time-of-day distance.
+Feeds that exceed a cost threshold (2 hours) are left unmatched,
+which naturally handles cluster feeds and extras without special-casing.
+
+After alignment, each slot has a position history across days. A
+recency-weighted linear regression (half-life 3 days) estimates the
+current position and drift rate for each slot. The forecast projects
+today's unfilled slots and tomorrow's full schedule, with one
+additional day of drift applied to tomorrow's positions. Volume is a
+recency-weighted per-slot average.
+
+Uses bottle-only events (no breastfeed merge). Breastfeeding volume
+is estimated, not measured, and Slot Drift is primarily a timing model.
+
+### Analog Trajectory
+
+Instance-based forecasting that asks "when have we seen a state like
+this before, and what happened next?" Instead of fitting a global
+function, the model treats each historical feed event as a reference
+state with a known 24-hour future trajectory.
+
+At forecast time the model summarizes the current state as a feature
+vector: recent gap and volume averages plus circular hour-of-day.
+It finds the most similar historical states using normalized Euclidean
+distance, weights them by a combination of proximity and recency
+(3-day half-life), and produces the forecast by averaging their
+actual future gap sequences. The predicted gaps are rolled forward
+from the cutoff time to produce absolute feed times.
+
+Volume predictions use per-step weighted averages from the same
+neighbor trajectories. This lets volume reflect what actually happened
+in analogous situations rather than relying on a global time-of-day
+profile.
+
+Uses bottle-only events (no breastfeed merge). The model needs at
+least 10 historical states whose trajectories extend at least 20
+hours past the state time (with at least 3 future events) to
+produce a forecast.
 
 ### Recent Cadence
 
@@ -121,8 +174,7 @@ treating each step independently.
 
 ### Consensus Blend (featured)
 
-Median-timestamp ensemble across the three scripted base models
-(Recent Cadence, Phase Nowcast Hybrid, Gap-Conditional). It does
+Median-timestamp ensemble across the scripted base models. It does
 not align forecasts by feed index, because different models may
 emit different numbers of future feeds. Instead, on each step it
 takes the next unconsumed point from every available model,
@@ -158,5 +210,5 @@ others.
 ---
 
 *Export: `export_narababy_silas_20260323.csv` · Dataset: `sha256:7b6cdd2f...`
-· Commit: `d5ca018 (dirty)`
-· Generated: 2026-03-23 16:15:43*
+· Commit: `7df30b8 (dirty)`
+· Generated: 2026-03-24 00:02:54*
