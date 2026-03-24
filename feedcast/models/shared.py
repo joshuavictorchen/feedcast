@@ -8,6 +8,7 @@ regression support.
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -43,6 +44,34 @@ CONSENSUS_MATCH_WINDOW_MINUTES = 90
 
 class ForecastUnavailable(RuntimeError):
     """Raised when a model cannot produce a forecast for the given cutoff."""
+
+
+def load_methodology(model_file: str) -> str:
+    """Load the report methodology from a model's methodology.md file.
+
+    Reads everything before the first ## heading. The # title line is
+    stripped. This lets methodology.md contain both the report-ready
+    text and supplementary sections (design decisions, research) that
+    don't appear in the report.
+
+    Args:
+        model_file: The __file__ of the calling model module.
+
+    Returns:
+        The methodology text for the report.
+    """
+    path = Path(model_file).parent / "methodology.md"
+    lines = path.read_text().splitlines()
+    methodology_lines: list[str] = []
+    for line in lines:
+        # Skip the title line
+        if line.startswith("# ") and not methodology_lines:
+            continue
+        # Stop at the first section heading
+        if line.startswith("## "):
+            break
+        methodology_lines.append(line)
+    return "\n".join(methodology_lines).strip()
 
 
 def exp_weights(

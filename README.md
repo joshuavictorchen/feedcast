@@ -123,11 +123,11 @@ feedcast/
   pipeline.py                  End-to-end orchestration
   data.py                      CSV parsing, domain types, fingerprinting
   models/                      Scripted forecasters and consensus blend
-    notes.md                   Domain observations and model critique
-    shared.py                  Shared utilities and tuning constants
-    recent_cadence.py          Interval baseline
-    phase_nowcast.py           Recursive state-space + nowcast
-    gap_conditional.py         Event-level autoregressive regression
+    notes.md                   Brainstorm notes, observations, and model ideas
+    shared.py                  Shared utilities used across models
+    slot_drift/                Daily template with per-slot drift
+      model.py                 Model implementation
+      methodology.md           Methodology, research, and design decisions
   agents.py                    Agent runner (points to repo-level agents/)
   tracker.py                   Run persistence and retrospectives
   report.py                    Markdown rendering and atomic report swap
@@ -146,16 +146,18 @@ tracker.json                   Run history with predictions and retrospectives
 
 ## Working with Models
 
-**Add a model:** Create a new file in `feedcast/models/`, implement a forecast
-function with the signature `(history, cutoff, horizon_hours) -> Forecast`,
-define `MODEL_NAME`, `MODEL_SLUG`, and `MODEL_METHODOLOGY`, then add a
-`ModelSpec` entry to the `MODELS` list in `feedcast/models/__init__.py`.
+**Add a model:** Create a subdirectory in `feedcast/models/` with `model.py`
+and `methodology.md`. Implement a forecast function with the signature
+`(history, cutoff, horizon_hours) -> Forecast` and define `MODEL_NAME` and
+`MODEL_SLUG`. The methodology text for the report is loaded from
+`methodology.md`. Add a `ModelSpec` entry to `feedcast/models/__init__.py`.
 
 **Remove a model:** Delete its `ModelSpec` from the `MODELS` list. Optionally
 delete the file.
 
-**Tune parameters:** All model constants live in `feedcast/models/shared.py`
-with descriptive names. Adjust them and rerun.
+**Tune parameters:** Keep model-specific constants in the model file that
+uses them. Reserve `feedcast/models/shared.py` for reusable utilities that
+are not model concepts.
 
 **Change the featured default:** Set `FEATURED_DEFAULT` in
 `feedcast/models/__init__.py` to any available model slug.
