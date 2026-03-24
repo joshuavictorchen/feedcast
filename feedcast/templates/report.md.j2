@@ -78,21 +78,6 @@ No completed retrospective history yet.
 {{ row.body }}
 {% endfor %}
 
-## Notes
-
-- **Limited data:** {{ history_days }} days of usable history since
-  {{ data_floor_display }}. A few minutes of difference can look
-  meaningful before enough real retrospectives accumulate.
-- **Non-stationarity:** Silas is growing fast. Older runs are still
-  useful, but they are not ground truth for the next developmental
-  phase.
-- **Breastfeeding volumes are estimated:**
-  The {{ bf_heuristic }} heuristic is not measured intake,
-  so any model that uses it inherits that uncertainty.
-- **Diagnostics artifact:** Detailed model diagnostics are saved
-  separately in `diagnostics.yaml` so the main report stays
-  readable.
-
 ---
 
 *Export: `{{ source_file }}` · Dataset: `{{ dataset_id_short }}`

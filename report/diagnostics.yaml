@@ -1,4 +1,4 @@
-run_id: 20260324-130224
+run_id: 20260324-162747
 cutoff: '2026-03-23T11:41:13'
 featured_slug: consensus_blend
 forecasts:
@@ -133,28 +133,38 @@ forecasts:
   error_message: null
   diagnostics:
     complete_states: 69
-    k_neighbors: 5
+    k_neighbors: 7
+    lookback_hours: 72
+    recency_half_life_hours: 36
+    trajectory_length_method: median
+    feature_weights:
+      last_gap: 1.0
+      mean_gap: 1.0
+      last_volume: 1.0
+      mean_volume: 1.0
+      sin_hour: 2.0
+      cos_hour: 2.0
     elapsed_since_last_bottle_hours: 0.0
     query_features:
       last_gap: 1.247
-      mean_gap_3: 2.155
+      mean_gap: 2.643
       last_volume: 2.0
-      mean_volume_3: 2.667
+      mean_volume: 3.205
       sin_hour: 0.082
       cos_hour: -0.997
     feature_normalization:
       last_gap:
         mean: 2.477
         std: 1.008
-      mean_gap_3:
-        mean: 2.505
-        std: 0.767
+      mean_gap:
+        mean: 2.445
+        std: 0.369
       last_volume:
         mean: 2.76
         std: 1.078
-      mean_volume_3:
-        mean: 2.78
-        std: 0.755
+      mean_volume:
+        mean: 2.666
+        std: 0.401
       sin_hour:
         mean: -0.118
         std: 0.681
@@ -162,31 +172,41 @@ forecasts:
         mean: -0.105
         std: 0.715
     neighbors:
-    - state_time: '2026-03-21T13:18:08'
-      distance: 1.154
-      recency_weight: 0.64
-      weight: 0.55
-      trajectory_length: 9
     - state_time: '2026-03-22T13:06:30'
-      distance: 1.189
-      recency_weight: 0.805
-      weight: 0.671
+      distance: 1.214
+      recency_weight: 0.647
+      weight: 0.529
       trajectory_length: 9
-    - state_time: '2026-03-17T12:30:35'
-      distance: 1.246
-      recency_weight: 0.252
-      weight: 0.201
-      trajectory_length: 7
+    - state_time: '2026-03-21T12:02:01'
+      distance: 1.274
+      recency_weight: 0.4
+      weight: 0.311
+      trajectory_length: 9
+    - state_time: '2026-03-21T13:18:08'
+      distance: 1.34
+      recency_weight: 0.409
+      weight: 0.303
+      trajectory_length: 9
     - state_time: '2026-03-19T12:18:10'
-      distance: 1.258
-      recency_weight: 0.399
-      weight: 0.315
+      distance: 1.624
+      recency_weight: 0.159
+      weight: 0.098
       trajectory_length: 8
-    - state_time: '2026-03-16T11:18:20'
-      distance: 1.351
-      recency_weight: 0.198
-      weight: 0.145
-      trajectory_length: 12
+    - state_time: '2026-03-21T14:48:03'
+      distance: 1.929
+      recency_weight: 0.421
+      weight: 0.217
+      trajectory_length: 8
+    - state_time: '2026-03-15T14:10:36'
+      distance: 2.151
+      recency_weight: 0.026
+      weight: 0.012
+      trajectory_length: 13
+    - state_time: '2026-03-22T11:54:56'
+      distance: 2.257
+      recency_weight: 0.633
+      weight: 0.279
+      trajectory_length: 10
 - name: Latent Hunger State
   slug: latent_hunger
   available: true
@@ -254,6 +274,6 @@ retrospective:
   available: false
   same_dataset: true
   dataset_id_short: sha256:7b6cdd2f...
-  prior_run_id: 20260324-125736
+  prior_run_id: 20260324-162213
   observed_horizon_hours: 0.0
   results: []

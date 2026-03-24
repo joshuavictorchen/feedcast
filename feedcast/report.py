@@ -17,9 +17,6 @@ import yaml
 
 from feedcast.data import (
     BIRTH_DATE,
-    DATA_FLOOR,
-    DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
-    DEFAULT_BREASTFEED_OZ_PER_30_MIN,
     ExportSnapshot,
     FeedEvent,
     Forecast,
@@ -154,12 +151,6 @@ def _render_report(
             }
             for row in historical_accuracy
         ],
-        "history_days": (cutoff - DATA_FLOOR).days,
-        "data_floor_display": DATA_FLOOR.strftime("%B %-d, %Y"),
-        "bf_heuristic": (
-            f"{DEFAULT_BREASTFEED_OZ_PER_30_MIN} oz/30 min, "
-            f"merged within {DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES} min"
-        ),
         "source_file": snapshot.export_path.name,
         "dataset_id_short": snapshot.dataset_id[:15] + "...",
         "git_commit_display": _git_commit_display(tracker_meta),
