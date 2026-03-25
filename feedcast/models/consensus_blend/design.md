@@ -13,55 +13,68 @@ keeps one candidate tied to one proposed feed explanation.
 
 ## Simple-majority support floor
 
-The user requirement here is explicit: consensus means simple
-majority of the available models. With four available models, a
-2-of-4 split is not consensus. With three available models, 2-of-3
-is enough. This is enforced when candidate slots are generated, not
-as an afterthought during aggregation.
+Consensus means simple majority of the available models. With four
+available models, a 2-of-4 split is not consensus. With three
+available models, 2-of-3 is enough. This is enforced when candidate
+slots are generated.
 
-This rule keeps minority-supported slots out of the forecast by
-construction, so a 2-of-4 split never becomes consensus.
+## Backtracking sequence selection with single-use enforcement
 
-## Non-overlapping sequence selection
+Candidate slots are selected via backtracking search with
+upper-bound pruning over forward-ordered subsequences. For the
+typical problem size (~17 candidates) this runs in milliseconds.
 
-Candidate slots are not emitted directly. Several nearby candidates
-can describe the same real feed, especially when every model point
-is allowed to anchor its own slot. Weighted interval scheduling
-forces those candidates to compete. The selected schedule is the
-highest-utility non-overlapping sequence instead of the union of all
-local agreements.
+The search is not globally optimal: it processes candidates in
+time order and cannot discover sequences where an earlier
+candidate becomes valid only after a later candidate claims shared
+points. This edge case requires a specific point-sharing pattern
+and did not affect retrospective scores on the current data.
 
-Support drives utility. Spread is a secondary penalty, so tighter
-majority candidates win when support is equal. The current selector
-does not impose a hard count budget because retrospective research
-showed that soft or hard count caps reduced the headline score more
-than they helped.
+Two constraints are enforced jointly during the search:
 
-## Wide anchor radius and spread cap
+1. **Temporal non-overlap:** candidates closer than the conflict
+   window are competing explanations for the same feed.
+2. **Single-use model points:** each model prediction is claimed by
+   at most one selected consensus feed. If a candidate's points
+   are partly claimed, it is rebuilt from unclaimed evidence only
+   (recomputed median timestamp, volume, support, spread). If the
+   rebuilt support drops below majority, that branch is pruned.
 
-Recent research showed model disagreement for the same real feed is
-often wider than one hour. The production selector therefore uses a
-two-hour anchor radius to recover majority support across that
-spread. A separate spread cap rejects candidates that become too
-diffuse to defend as one feed.
+Single-use enforcement is the key correctness property. Without it,
+one model's prediction counts as evidence for multiple nearby
+consensus feeds, inflating support counts and producing more feeds
+than the models actually warrant.
 
-This is a deliberate tradeoff. A narrower radius or spread cap
-reduced over-prediction, but it also lowered retrospective headline
-score on the recent weighted sweep.
+## Wide anchor radius
 
-## 75-minute conflict window
+The production radius is 120 minutes. Research shows inter-model
+spread for the same real feed is P50=102 minutes, so a wide radius
+is needed to recover majority agreement across that disagreement.
 
-The selector treats candidates closer than 75 minutes as competing
-explanations for the same feed. That number is lower than
-`MIN_INTERVAL_HOURS` because the recent data includes real short-gap
-feeds around 72-75 minutes. Using a stricter 90-minute conflict
-window collapsed too many valid near-term feeds and lost score.
+With the exhaustive selector, a wider radius generates more
+candidates for the optimizer to choose from, which improves the
+final sequence. This is the opposite of the greedy heuristic
+(where wider radius created more point-sharing and worse greedy
+decisions). The retrospective sweep confirmed radius=120 scores
+above all tighter alternatives.
 
-## Known limitations
+Outliers within the radius (e.g., one model 60 minutes from the
+majority) are median-suppressed: the consensus timestamp reflects
+the majority position. The outlier model's prediction is consumed
+by single-use enforcement, so it cannot also anchor a separate
+phantom feed.
 
-The production selector still leans toward timing accuracy over
-strict count control. In the recent retrospective sweep, the
-highest-scoring majority selector still predicted more feeds than the
-observed actuals on several cutoffs. That tradeoff was accepted
-because the user prioritized maximum accuracy and timing-first
-behavior over stricter count control.
+## 90-minute conflict window
+
+The selector treats candidates closer than 90 minutes as competing
+explanations for the same feed. This aligns with
+`MIN_INTERVAL_HOURS`, the physiological floor for distinct feeds.
+
+## Utility function
+
+Support drives utility (`support * 10`). Spread is a secondary
+penalty (`0.25 per hour`), so tighter majority candidates win when
+support is equal. The spread penalty is intentionally small — a
+4-model candidate with wide spread is still preferred over a
+3-model candidate with tight spread, because more models agreeing
+is stronger evidence.

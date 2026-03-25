@@ -35,6 +35,7 @@ from feedcast.models.consensus_blend.model import (
     SELECTION_CONFLICT_WINDOW_MINUTES,
     SPREAD_PENALTY_PER_HOUR,
     _candidates_to_forecast_points,
+    _majority_floor,
     generate_candidate_clusters,
     run_consensus_blend,
     select_candidate_sequence,
@@ -334,36 +335,48 @@ def _sweep_selector_parameters(
     )
     log()
 
+    # Pre-compute model outputs per cutoff to avoid redundant work.
+    cutoff_data: list[
+        tuple[float, list[FeedEvent], list[FeedEvent], dict[str, Forecast]]
+    ] = []
+    for cutoff in cutoffs:
+        horizon_end = cutoff + timedelta(hours=HORIZON_HOURS)
+        actuals = [
+            event for event in events if cutoff < event.time <= horizon_end
+        ]
+        if len(actuals) < 2:
+            continue
+        observed_until = min(horizon_end, max(event.time for event in events))
+        history_at_cutoff = [event for event in events if event.time <= cutoff]
+        base_forecasts = run_all_models_from_cache(
+            event_cache, cutoff, HORIZON_HOURS
+        )
+        available = {
+            forecast.slug: forecast
+            for forecast in base_forecasts
+            if forecast.available and forecast.points
+        }
+        if len(available) < 2:
+            continue
+        weight = _recency_weight(cutoff, cutoffs[-1])
+        cutoff_data.append(
+            (weight, cutoff, actuals, observed_until, history_at_cutoff, available)
+        )
+
     rows: list[dict[str, float | int]] = []
-    for radius_minutes in [105, 120, 135]:
-        for max_spread_minutes in [135, 155, 180]:
+    for radius_minutes in [75, 90, 105, 120, 135]:
+        for max_spread_minutes in [120, 150, 180]:
             for conflict_minutes in [75, 90, 105]:
                 sweep_rows: list[tuple[float, dict[str, float | int]]] = []
-                for cutoff in cutoffs:
-                    horizon_end = cutoff + timedelta(hours=HORIZON_HOURS)
-                    actuals = [
-                        event for event in events if cutoff < event.time <= horizon_end
-                    ]
-                    if len(actuals) < 2:
-                        continue
-
-                    observed_until = min(
-                        horizon_end, max(event.time for event in events)
-                    )
-                    history_at_cutoff = [
-                        event for event in events if event.time <= cutoff
-                    ]
-                    base_forecasts = run_all_models_from_cache(
-                        event_cache, cutoff, HORIZON_HOURS
-                    )
-                    available = {
-                        forecast.slug: forecast
-                        for forecast in base_forecasts
-                        if forecast.available and forecast.points
-                    }
-                    if len(available) < 2:
-                        continue
-
+                for (
+                    weight,
+                    cutoff,
+                    actuals,
+                    observed_until,
+                    history_at_cutoff,
+                    available,
+                ) in cutoff_data:
+                    majority_floor = _majority_floor(len(available))
                     candidates = generate_candidate_clusters(
                         available,
                         radius_minutes=radius_minutes,
@@ -371,6 +384,7 @@ def _sweep_selector_parameters(
                     )
                     selected = select_candidate_sequence(
                         candidates,
+                        majority_floor=majority_floor,
                         conflict_minutes=conflict_minutes,
                         spread_penalty_per_hour=SPREAD_PENALTY_PER_HOUR,
                     )
@@ -384,7 +398,7 @@ def _sweep_selector_parameters(
                     score = score_forecast(points, actuals, cutoff, observed_until)
                     sweep_rows.append(
                         (
-                            _recency_weight(cutoff, cutoffs[-1]),
+                            weight,
                             {
                                 "score": score.score,
                                 "count_score": score.count_score,
