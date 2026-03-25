@@ -3,7 +3,7 @@
 Feedcast predicts the next 24 hours of bottle feeds for a newborn from
 Nara Baby app exports, using an ensemble of scripted forecasting models
 and LLM agents. Feed timing is the primary target. Each run scores the
-prior run's predictions against what actually happened. No backtesting.
+prior run's predictions against what actually happened.
 
 *Built by a tired dad with Claude and Codex between bottle feedings.
 Coordinated via [claodex](https://github.com/joshuavictorchen/claodex).
@@ -120,6 +120,38 @@ Each run updates these artifacts:
 - `report/diagnostics.yaml` — structured model diagnostics
 - `tracker.json` — stored predictions and retrospective history
 
+## Replay And Tuning
+
+Feedcast also includes a separate local replay harness for development work.
+It rewinds the current export by exactly 24 hours, reruns a model from that
+synthetic cutoff, and scores the forecast against the now-known actual bottle
+feeds from the latest observed 24 hours.
+
+Replay artifacts are written to `.replay-results/` by default. That directory
+is gitignored. Every run prints the saved artifact path so humans and agents
+can inspect the JSON output directly.
+
+```bash
+# Score one model against the latest observed 24 hours
+.venv/bin/python scripts/run_replay.py score --model slot_drift
+
+# Score with parameter overrides
+.venv/bin/python scripts/run_replay.py score --model slot_drift --param LOOKBACK_DAYS=5
+
+# Sweep candidate values (cross-product evaluated)
+.venv/bin/python scripts/run_replay.py tune \
+  --model slot_drift \
+  --param LOOKBACK_DAYS=5 --param LOOKBACK_DAYS=7 --param LOOKBACK_DAYS=9
+
+# Machine-readable output for agents or automation
+.venv/bin/python scripts/run_replay.py score --model slot_drift --json
+```
+
+Replay is intentionally narrow. It is a directional tool for recent-pattern
+fitting, not a replacement for model-local research or a claim of robust
+out-of-sample validation. Full notes:
+[`feedcast/replay/README.md`](feedcast/replay/README.md).
+
 ## Repo Layout
 
 ```text
@@ -167,6 +199,10 @@ feedcast/
   evaluation/                  Retrospective forecast scoring
     scoring.py                 Shared scorer (Hungarian matching, weighted F1 + timing)
     methodology.md             Scoring design rationale and parameter choices
+  replay/                      Latest-24h replay scoring and tuning
+    runner.py                  Replay and tune models against the latest 24 hours
+    results.py                 Local replay artifact persistence
+    README.md                  Usage, tuning examples, and Python API
   agents/                      LLM agent workspaces, prompt, and runner
     __init__.py                Agent orchestration and output validation
     run.sh                     Shell dispatcher for Claude/Codex CLIs
@@ -245,6 +281,16 @@ delete the directory.
 **Tune parameters:** Keep model-specific constants in the model file that
 uses them. Reserve `feedcast/models/shared.py` for reusable utilities that
 are not model concepts.
+
+**Replay a model against the latest observed 24 hours:** Run
+`.venv/bin/python scripts/run_replay.py score --model <slug>`. Add
+`--param KEY=VALUE` to test with overridden constants.
+
+**Tune a model against the latest observed 24 hours:** Run
+`.venv/bin/python scripts/run_replay.py tune --model <slug>` with
+`--param KEY=VALUE` flags specifying candidate values. The harness
+evaluates the cross-product and ranks results. See
+[`feedcast/replay/README.md`](feedcast/replay/README.md) for details.
 
 **Change the featured default:** Set `FEATURED_DEFAULT` in
 `feedcast/models/__init__.py` to any available model slug.

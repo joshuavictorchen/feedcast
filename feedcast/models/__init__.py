@@ -119,6 +119,14 @@ STATIC_FEATURED_TIEBREAKER = [
 FEATURED_DEFAULT = CONSENSUS_BLEND_SLUG
 
 
+def get_model_spec(slug: str) -> ModelSpec | None:
+    """Return the scripted model spec for one slug, if registered."""
+    for spec in MODELS:
+        if spec.slug == slug:
+            return spec
+    return None
+
+
 def build_event_cache(
     activities: list[Activity],
 ) -> dict[int | None, list[FeedEvent]]:

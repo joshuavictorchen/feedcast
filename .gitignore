@@ -4,3 +4,4 @@ __pycache__/
 .mpl-cache/
 exports/
 .report-archive/
+.replay-results/
