@@ -1,69 +1,67 @@
 # Consensus Blend Design Decisions
 
-## Immutable majority-subset candidates
+## Why majority vote?
 
-Every model prediction is treated as a possible anchor for one real
-feed. Around each anchor, the blend enumerates every simple-majority
-subset of the available models and asks each model in that subset for
-its nearest prediction inside a shared radius.
+The user requirement is explicit: if 3 of 4 models predict a feed
+around 3pm and 1 predicts 4pm, the consensus should reflect the
+majority, not split the difference. Simple majority (more than half)
+is the threshold: 3-of-4, 2-of-3, or 2-of-2.
 
-This is the key structural decision. The old selector mutated
-candidates during search by rebuilding them after shared points were
-claimed. That made correctness depend on search order. The current
-selector makes every candidate immutable up front, so selection only
-has to decide which fixed candidates survive.
+## How candidates are built
 
-## Simple-majority support floor
+Each model prediction anchors a search: "which other models predict
+something nearby?" For each anchor, the blend tries every majority-
+sized group of models (all 3-of-4 combinations and the full 4-of-4)
+and pulls each model's nearest prediction within a 2-hour radius.
+If a group's predictions pass the spread cap (3 hours max), it
+becomes a candidate.
 
-Consensus means simple majority of the available models:
+Candidates are fixed once created — they are never modified during
+selection. This avoids bugs where the selection order changes what
+a candidate looks like.
 
-- 4 models available: support floor = 3
-- 3 models available: support floor = 2
-- 2 models available: support floor = 2
+## How the best schedule is chosen
 
-This rejects 2-of-4 split votes while still allowing consensus to work
-when one model is unavailable.
+Multiple candidates can describe the same real feed (anchored from
+different model predictions but pulling in the same evidence). An
+optimizer (scipy MILP) picks the highest-scoring non-overlapping
+set subject to two hard rules:
 
-## Exact set-packing selector
+1. **No double-counting:** Each model prediction can support at most
+   one consensus feed. If model A's 3pm prediction is used for one
+   consensus feed, it cannot also be counted as evidence for another.
 
-Selected consensus feeds are chosen with a mixed-integer linear
-program. There is one binary decision per candidate slot.
+2. **Minimum spacing:** Two consensus feeds cannot be closer than
+   90 minutes (the physiological minimum between real feeds).
 
-The selector enforces two hard constraints:
+## Why the 2-hour search radius?
 
-1. Each underlying model prediction (`slug:index`) can be used at most once.
-2. Two candidates closer than the conflict window cannot both survive.
+Research shows models often disagree by 100+ minutes about the same
+real feed (median spread = 102 min). A narrow radius misses
+legitimate agreement. The wide radius pulls in outlier predictions
+too, but the median timestamp naturally reflects the majority
+position — one outlier barely moves a 3-point or 4-point median.
 
-That gives the blend a clean invariant: no model point is ever reused
-to support multiple consensus feeds.
+## Current limitations
 
-## Wide anchor radius, explicit spread cap
+**Utility ranking doesn't matter much.** Candidates are scored by
+model support with a small bonus for tighter agreement, but the
+hard constraints (single-use + spacing) are tight enough to
+determine the answer on their own. Parameter sweeps across a wide
+range of scoring weights all produced identical results.
 
-The production radius is 120 minutes. Recent research shows the median
-inter-model spread for the same real feed is about 102 minutes, so a
-narrow clustering threshold would drop too much legitimate agreement.
+**Outliers are suppressed, not rejected.** A model predicting 4pm
+when three others predict 3pm gets pulled into the candidate (it's
+within the 2-hour radius). The median timestamp still lands at
+~3pm, so the prediction is accurate, but the outlier model is
+counted as a contributor. True rejection (excluding the outlier
+entirely) would require a tighter radius, which hurts overall
+accuracy by also excluding legitimate wide agreement.
 
-Because the radius is intentionally wide, the model also enforces a
-hard candidate spread cap of 180 minutes. That keeps obviously diffuse
-slots out of the optimizer.
+## Where to improve next
 
-## Utility favors support first, tightness second
-
-Candidate utility is:
-
-`support * 10 - spread_penalty_per_hour * spread_hours`
-
-Support is still the main signal. Spread mostly breaks ties between
-similarly-supported slots. This means the current production utility is
-still somewhat suppressive rather than strictly outlier-rejecting: a
-wide 4-model candidate can beat a tight 3-model candidate. That is a
-deliberate simplification for now, not a claim that the utility is
-finished.
-
-## Direction over perfection
-
-The exact selector is a cleaner long-term structure even though the
-current utility is not fully tuned. It removes rebuild bugs, order
-dependence, and post-selection repair logic. Future tuning should
-happen by adjusting candidate utility and constraints, not by bringing
-mutation back into the selector.
+The score ceiling for this constraint setup is around 69.8 (on the
+current 5-cutoff retrospective). Gains would come from changing how
+candidates are generated or how conflicts are defined — for example,
+a scoring model where a tight 3-model agreement can beat a wide
+4-model agreement, or conflict windows that vary by time of day.

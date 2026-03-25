@@ -34,6 +34,7 @@ from feedcast.models.consensus_blend.model import (
     MAX_CANDIDATE_SPREAD_MINUTES,
     SELECTION_CONFLICT_WINDOW_MINUTES,
     SPREAD_PENALTY_PER_HOUR,
+    CandidateCluster,
     _candidates_to_forecast_points,
     _majority_floor,
     generate_candidate_clusters,
@@ -359,37 +360,60 @@ def _sweep_selector_parameters(
             (weight, cutoff, actuals, observed_until, history_at_cutoff, available)
         )
 
-    rows: list[dict[str, float | int]] = []
-    for radius_minutes in [75, 90, 105, 120, 135]:
-        for max_spread_minutes in [120, 150, 180]:
-            for conflict_minutes in [75, 90, 105]:
+    # Pre-generate candidates per cutoff per (radius, spread) pair to avoid
+    # redundant candidate generation across spread_penalty variations.
+    candidate_cache: dict[
+        tuple[int, int, int], list[tuple[float, list[CandidateCluster], int, list[FeedEvent]]]
+    ] = {}
+    for radius_minutes in [90, 120]:
+        for max_spread_minutes in [150, 180]:
+            cache_key = (radius_minutes, max_spread_minutes)
+            entries = []
+            for (
+                weight,
+                cutoff,
+                actuals,
+                observed_until,
+                history_at_cutoff,
+                available,
+            ) in cutoff_data:
+                majority_floor = _majority_floor(len(available))
+                candidates = generate_candidate_clusters(
+                    available,
+                    radius_minutes=radius_minutes,
+                    max_spread_minutes=max_spread_minutes,
+                )
+                entries.append(
+                    (weight, cutoff, actuals, observed_until, history_at_cutoff,
+                     candidates, majority_floor)
+                )
+            candidate_cache[cache_key] = entries
+
+    rows: list[dict[str, float]] = []
+    for (radius_minutes, max_spread_minutes), entries in candidate_cache.items():
+        for conflict_minutes in [75, 90, 105]:
+            for spread_penalty in [0.25, 1.0, 2.0, 5.0]:
                 sweep_rows: list[tuple[float, dict[str, float | int]]] = []
                 for (
-                    weight,
-                    cutoff,
-                    actuals,
-                    observed_until,
-                    history_at_cutoff,
-                    available,
-                ) in cutoff_data:
-                    majority_floor = _majority_floor(len(available))
-                    candidates = generate_candidate_clusters(
-                        available,
-                        radius_minutes=radius_minutes,
-                        max_spread_minutes=max_spread_minutes,
-                    )
+                    weight, cutoff, actuals, observed_until, history_at_cutoff,
+                    candidates, majority_floor,
+                ) in entries:
                     selected = select_candidate_sequence(
                         candidates,
                         majority_floor=majority_floor,
                         conflict_minutes=conflict_minutes,
-                        spread_penalty_per_hour=SPREAD_PENALTY_PER_HOUR,
+                        spread_penalty_per_hour=spread_penalty,
                     )
                     points = normalize_forecast_points(
-                        _candidates_to_forecast_points(selected, history_at_cutoff),
+                        _candidates_to_forecast_points(
+                            selected, history_at_cutoff
+                        ),
                         cutoff,
                         HORIZON_HOURS,
                     )
-                    score = score_forecast(points, actuals, cutoff, observed_until)
+                    score = score_forecast(
+                        points, actuals, cutoff, observed_until
+                    )
                     sweep_rows.append(
                         (
                             weight,
@@ -407,6 +431,7 @@ def _sweep_selector_parameters(
                         "radius_minutes": radius_minutes,
                         "max_spread_minutes": max_spread_minutes,
                         "conflict_minutes": conflict_minutes,
+                        "spread_penalty": spread_penalty,
                         "score": _weighted_mean(sweep_rows, "score"),
                         "count_score": _weighted_mean(sweep_rows, "count_score"),
                         "timing_score": _weighted_mean(sweep_rows, "timing_score"),
@@ -422,20 +447,21 @@ def _sweep_selector_parameters(
         )
     )
     log(
-        f"{'Radius':>6} {'Spread':>6} {'Conflict':>8}  "
+        f"{'Radius':>6} {'Spread':>6} {'Conflict':>8} {'Penalty':>7}  "
         f"{'Score':>8} {'Count':>8} {'Timing':>8} {'Pred':>6}"
     )
-    for row in rows[:10]:
+    for row in rows[:15]:
         marker = ""
         if (
             int(row["radius_minutes"]) == ANCHOR_RADIUS_MINUTES
             and int(row["max_spread_minutes"]) == MAX_CANDIDATE_SPREAD_MINUTES
             and int(row["conflict_minutes"]) == SELECTION_CONFLICT_WINDOW_MINUTES
+            and float(row["spread_penalty"]) == SPREAD_PENALTY_PER_HOUR
         ):
             marker = "  <- production"
         log(
             f"{int(row['radius_minutes']):>6} {int(row['max_spread_minutes']):>6} "
-            f"{int(row['conflict_minutes']):>8}  "
+            f"{int(row['conflict_minutes']):>8} {row['spread_penalty']:>7.2f}  "
             f"{row['score']:>8.1f} {row['count_score']:>8.1f} "
             f"{row['timing_score']:>8.1f} {row['predicted']:>6.1f}{marker}"
         )

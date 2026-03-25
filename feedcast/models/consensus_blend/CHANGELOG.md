@@ -1,46 +1,44 @@
-# Consensus Blend Changelog
+# Changelog
 
-## 2026-03-25 — Replace mutable backtracking with immutable exact selector
+Tracks behavior-level changes to the Consensus Blend model. Add newest entries first.
 
-**Problem:** The backtracking selector still depended on candidate
-rebuilds during search. That made correctness depend on search order
-and kept the core algorithm harder to reason about than it needed to
-be.
+## Replace lockstep blend with immutable majority-subset MILP selector | 2026-03-25
 
-**Solution:** Replaced the rebuild path with immutable majority-subset
-candidate generation plus an exact MILP set-packing selector. The new
-runtime enforces single-use model points and temporal conflicts as hard
-constraints instead of repairing candidates after selection.
+### Problem
 
-## 2026-03-25 — Backtracking selector with single-use enforcement
+The consensus blend was defined inline in `feedcast/models/__init__.py`
+and used a lockstep median-timestamp walk that had three structural
+issues: misalignment cascades (one skipped outlier shifted all
+downstream pairings), phantom consensus (the median of a 2-vs-2 split
+produced a time no model believed in), and equal treatment of 2-of-4
+minority splits as "consensus."
 
-**Problem:** Greedy selection was suboptimal and the per-point arrays
-were misaligned with the sorted point_key, causing rebuilds to use
-wrong timestamps.
+### Solution
 
-**Solution:** Replaced the greedy selector with backtracking search
-plus upper-bound pruning over forward-ordered subsequences. Fixed
-point_key alignment by sorting chosen-points before building tuples and
-restored wider radius (120 min) to give the selector more candidates.
+Extracted the consensus blend into its own model directory with the
+standard file set. Replaced the lockstep algorithm with a three-stage
+pipeline:
 
-## 2026-03-24 — Replace lockstep with majority sequence selector
+1. **Immutable candidate generation.** Every model prediction is an
+   anchor. For each anchor, the blend enumerates every majority-sized
+   model subset (3-of-4 and 4-of-4 with four models) and builds a
+   candidate from each subset's nearest predictions within a shared
+   radius. Candidates are deduplicated by their exact set of
+   contributing model points and are never mutated after creation.
 
-**Problem:** The lockstep median-timestamp blend could create phantom
-consensus and misalignment cascades when models emitted extra or
-shifted feeds. The first flat clustering prototype fixed the
-misalignment issue but over-predicted badly because it emitted every
-local agreement region.
+2. **Exact set-packing selection.** A MILP solver (scipy `milp`) picks
+   the highest-utility non-overlapping sequence subject to two hard
+   constraints: each model prediction is used at most once, and
+   candidates closer than the conflict window (90 min) cannot both
+   survive.
 
-**Solution:** Production now builds majority-supported candidate feed
-slots around each model prediction and selects a non-overlapping
-sequence instead of walking the models in lockstep.
+3. **Scorer-based research.** The research script evaluates the
+   production selector on retrospective cutoffs using the real
+   `score_forecast()` function with recency weighting, replacing the
+   earlier proxy-based cluster statistics.
 
-## 2026-03-24 — Extract into dedicated model directory
-
-**Problem:** Consensus blend was defined inline in
-`feedcast/models/__init__.py` without research, design docs, or the
-standard model directory structure.
-
-**Solution:** Moved into `feedcast/models/consensus_blend/` with
-`model.py`, `methodology.md`, `design.md`, `research.py`, and
-`research_results.txt`.
+The majority floor (simple majority of available models) rejects
+2-of-4 splits by construction. The single-use constraint prevents
+one model's prediction from counting as evidence for multiple
+consensus feeds. The immutable candidate design eliminates rebuild
+bugs and search-order dependence that affected earlier iterations.
