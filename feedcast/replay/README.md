@@ -1,83 +1,62 @@
 # Replay
 
-Replay is a local development tool for evaluating and tuning scripted models.
-It rewinds the current export by exactly 24 hours, reruns a model from that
-synthetic cutoff, and scores the forecast against the now-known actual bottle
-feeds. Results are written to `.replay-results/` (gitignored).
+Replay is a local tuning tool for scripted models. It rewinds the current
+export by 24 hours, reruns a model from that synthetic cutoff, and scores the
+forecast against the now-known actuals — so you can test parameter changes
+against real data before committing them.
 
-This is a directional tool for recent-pattern fitting, not robust out-of-sample
-validation. It complements model-local research, not replaces it.
+Results are written to `.replay-results/` (gitignored).
 
 ## Usage
 
 ```bash
-# Score one model against the latest observed 24 hours
-.venv/bin/python scripts/run_replay.py score --model slot_drift
+# Baseline score
+.venv/bin/python scripts/run_replay.py slot_drift
 
-# Score with parameter overrides
-.venv/bin/python scripts/run_replay.py score \
-  --model slot_drift \
-  --param LOOKBACK_DAYS=5
+# Score with a parameter override
+.venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5
 
-# Score the consensus blend
-.venv/bin/python scripts/run_replay.py score --model consensus_blend
+# Tune: comma-separated values trigger a sweep
+.venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5,7,9
 
-# Machine-readable JSON for agents or automation
-.venv/bin/python scripts/run_replay.py score --model slot_drift --json
-```
-
-## Tuning
-
-`tune` evaluates the cross-product of candidate parameter values against the
-latest 24 hours and ranks results by headline score. Each `--param` flag adds
-a candidate value. Repeat the same key with different values to sweep it.
-
-```bash
-# Sweep LOOKBACK_DAYS across three values
-.venv/bin/python scripts/run_replay.py tune \
-  --model slot_drift \
-  --param LOOKBACK_DAYS=5 \
-  --param LOOKBACK_DAYS=7 \
-  --param LOOKBACK_DAYS=9
-
-# Multi-parameter sweep (cross-product: 3 × 3 = 9 evaluations)
-.venv/bin/python scripts/run_replay.py tune \
-  --model slot_drift \
-  --param LOOKBACK_DAYS=5 \
-  --param LOOKBACK_DAYS=7 \
-  --param LOOKBACK_DAYS=9 \
-  --param MATCH_COST_THRESHOLD_HOURS=1.5 \
-  --param MATCH_COST_THRESHOLD_HOURS=2.0 \
-  --param MATCH_COST_THRESHOLD_HOURS=2.5
+# Multi-param sweep (cross-product: 3 × 2 = 6 evaluations)
+.venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5,7,9 DRIFT_WEIGHT_HALF_LIFE_DAYS=2.0,3.0
 
 # JSON output for agents
-.venv/bin/python scripts/run_replay.py tune \
-  --model slot_drift \
-  --param LOOKBACK_DAYS=5 \
-  --param LOOKBACK_DAYS=7 \
-  --json
+.venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5,7,9 --json
 ```
 
-Parameter values are parsed as int, float, JSON (for lists/dicts), or string.
-For complex values, quote the JSON:
+## YAML input
+
+For structured sweeps, put param candidates in a YAML file:
+
+```yaml
+# sweep.yaml
+LOOKBACK_DAYS: [5, 7, 9]
+DRIFT_WEIGHT_HALF_LIFE_DAYS: [2.0, 3.0, 4.0]
+MATCH_COST_THRESHOLD_HOURS: [1.5, 2.0, 2.5]
+```
 
 ```bash
---param 'FEATURE_WEIGHTS=[1,1,1,1,2,2]'
+.venv/bin/python scripts/run_replay.py slot_drift sweep.yaml
 ```
+
+Scalar values in YAML are treated as single overrides. List values define
+sweep candidates. YAML files and inline params can be mixed.
 
 ## How it works
 
-The harness temporarily overrides module-level constants in the model's
-`model.py` for each evaluation, then restores the originals. This means
-tuning works for any parameter defined as a module-level constant that the
-model reads at runtime. No sidecar files or metadata declarations are needed.
+The tool temporarily overrides module-level constants in the model's
+`model.py` for each evaluation, then restores the originals. This works for
+any parameter defined as a module constant that the model reads at runtime.
+No sidecar files or metadata declarations are needed.
 
 The baseline is inferred by reading the model module's current constant
-values for the parameter names being tuned.
+values for the parameter names being tuned. Single value per param → score.
+Any param with multiple values → sweep (cross-product evaluated, ranked by
+headline score).
 
 ## Python API
-
-Agents and research scripts can import the replay harness directly:
 
 ```python
 from feedcast.replay import score_model, tune_model

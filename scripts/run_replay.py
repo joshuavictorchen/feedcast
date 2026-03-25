@@ -1,4 +1,21 @@
-"""Command-line entrypoint for latest-24h replay scoring and tuning."""
+"""Command-line entrypoint for latest-24h replay scoring and tuning.
+
+Usage:
+    # Baseline score
+    .venv/bin/python scripts/run_replay.py slot_drift
+
+    # Score with overrides
+    .venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5
+
+    # Tune with inline candidates
+    .venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5,7,9
+
+    # Tune from a YAML file
+    .venv/bin/python scripts/run_replay.py slot_drift sweep.yaml
+
+    # JSON output for agents
+    .venv/bin/python scripts/run_replay.py slot_drift --json
+"""
 
 from __future__ import annotations
 
@@ -9,6 +26,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -17,96 +36,38 @@ os.chdir(REPO_ROOT)
 from feedcast.models import CONSENSUS_BLEND_SLUG, MODELS
 from feedcast.replay import score_model, tune_model
 
+VALID_SLUGS = [spec.slug for spec in MODELS] + [CONSENSUS_BLEND_SLUG]
+TUNABLE_SLUGS = [spec.slug for spec in MODELS]
+
 
 def main() -> None:
     """Run the replay CLI."""
     parser = argparse.ArgumentParser(
-        description=(
-            "Replay the latest observed 24 hours for one scripted model or the "
-            "consensus blend."
-        )
-    )
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    # --- score subcommand ---
-    score_parser = subparsers.add_parser(
-        "score",
-        help="Score one model against the latest observed 24 hours.",
-    )
-    _add_common_arguments(score_parser, include_consensus=True)
-
-    # --- tune subcommand ---
-    tune_parser = subparsers.add_parser(
-        "tune",
-        help=(
-            "Evaluate candidate parameter values against the latest 24 hours. "
-            "Requires at least one --param flag."
+        description="Replay the latest 24 hours to score or tune a model.",
+        usage=(
+            "%(prog)s MODEL [PARAM=VALUES | FILE.yaml ...] [--json] "
+            "[--export-path PATH] [--output-dir DIR]"
         ),
     )
-    _add_common_arguments(tune_parser, include_consensus=False)
-
-    args = parser.parse_args()
-    try:
-        if args.command == "score":
-            overrides = _parse_overrides(args.param) if args.param else None
-            payload = score_model(
-                model_slug=args.model,
-                overrides=overrides,
-                export_path=args.export_path,
-                output_dir=args.output_dir,
-            )
-        else:
-            candidates = _parse_candidates(args.param)
-            payload = tune_model(
-                model_slug=args.model,
-                candidates_by_name=candidates,
-                export_path=args.export_path,
-                output_dir=args.output_dir,
-            )
-    except ValueError as error:
-        parser.exit(status=2, message=f"error: {error}\n")
-
-    if args.json:
-        print(json.dumps(payload, indent=2))
-        return
-
-    if args.command == "score":
-        _print_score_summary(payload)
-    else:
-        _print_tune_summary(payload)
-
-
-# ---------------------------------------------------------------------------
-# Argument setup
-# ---------------------------------------------------------------------------
-
-
-def _add_common_arguments(
-    parser: argparse.ArgumentParser,
-    *,
-    include_consensus: bool,
-) -> None:
-    """Add the shared replay CLI arguments."""
-    model_choices = [spec.slug for spec in MODELS]
-    if include_consensus:
-        model_choices.append(CONSENSUS_BLEND_SLUG)
-
     parser.add_argument(
-        "--model",
-        required=True,
-        choices=model_choices,
-        help="Target model slug.",
+        "model",
+        choices=VALID_SLUGS,
+        metavar="MODEL",
+        help=f"Model slug: {', '.join(VALID_SLUGS)}",
     )
     parser.add_argument(
-        "--param",
-        action="append",
-        metavar="KEY=VALUE",
+        "params",
+        nargs="*",
+        metavar="PARAM=VALUES | FILE.yaml",
         help=(
-            "Parameter override as KEY=VALUE. "
-            "For score: one value per key. "
-            "For tune: repeat the same key with different values to define "
-            "candidates (cross-product is evaluated)."
+            "Params as KEY=VALUE (comma-separated for sweeps), "
+            "or a YAML file. List values in YAML trigger a sweep."
         ),
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the full replay artifact as JSON.",
     )
     parser.add_argument(
         "--export-path",
@@ -120,11 +81,46 @@ def _add_common_arguments(
         default=Path(".replay-results"),
         help="Where local replay artifacts are written.",
     )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Print the full replay artifact as JSON.",
-    )
+
+    args = parser.parse_args()
+
+    try:
+        parsed = _parse_params(args.params)
+        is_tune = any(len(values) > 1 for values in parsed.values())
+
+        if is_tune:
+            if args.model not in TUNABLE_SLUGS:
+                raise ValueError(
+                    f"Only scripted models can be tuned; got {args.model!r}."
+                )
+            payload = tune_model(
+                model_slug=args.model,
+                candidates_by_name=parsed,
+                export_path=args.export_path,
+                output_dir=args.output_dir,
+            )
+        else:
+            # Single value per key → score with overrides
+            overrides = (
+                {k: v[0] for k, v in parsed.items()} if parsed else None
+            )
+            payload = score_model(
+                model_slug=args.model,
+                overrides=overrides,
+                export_path=args.export_path,
+                output_dir=args.output_dir,
+            )
+    except ValueError as error:
+        parser.exit(status=2, message=f"error: {error}\n")
+
+    if args.json:
+        print(json.dumps(payload, indent=2))
+        return
+
+    if is_tune:
+        _print_tune_summary(payload)
+    else:
+        _print_score_summary(payload)
 
 
 # ---------------------------------------------------------------------------
@@ -132,12 +128,8 @@ def _add_common_arguments(
 # ---------------------------------------------------------------------------
 
 
-def _parse_value(raw: str) -> int | float | str | list | dict:
-    """Parse a parameter value from a --param flag.
-
-    Tries int, then float, then JSON (for lists/dicts), then falls back
-    to a plain string.
-    """
+def _parse_value(raw: str) -> int | float | str:
+    """Parse a single scalar value: int, float, or string."""
     try:
         return int(raw)
     except ValueError:
@@ -146,47 +138,78 @@ def _parse_value(raw: str) -> int | float | str | list | dict:
         return float(raw)
     except ValueError:
         pass
-    try:
-        return json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
-        pass
     return raw
 
 
-def _split_param(raw: str) -> tuple[str, Any]:
-    """Split a KEY=VALUE string and parse the value."""
-    key, separator, raw_value = raw.partition("=")
-    if not separator or not key:
-        raise ValueError(f"Invalid --param format: {raw!r}. Expected KEY=VALUE.")
-    return key, _parse_value(raw_value)
+def _parse_params(raw_params: list[str]) -> dict[str, list[Any]]:
+    """Parse positional args into candidate value lists.
 
+    Accepts a mix of inline KEY=VALUE args and YAML file paths. Values
+    from all sources are merged.
 
-def _parse_overrides(raw_params: list[str]) -> dict[str, Any]:
-    """Parse --param flags into a single override dict for score."""
-    overrides: dict[str, Any] = {}
-    for raw in raw_params:
-        key, value = _split_param(raw)
-        if key in overrides:
-            raise ValueError(
-                f"Duplicate --param {key!r}. For score, each parameter appears "
-                "once. Use tune for multi-value sweeps."
-            )
-        overrides[key] = value
-    return overrides
+    Inline examples:
+        LOOKBACK_DAYS=5         → {"LOOKBACK_DAYS": [5]}
+        LOOKBACK_DAYS=5,7,9     → {"LOOKBACK_DAYS": [5, 7, 9]}
+        WEIGHTS=[1,1,2,2]       → {"WEIGHTS": [[1, 1, 2, 2]]}
 
-
-def _parse_candidates(raw_params: list[str] | None) -> dict[str, list[Any]]:
-    """Parse repeated --param flags into candidate lists for tune."""
-    if not raw_params:
-        raise ValueError(
-            "tune requires at least one --param flag. Example:\n"
-            "  --param LOOKBACK_DAYS=5 --param LOOKBACK_DAYS=7"
-        )
+    YAML example (sweep.yaml):
+        LOOKBACK_DAYS: [5, 7, 9]
+        DRIFT_WEIGHT_HALF_LIFE_DAYS: 3.0
+    """
     candidates: dict[str, list[Any]] = {}
+
     for raw in raw_params:
-        key, value = _split_param(raw)
-        candidates.setdefault(key, []).append(value)
+        # YAML file: load and merge
+        if raw.endswith((".yaml", ".yml")):
+            _merge_yaml(Path(raw), candidates)
+            continue
+
+        # Inline KEY=VALUE
+        key, separator, raw_value = raw.partition("=")
+        if not separator or not key:
+            raise ValueError(
+                f"Invalid param format: {raw!r}. Expected KEY=VALUE or a .yaml file."
+            )
+
+        # If the whole RHS is valid JSON, treat it as one candidate value.
+        # This lets arrays like [1,1,2,2] pass through without being split.
+        try:
+            parsed = json.loads(raw_value)
+            candidates.setdefault(key, []).append(parsed)
+            continue
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+        # Otherwise, split on commas and parse each piece as a scalar.
+        for piece in raw_value.split(","):
+            piece = piece.strip()
+            if piece:
+                candidates.setdefault(key, []).append(_parse_value(piece))
+
     return candidates
+
+
+def _merge_yaml(path: Path, candidates: dict[str, list[Any]]) -> None:
+    """Load a YAML param file and merge into the candidates dict.
+
+    Scalar values become a single candidate. List values become multiple
+    candidates for that key.
+    """
+    if not path.exists():
+        raise ValueError(f"Param file not found: {path}")
+
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"Expected a YAML mapping of param names to values in {path}, "
+            f"got {type(data).__name__}."
+        )
+
+    for key, value in data.items():
+        if isinstance(value, list):
+            candidates.setdefault(str(key), []).extend(value)
+        else:
+            candidates.setdefault(str(key), []).append(value)
 
 
 # ---------------------------------------------------------------------------
@@ -208,7 +231,7 @@ def _print_score_summary(payload: dict[str, object]) -> None:
     print(f"Replay:   {window['cutoff']} → {window['observed_until']}")
     print(f"Status:   {result['status']}")
     if result.get("overrides"):
-        print(f"Overrides: {_format_params(result['overrides'])}")
+        print(f"Params:   {_format_params(result['overrides'])}")
     if result["score"] is not None:
         score = result["score"]
         print(f"Headline: {score['headline']}")

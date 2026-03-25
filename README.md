@@ -122,11 +122,11 @@ Each run updates these artifacts:
 
 ## Replay And Tuning
 
-Feedcast includes a local replay harness for evaluating and tuning scripted
-models. It rewinds the current export by 24 hours, reruns a model from that
-synthetic cutoff, and scores the forecast against the now-known actuals. Use
-`score` to evaluate a model (with optional `--param` overrides), and `tune`
-to sweep candidate parameter values and rank them by headline score.
+Feedcast includes a replay-based tuning tool for scripted models. It tests
+parameter values against the latest 24 hours of known actuals and ranks them
+by forecast accuracy, so model developers can make data-driven parameter
+choices. Define candidate values inline or in a YAML file, and the tool
+evaluates the cross-product and reports which combination scored best.
 
 Replay is a directional tool for recent-pattern fitting, not robust
 out-of-sample validation. Full usage and examples:
