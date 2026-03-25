@@ -159,11 +159,11 @@ feedcast/
       research.py              Repeatable data analysis
       research_results.txt     Saved research output
     consensus_blend/           Majority-vote ensemble across scripted models
-      model.py                 Production sequence selector + lockstep research baseline
+      model.py                 Production sequence selector
       CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
-      research.py              Production-vs-baseline evaluation and selector sweeps
+      research.py              Production evaluation and selector sweeps
       research_results.txt     Saved research output
   evaluation/                  Retrospective forecast scoring
     scoring.py                 Shared scorer (Hungarian matching, weighted F1 + timing)

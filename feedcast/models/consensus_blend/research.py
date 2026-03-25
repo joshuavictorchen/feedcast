@@ -1,12 +1,12 @@
-"""Consensus Blend research: evaluate the production selector and baseline.
+"""Consensus Blend research: evaluate the production selector.
 
 Run from the repo root:
     .venv/bin/python -m feedcast.models.consensus_blend.research
 
-This script compares the production majority-sequence selector against
-the legacy lockstep blend on recent retrospective cutoffs. It also
-sweeps nearby selector constants so changes remain grounded in the real
-``score_forecast()`` metric rather than proxy cluster statistics.
+This script evaluates the production majority-sequence selector on
+recent retrospective cutoffs and sweeps nearby selector constants.
+The goal is to keep tuning grounded in the real ``score_forecast()``
+metric rather than proxy cluster statistics.
 """
 
 from __future__ import annotations
@@ -34,7 +34,6 @@ from feedcast.models.consensus_blend.model import (
     MAX_CANDIDATE_SPREAD_MINUTES,
     SELECTION_CONFLICT_WINDOW_MINUTES,
     SPREAD_PENALTY_PER_HOUR,
-    _blend_lockstep,
     _candidates_to_forecast_points,
     generate_candidate_clusters,
     run_consensus_blend,
@@ -72,7 +71,7 @@ def main() -> None:
 
     _analyze_interfeed_gaps(events, cutoff, log)
     _analyze_model_agreement(events, event_cache, cutoffs, log)
-    _compare_production_to_lockstep(events, event_cache, cutoffs, log)
+    _report_production_scores(events, event_cache, cutoffs, log)
     _sweep_selector_parameters(events, event_cache, cutoffs, log)
 
     results_path = OUTPUT_DIR / "research_results.txt"
@@ -232,14 +231,14 @@ def _analyze_model_agreement(
     log()
 
 
-def _compare_production_to_lockstep(
+def _report_production_scores(
     events: list[FeedEvent],
     event_cache: dict,
     cutoffs: list[datetime],
     log,
 ) -> None:
-    """Compare the production selector against the lockstep baseline."""
-    log("=== PRODUCTION VS LOCKSTEP BASELINE ===")
+    """Report retrospective scores for the production selector."""
+    log("=== PRODUCTION SELECTOR SCORES ===")
     log()
     log(
         "Production selector constants: "
@@ -250,7 +249,6 @@ def _compare_production_to_lockstep(
     )
     log()
 
-    baseline_rows: list[tuple[float, dict[str, float | int | str]]] = []
     production_rows: list[tuple[float, dict[str, float | int | str]]] = []
 
     for cutoff in cutoffs:
@@ -271,27 +269,6 @@ def _compare_production_to_lockstep(
             continue
 
         weight = _recency_weight(cutoff, cutoffs[-1])
-
-        baseline_points, _ = _blend_lockstep(available, history_at_cutoff)
-        baseline_points = normalize_forecast_points(
-            baseline_points, cutoff, HORIZON_HOURS
-        )
-        baseline_score = score_forecast(
-            baseline_points, actuals, cutoff, observed_until
-        )
-        baseline_rows.append(
-            (
-                weight,
-                {
-                    "cutoff": str(cutoff),
-                    "score": baseline_score.score,
-                    "count_score": baseline_score.count_score,
-                    "timing_score": baseline_score.timing_score,
-                    "predicted": baseline_score.predicted_count,
-                    "actual": baseline_score.actual_count,
-                },
-            )
-        )
 
         production_forecast = run_consensus_blend(
             base_forecasts,
@@ -321,27 +298,18 @@ def _compare_production_to_lockstep(
 
     log(
         f"{'Cutoff':<22} {'Actual':>6}  "
-        f"{'Base_N':>6} {'Base_Scr':>8} {'Base_Cnt':>8} {'Base_Tim':>8}  "
         f"{'Prod_N':>6} {'Prod_Scr':>8} {'Prod_Cnt':>8} {'Prod_Tim':>8}"
     )
-    for (_, baseline), (_, production) in zip(baseline_rows, production_rows):
+    for _, production in production_rows:
         log(
-            f"{baseline['cutoff']:<22} {int(baseline['actual']):>6}  "
-            f"{int(baseline['predicted']):>6} {baseline['score']:>8.1f} "
-            f"{baseline['count_score']:>8.1f} {baseline['timing_score']:>8.1f}  "
+            f"{production['cutoff']:<22} {int(production['actual']):>6}  "
             f"{int(production['predicted']):>6} {production['score']:>8.1f} "
             f"{production['count_score']:>8.1f} {production['timing_score']:>8.1f}"
         )
 
-    if baseline_rows:
+    if production_rows:
         log()
         log("Recency-weighted means:")
-        log(
-            "  Lockstep:   "
-            f"score={_weighted_mean(baseline_rows, 'score'):.1f}  "
-            f"count={_weighted_mean(baseline_rows, 'count_score'):.1f}  "
-            f"timing={_weighted_mean(baseline_rows, 'timing_score'):.1f}"
-        )
         log(
             "  Production: "
             f"score={_weighted_mean(production_rows, 'score'):.1f}  "

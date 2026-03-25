@@ -2,17 +2,14 @@
 
 ## Anchor-based candidate slots
 
-The production algorithm no longer walks forecasts in lockstep.
-Instead, every model prediction is treated as a possible anchor for
-one real feed. Around that anchor, the selector pulls the nearest
-prediction from each available model inside a shared radius and
-forms one candidate slot.
+Every model prediction is treated as a possible anchor for one real
+feed. Around that anchor, the selector pulls the nearest prediction
+from each available model inside a shared radius and forms one
+candidate slot.
 
 This lets the blend recover majority agreement even when the models
-disagree by more than a narrow clustering threshold. The old flat
-clustering approach split some real feeds into multiple local
-clusters; the anchor view keeps one candidate tied to one proposed
-feed explanation.
+disagree by more than a narrow clustering threshold. The anchor view
+keeps one candidate tied to one proposed feed explanation.
 
 ## Simple-majority support floor
 
@@ -22,9 +19,8 @@ majority of the available models. With four available models, a
 is enough. This is enforced when candidate slots are generated, not
 as an afterthought during aggregation.
 
-This rule is stricter than the old blend and stricter than the first
-pool-then-cluster prototype. It removes minority-supported echo
-feeds by construction.
+This rule keeps minority-supported slots out of the forecast by
+construction, so a 2-of-4 split never becomes consensus.
 
 ## Non-overlapping sequence selection
 
@@ -50,8 +46,8 @@ spread. A separate spread cap rejects candidates that become too
 diffuse to defend as one feed.
 
 This is a deliberate tradeoff. A narrower radius or spread cap
-reduced over-prediction, but it also pushed the blend back below the
-lockstep baseline on retrospective headline score.
+reduced over-prediction, but it also lowered retrospective headline
+score on the recent weighted sweep.
 
 ## 75-minute conflict window
 
@@ -61,17 +57,11 @@ explanations for the same feed. That number is lower than
 feeds around 72-75 minutes. Using a stricter 90-minute conflict
 window collapsed too many valid near-term feeds and lost score.
 
-## Legacy lockstep baseline
-
-The old lockstep median-timestamp walk stays in `model.py` as a
-research baseline. It is no longer production, but it remains useful
-for regression comparisons and future tuning.
-
 ## Known limitations
 
 The production selector still leans toward timing accuracy over
 strict count control. In the recent retrospective sweep, the
 highest-scoring majority selector still predicted more feeds than the
-old lockstep blend on several cutoffs. That tradeoff was accepted
+observed actuals on several cutoffs. That tradeoff was accepted
 because the user prioritized maximum accuracy and timing-first
-behavior over preserving the old count profile.
+behavior over stricter count control.

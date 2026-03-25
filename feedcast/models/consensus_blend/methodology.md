@@ -1,9 +1,9 @@
 # Consensus Blend
 
-Majority-vote ensemble across the scripted base models. Instead of
-walking model forecasts in lockstep, the blend proposes candidate
-feed slots around each predicted point by pulling in the nearest
-prediction from every available model inside a shared time radius.
+Majority-vote ensemble across the scripted base models. The blend
+proposes candidate feed slots around each predicted point by pulling
+in the nearest prediction from every available model inside a shared
+time radius.
 
 Only candidate slots backed by a simple majority of the available
 models survive. Those candidates then compete in a weighted

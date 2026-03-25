@@ -2,14 +2,12 @@
 
 The production runtime builds majority-supported candidate feed slots
 around each model prediction, then selects the best non-overlapping
-sequence. A lockstep baseline remains in this module for research and
-retrospective comparison.
+sequence.
 """
 
 from __future__ import annotations
 
 from bisect import bisect_right
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -50,10 +48,6 @@ SPREAD_PENALTY_PER_HOUR = 0.25
 # --- Availability floor ---
 
 MIN_CONSENSUS_MODELS = 2
-
-# --- Research baseline constants ---
-
-LOCKSTEP_MATCH_WINDOW_MINUTES = 90
 
 
 @dataclass(frozen=True)
@@ -391,89 +385,3 @@ def _candidates_to_forecast_points(
 def _majority_floor(component_count: int) -> int:
     """Return the simple-majority support floor."""
     return component_count // 2 + 1
-
-
-def _blend_lockstep(
-    component_forecasts: dict[str, Forecast],
-    history: list[FeedEvent],
-) -> tuple[list[ForecastPoint], int]:
-    """Blend component forecasts using the legacy lockstep walk.
-
-    This remains available as the research baseline and fallback
-    comparison point for future selector tuning.
-    """
-    component_indices = {slug: 0 for slug in component_forecasts}
-    points: list[ForecastPoint] = []
-    skipped_outliers = 0
-    match_window = timedelta(minutes=LOCKSTEP_MATCH_WINDOW_MINUTES)
-
-    while True:
-        next_candidates = [
-            (slug, forecast.points[component_indices[slug]])
-            for slug, forecast in component_forecasts.items()
-            if component_indices[slug] < len(forecast.points)
-        ]
-        if len(next_candidates) < 2:
-            break
-
-        candidate_timestamps = np.array(
-            [point.time.timestamp() for _, point in next_candidates],
-            dtype=float,
-        )
-        anchor_time = datetime.fromtimestamp(
-            float(np.median(candidate_timestamps))
-        )
-        cluster_start = anchor_time - match_window
-        cluster_end = anchor_time + match_window
-
-        leading_outliers = [
-            slug
-            for slug, point in next_candidates
-            if point.time < cluster_start
-        ]
-        for slug in leading_outliers:
-            component_indices[slug] += 1
-            skipped_outliers += 1
-
-        if leading_outliers:
-            continue
-
-        cluster = [
-            (slug, point)
-            for slug, point in next_candidates
-            if cluster_start <= point.time <= cluster_end
-        ]
-        if len(cluster) < 2:
-            earliest_slug = min(
-                next_candidates, key=lambda item: item[1].time
-            )[0]
-            component_indices[earliest_slug] += 1
-            skipped_outliers += 1
-            continue
-
-        timestamp_values = np.array(
-            [point.time.timestamp() for _, point in cluster],
-            dtype=float,
-        )
-        consensus_time = datetime.fromtimestamp(
-            float(np.median(timestamp_values))
-        )
-        volume_values = np.array(
-            [point.volume_oz for _, point in cluster], dtype=float
-        )
-        previous_time = points[-1].time if points else history[-1].time
-        gap_hours = max(
-            (consensus_time - previous_time).total_seconds() / 3600,
-            MIN_INTERVAL_HOURS,
-        )
-        points.append(
-            ForecastPoint(
-                time=consensus_time,
-                volume_oz=float(np.mean(volume_values)),
-                gap_hours=gap_hours,
-            )
-        )
-        for slug, _ in cluster:
-            component_indices[slug] += 1
-
-    return points, skipped_outliers
