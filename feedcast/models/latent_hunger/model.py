@@ -49,7 +49,9 @@ LOOKBACK_DAYS = 7
 MIN_FIT_GAPS = 5
 
 # Recency half-life for weighting events in growth rate estimation.
-RECENCY_HALF_LIFE_HOURS = 72
+# Latest-24h replay tuning favored 48h over 72h, which better tracks the
+# current pace when feeding cadence is shifting.
+RECENCY_HALF_LIFE_HOURS = 48
 
 # Circadian modulation of the hunger growth rate. amplitude=0 means no
 # modulation (constant growth). Research found amplitude=0.0 optimal for
