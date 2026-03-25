@@ -122,34 +122,14 @@ Each run updates these artifacts:
 
 ## Replay And Tuning
 
-Feedcast also includes a separate local replay harness for development work.
-It rewinds the current export by exactly 24 hours, reruns a model from that
-synthetic cutoff, and scores the forecast against the now-known actual bottle
-feeds from the latest observed 24 hours.
+Feedcast includes a local replay harness for evaluating and tuning scripted
+models. It rewinds the current export by 24 hours, reruns a model from that
+synthetic cutoff, and scores the forecast against the now-known actuals. Use
+`score` to evaluate a model (with optional `--param` overrides), and `tune`
+to sweep candidate parameter values and rank them by headline score.
 
-Replay artifacts are written to `.replay-results/` by default. That directory
-is gitignored. Every run prints the saved artifact path so humans and agents
-can inspect the JSON output directly.
-
-```bash
-# Score one model against the latest observed 24 hours
-.venv/bin/python scripts/run_replay.py score --model slot_drift
-
-# Score with parameter overrides
-.venv/bin/python scripts/run_replay.py score --model slot_drift --param LOOKBACK_DAYS=5
-
-# Sweep candidate values (cross-product evaluated)
-.venv/bin/python scripts/run_replay.py tune \
-  --model slot_drift \
-  --param LOOKBACK_DAYS=5 --param LOOKBACK_DAYS=7 --param LOOKBACK_DAYS=9
-
-# Machine-readable output for agents or automation
-.venv/bin/python scripts/run_replay.py score --model slot_drift --json
-```
-
-Replay is intentionally narrow. It is a directional tool for recent-pattern
-fitting, not a replacement for model-local research or a claim of robust
-out-of-sample validation. Full notes:
+Replay is a directional tool for recent-pattern fitting, not robust
+out-of-sample validation. Full usage and examples:
 [`feedcast/replay/README.md`](feedcast/replay/README.md).
 
 ## Repo Layout

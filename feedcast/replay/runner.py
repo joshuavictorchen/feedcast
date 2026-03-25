@@ -100,6 +100,7 @@ def score_model(
 
     snapshot = load_export_snapshot(export_path=export_path)
     window = _latest_replay_window(snapshot)
+    event_cache = build_event_cache(snapshot.activities)
 
     context = (
         override_constants(f"feedcast.models.{model_slug}.model", overrides)
@@ -109,7 +110,7 @@ def score_model(
     with context:
         evaluation = _evaluate_model(
             model_slug=model_slug,
-            snapshot=snapshot,
+            event_cache=event_cache,
             replay_cutoff=window["cutoff"],
             observed_until=window["observed_until"],
         )
@@ -187,10 +188,14 @@ def tune_model(
             _coerce_param(name, value, baseline_params[name]) for value in values
         ]
 
+    # Build the event cache once — it depends only on the export activities
+    # and model merge windows, neither of which change between candidates.
+    event_cache = build_event_cache(snapshot.activities)
+
     # Evaluate baseline with current constants
     baseline = _evaluate_model(
         model_slug=model_slug,
-        snapshot=snapshot,
+        event_cache=event_cache,
         replay_cutoff=window["cutoff"],
         observed_until=window["observed_until"],
     )
@@ -213,7 +218,7 @@ def tune_model(
             with override_constants(module_name, params):
                 evaluation = _evaluate_model(
                     model_slug=model_slug,
-                    snapshot=snapshot,
+                    event_cache=event_cache,
                     replay_cutoff=window["cutoff"],
                     observed_until=window["observed_until"],
                 )
@@ -329,12 +334,11 @@ def _latest_replay_window(snapshot: ExportSnapshot) -> dict[str, datetime]:
 def _evaluate_model(
     *,
     model_slug: str,
-    snapshot: ExportSnapshot,
+    event_cache: dict[int | None, list[Any]],
     replay_cutoff: datetime,
     observed_until: datetime,
 ) -> dict[str, Any]:
     """Replay one model and score against the known last-24h actuals."""
-    event_cache = build_event_cache(snapshot.activities)
     forecast = _run_forecast(model_slug, event_cache, replay_cutoff)
 
     if not forecast.available:
