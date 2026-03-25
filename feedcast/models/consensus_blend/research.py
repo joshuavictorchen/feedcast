@@ -1,9 +1,9 @@
-"""Consensus Blend research: evaluate the production selector.
+"""Consensus Blend research: evaluate the production exact selector.
 
 Run from the repo root:
     .venv/bin/python -m feedcast.models.consensus_blend.research
 
-This script evaluates the production majority-sequence selector on
+This script evaluates the production immutable-candidate selector on
 recent retrospective cutoffs and sweeps nearby selector constants.
 The goal is to keep tuning grounded in the real ``score_forecast()``
 metric rather than proxy cluster statistics.
@@ -239,7 +239,7 @@ def _report_production_scores(
     log,
 ) -> None:
     """Report retrospective scores for the production selector."""
-    log("=== PRODUCTION SELECTOR SCORES ===")
+    log("=== PRODUCTION EXACT SELECTOR SCORES ===")
     log()
     log(
         "Production selector constants: "
@@ -330,8 +330,8 @@ def _sweep_selector_parameters(
     log("=== SELECTOR PARAMETER SWEEP ===")
     log()
     log(
-        "Scores the anchor-based majority selector directly against the "
-        "retrospective scorer."
+        "Scores the immutable-candidate exact selector directly against "
+        "the retrospective scorer."
     )
     log()
 
@@ -341,16 +341,12 @@ def _sweep_selector_parameters(
     ] = []
     for cutoff in cutoffs:
         horizon_end = cutoff + timedelta(hours=HORIZON_HOURS)
-        actuals = [
-            event for event in events if cutoff < event.time <= horizon_end
-        ]
+        actuals = [event for event in events if cutoff < event.time <= horizon_end]
         if len(actuals) < 2:
             continue
         observed_until = min(horizon_end, max(event.time for event in events))
         history_at_cutoff = [event for event in events if event.time <= cutoff]
-        base_forecasts = run_all_models_from_cache(
-            event_cache, cutoff, HORIZON_HOURS
-        )
+        base_forecasts = run_all_models_from_cache(event_cache, cutoff, HORIZON_HOURS)
         available = {
             forecast.slug: forecast
             for forecast in base_forecasts
@@ -389,9 +385,7 @@ def _sweep_selector_parameters(
                         spread_penalty_per_hour=SPREAD_PENALTY_PER_HOUR,
                     )
                     points = normalize_forecast_points(
-                        _candidates_to_forecast_points(
-                            selected, history_at_cutoff
-                        ),
+                        _candidates_to_forecast_points(selected, history_at_cutoff),
                         cutoff,
                         HORIZON_HOURS,
                     )
@@ -436,8 +430,7 @@ def _sweep_selector_parameters(
         if (
             int(row["radius_minutes"]) == ANCHOR_RADIUS_MINUTES
             and int(row["max_spread_minutes"]) == MAX_CANDIDATE_SPREAD_MINUTES
-            and int(row["conflict_minutes"])
-            == SELECTION_CONFLICT_WINDOW_MINUTES
+            and int(row["conflict_minutes"]) == SELECTION_CONFLICT_WINDOW_MINUTES
         ):
             marker = "  <- production"
         log(

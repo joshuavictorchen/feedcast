@@ -7,10 +7,10 @@ from datetime import datetime, timedelta
 
 from feedcast.data import FeedEvent, Forecast, ForecastPoint
 from feedcast.models.consensus_blend.model import (
+    _majority_floor,
     generate_candidate_clusters,
     run_consensus_blend,
     select_candidate_sequence,
-    _majority_floor,
 )
 
 
@@ -65,7 +65,11 @@ class ConsensusBlendTests(unittest.TestCase):
         self.assertTrue(forecast.available)
         self.assertEqual(len(forecast.points), 1)
         self.assertLess(
-            abs((forecast.points[0].time - (cutoff + timedelta(hours=3))).total_seconds()),
+            abs(
+                (
+                    forecast.points[0].time - (cutoff + timedelta(hours=3))
+                ).total_seconds()
+            ),
             10 * 60,
         )
 
@@ -106,7 +110,11 @@ class ConsensusBlendTests(unittest.TestCase):
         self.assertTrue(forecast.available)
         self.assertEqual(len(forecast.points), 1)
         self.assertLess(
-            abs((forecast.points[0].time - (cutoff + timedelta(hours=3))).total_seconds()),
+            abs(
+                (
+                    forecast.points[0].time - (cutoff + timedelta(hours=3))
+                ).total_seconds()
+            ),
             10 * 60,
         )
 
@@ -202,17 +210,10 @@ class ConsensusBlendTests(unittest.TestCase):
             f"Point reuse detected: {all_keys}",
         )
 
-    def test_per_point_arrays_are_aligned_with_point_key(self) -> None:
-        """point_timestamps and point_volumes must correspond to point_key.
-
-        Uses non-alphabetical slug ordering to catch alignment bugs
-        where point_key is sorted but per-point arrays follow dict
-        iteration order.
-        """
+    def test_candidate_generation_is_independent_of_model_order(self) -> None:
+        """Candidate identity should not depend on input dict ordering."""
         cutoff = datetime(2026, 3, 24, 12, 0, 0)
-        # Slugs intentionally non-alphabetical to expose iteration-vs-sort
-        # mismatches.  zebra sorts last but is inserted first.
-        forecasts = {
+        forecasts_one = {
             "zebra": Forecast(
                 name="zebra",
                 slug="zebra",
@@ -253,54 +254,45 @@ class ConsensusBlendTests(unittest.TestCase):
                 diagnostics={},
             ),
         }
+        forecasts_two = {
+            "alpha": forecasts_one["alpha"],
+            "middle": forecasts_one["middle"],
+            "zebra": forecasts_one["zebra"],
+        }
+
+        candidates_one = generate_candidate_clusters(forecasts_one)
+        candidates_two = generate_candidate_clusters(forecasts_two)
+
+        summary_one = {
+            (candidate.point_key, candidate.time, candidate.support)
+            for candidate in candidates_one
+        }
+        summary_two = {
+            (candidate.point_key, candidate.time, candidate.support)
+            for candidate in candidates_two
+        }
+        self.assertEqual(summary_one, summary_two)
+
+    def test_candidate_generator_emits_majority_subset_alternatives(self) -> None:
+        """The exact selector should have tight-majority alternatives to choose."""
+        forecasts = {
+            "model_a": _forecast("model_a", [2.92]),
+            "model_b": _forecast("model_b", [3.0]),
+            "model_c": _forecast("model_c", [3.08]),
+            "model_d": _forecast("model_d", [4.0]),
+        }
+
         candidates = generate_candidate_clusters(forecasts)
-        self.assertGreater(len(candidates), 0)
+        candidate_models = {candidate.models for candidate in candidates}
 
-        for candidate in candidates:
-            # For each position i, point_key[i] should correspond to
-            # point_timestamps[i] and point_volumes[i].
-            for i, key in enumerate(candidate.point_key):
-                slug = key.split(":")[0]
-                expected_point = forecasts[slug].points[int(key.split(":")[1])]
-                self.assertAlmostEqual(
-                    candidate.point_timestamps[i],
-                    expected_point.time.timestamp(),
-                    places=1,
-                    msg=f"Timestamp mismatch at index {i} for {key}",
-                )
-                self.assertAlmostEqual(
-                    candidate.point_volumes[i],
-                    expected_point.volume_oz,
-                    places=3,
-                    msg=f"Volume mismatch at index {i} for {key}",
-                )
-
-
-    def test_selector_finds_multiple_feeds_despite_shared_points(self) -> None:
-        """Regression: shared anchor points should not collapse two valid feeds.
-
-        With a:[2.0,2.5], b:[2.0,3.5], c:[2.5,3.5], d:[3.5,4.0], the
-        selector should find at least one consensus feed.  The forward-order
-        search may miss the globally optimal sequence where an earlier
-        candidate becomes valid after a later one claims points, but it
-        should still find a reasonable selection (not degenerate to zero).
-        """
-        cutoff = datetime(2026, 3, 24, 12, 0, 0)
-        history = [_history_event(cutoff)]
-        forecast = run_consensus_blend(
-            base_forecasts=[
-                _forecast("model_a", [2.0, 2.5]),
-                _forecast("model_b", [2.0, 3.5]),
-                _forecast("model_c", [2.5, 3.5]),
-                _forecast("model_d", [3.5, 4.0]),
-            ],
-            history=history,
-            cutoff=cutoff,
-            horizon_hours=24,
+        self.assertIn(
+            ("model_a", "model_b", "model_c"),
+            candidate_models,
         )
-
-        self.assertTrue(forecast.available)
-        self.assertGreaterEqual(len(forecast.points), 1)
+        self.assertIn(
+            ("model_a", "model_b", "model_c", "model_d"),
+            candidate_models,
+        )
 
 
 if __name__ == "__main__":

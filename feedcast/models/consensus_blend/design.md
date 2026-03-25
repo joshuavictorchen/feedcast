@@ -1,80 +1,69 @@
 # Consensus Blend Design Decisions
 
-## Anchor-based candidate slots
+## Immutable majority-subset candidates
 
 Every model prediction is treated as a possible anchor for one real
-feed. Around that anchor, the selector pulls the nearest prediction
-from each available model inside a shared radius and forms one
-candidate slot.
+feed. Around each anchor, the blend enumerates every simple-majority
+subset of the available models and asks each model in that subset for
+its nearest prediction inside a shared radius.
 
-This lets the blend recover majority agreement even when the models
-disagree by more than a narrow clustering threshold. The anchor view
-keeps one candidate tied to one proposed feed explanation.
+This is the key structural decision. The old selector mutated
+candidates during search by rebuilding them after shared points were
+claimed. That made correctness depend on search order. The current
+selector makes every candidate immutable up front, so selection only
+has to decide which fixed candidates survive.
 
 ## Simple-majority support floor
 
-Consensus means simple majority of the available models. With four
-available models, a 2-of-4 split is not consensus. With three
-available models, 2-of-3 is enough. This is enforced when candidate
-slots are generated.
+Consensus means simple majority of the available models:
 
-## Backtracking sequence selection with single-use enforcement
+- 4 models available: support floor = 3
+- 3 models available: support floor = 2
+- 2 models available: support floor = 2
 
-Candidate slots are selected via backtracking search with
-upper-bound pruning over forward-ordered subsequences. For the
-typical problem size (~17 candidates) this runs in milliseconds.
+This rejects 2-of-4 split votes while still allowing consensus to work
+when one model is unavailable.
 
-The search is not globally optimal: it processes candidates in
-time order and cannot discover sequences where an earlier
-candidate becomes valid only after a later candidate claims shared
-points. This edge case requires a specific point-sharing pattern
-and did not affect retrospective scores on the current data.
+## Exact set-packing selector
 
-Two constraints are enforced jointly during the search:
+Selected consensus feeds are chosen with a mixed-integer linear
+program. There is one binary decision per candidate slot.
 
-1. **Temporal non-overlap:** candidates closer than the conflict
-   window are competing explanations for the same feed.
-2. **Single-use model points:** each model prediction is claimed by
-   at most one selected consensus feed. If a candidate's points
-   are partly claimed, it is rebuilt from unclaimed evidence only
-   (recomputed median timestamp, volume, support, spread). If the
-   rebuilt support drops below majority, that branch is pruned.
+The selector enforces two hard constraints:
 
-Single-use enforcement is the key correctness property. Without it,
-one model's prediction counts as evidence for multiple nearby
-consensus feeds, inflating support counts and producing more feeds
-than the models actually warrant.
+1. Each underlying model prediction (`slug:index`) can be used at most once.
+2. Two candidates closer than the conflict window cannot both survive.
 
-## Wide anchor radius
+That gives the blend a clean invariant: no model point is ever reused
+to support multiple consensus feeds.
 
-The production radius is 120 minutes. Research shows inter-model
-spread for the same real feed is P50=102 minutes, so a wide radius
-is needed to recover majority agreement across that disagreement.
+## Wide anchor radius, explicit spread cap
 
-With the exhaustive selector, a wider radius generates more
-candidates for the optimizer to choose from, which improves the
-final sequence. This is the opposite of the greedy heuristic
-(where wider radius created more point-sharing and worse greedy
-decisions). The retrospective sweep confirmed radius=120 scores
-above all tighter alternatives.
+The production radius is 120 minutes. Recent research shows the median
+inter-model spread for the same real feed is about 102 minutes, so a
+narrow clustering threshold would drop too much legitimate agreement.
 
-Outliers within the radius (e.g., one model 60 minutes from the
-majority) are median-suppressed: the consensus timestamp reflects
-the majority position. The outlier model's prediction is consumed
-by single-use enforcement, so it cannot also anchor a separate
-phantom feed.
+Because the radius is intentionally wide, the model also enforces a
+hard candidate spread cap of 180 minutes. That keeps obviously diffuse
+slots out of the optimizer.
 
-## 90-minute conflict window
+## Utility favors support first, tightness second
 
-The selector treats candidates closer than 90 minutes as competing
-explanations for the same feed. This aligns with
-`MIN_INTERVAL_HOURS`, the physiological floor for distinct feeds.
+Candidate utility is:
 
-## Utility function
+`support * 10 - spread_penalty_per_hour * spread_hours`
 
-Support drives utility (`support * 10`). Spread is a secondary
-penalty (`0.25 per hour`), so tighter majority candidates win when
-support is equal. The spread penalty is intentionally small — a
-4-model candidate with wide spread is still preferred over a
-3-model candidate with tight spread, because more models agreeing
-is stronger evidence.
+Support is still the main signal. Spread mostly breaks ties between
+similarly-supported slots. This means the current production utility is
+still somewhat suppressive rather than strictly outlier-rejecting: a
+wide 4-model candidate can beat a tight 3-model candidate. That is a
+deliberate simplification for now, not a claim that the utility is
+finished.
+
+## Direction over perfection
+
+The exact selector is a cleaner long-term structure even though the
+current utility is not fully tuned. It removes rebuild bugs, order
+dependence, and post-selection repair logic. Future tuning should
+happen by adjusting candidate utility and constraints, not by bringing
+mutation back into the selector.

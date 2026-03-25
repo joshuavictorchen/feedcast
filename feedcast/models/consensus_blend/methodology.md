@@ -1,17 +1,16 @@
 # Consensus Blend
 
 Majority-vote ensemble across the scripted base models. The blend
-proposes candidate feed slots around each predicted point by pulling
-in the nearest prediction from every available model inside a shared
-time radius.
+builds immutable candidate feed slots around each predicted point,
+including majority-sized subsets of the available models, then solves
+an exact set-packing problem to choose one non-overlapping feed
+sequence.
 
-Only candidate slots backed by a simple majority of the available
-models survive. Those candidates then compete in a weighted
-interval scheduler that keeps the best non-overlapping sequence,
-favoring higher model support and tighter timing agreement.
+Each candidate uses the median timestamp and median volume of its
+contributing model predictions. The exact selector enforces two hard
+rules: one model prediction can only support one consensus feed, and
+two candidate feeds inside the conflict window cannot both survive.
 
-Each consensus feed uses the median timestamp and median volume of
-its contributing model predictions. This prevents 2-vs-2 split
-votes from becoming consensus and avoids emitting multiple nearby
-"echo" feeds when several local candidate clusters are really
-describing the same underlying feed.
+This keeps the blend from reusing the same evidence twice while still
+letting tight majority agreement compete directly against wider
+all-model agreement.

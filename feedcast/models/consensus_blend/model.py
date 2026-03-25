@@ -1,27 +1,23 @@
 """Consensus Blend forecast model.
 
-The production runtime builds majority-supported candidate feed slots
-around each model prediction, then selects the best non-overlapping
-sequence where each model prediction is used at most once.
+The production runtime builds immutable majority-supported candidate
+feed slots around each model prediction, then solves an exact
+set-packing problem that picks the best non-overlapping sequence
+without reusing any model prediction twice.
 """
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
+from itertools import combinations
 
 import numpy as np
+from scipy.optimize import Bounds, LinearConstraint, milp
 
-from feedcast.data import (
-    FeedEvent,
-    Forecast,
-    ForecastPoint,
-    MIN_INTERVAL_HOURS,
-)
-from feedcast.models.shared import (
-    load_methodology,
-    normalize_forecast_points,
-)
+from feedcast.data import MIN_INTERVAL_HOURS, FeedEvent, Forecast, ForecastPoint
+from feedcast.models.shared import load_methodology, normalize_forecast_points
 
 MODEL_NAME = "Consensus Blend"
 MODEL_SLUG = "consensus_blend"
@@ -29,21 +25,19 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 
 # --- Production selector constants ---
 
-# Candidate slots are built by asking which model predictions sit near a
-# proposed anchor time.  A 2-hour radius recovers majority agreement even
-# when models disagree substantially.  The exhaustive selector handles
-# the resulting point-sharing correctly via single-use enforcement.
+# Candidate slots are built around every model prediction. A 2-hour anchor
+# radius keeps wide-but-real agreement regions in play so the exact selector
+# can choose among them.
 ANCHOR_RADIUS_MINUTES = 120
 
-# Candidate clusters wider than this are too diffuse to treat as one feed.
+# Candidate slots wider than this are too diffuse to treat as one feed.
 MAX_CANDIDATE_SPREAD_MINUTES = 180
 
-# Selected consensus slots closer than this are treated as competing
-# explanations for the same real-world feed.  Aligned with
-# MIN_INTERVAL_HOURS (90 min), the physiological floor for distinct feeds.
+# Selected consensus slots closer than this are competing explanations for
+# the same real feed. This matches the 90-minute physiological floor.
 SELECTION_CONFLICT_WINDOW_MINUTES = 90
 
-# Tighter candidate slots are preferred when support is equal.
+# Support is the primary signal. Spread breaks ties in favor of tighter slots.
 SPREAD_PENALTY_PER_HOUR = 0.25
 
 # --- Availability floor ---
@@ -53,7 +47,7 @@ MIN_CONSENSUS_MODELS = 2
 
 @dataclass(frozen=True)
 class CandidateCluster:
-    """One majority-supported candidate feed slot."""
+    """One immutable majority-supported candidate feed slot."""
 
     time: datetime
     volume_oz: float
@@ -61,9 +55,6 @@ class CandidateCluster:
     spread_minutes: float
     models: tuple[str, ...]
     point_key: tuple[str, ...]
-    # Per-point data retained for rebuild during single-use enforcement.
-    point_timestamps: tuple[float, ...]
-    point_volumes: tuple[float, ...]
 
 
 def run_consensus_blend(
@@ -155,19 +146,13 @@ def _blend_by_sequence_selection(
     component_forecasts: dict[str, Forecast],
     history: list[FeedEvent],
 ) -> tuple[list[ForecastPoint], dict]:
-    """Build majority-supported candidate slots and select a sequence.
-
-    The selector treats each candidate slot as one possible explanation
-    for a real feed.  Greedy selection by descending utility picks the
-    strongest candidates first, enforcing both temporal non-overlap and
-    single-use model points in one pass.
-    """
+    """Build candidate slots and select an exact non-overlapping sequence."""
     majority_floor = _majority_floor(len(component_forecasts))
     candidates = generate_candidate_clusters(component_forecasts)
     selected = select_candidate_sequence(candidates, majority_floor)
     points = _candidates_to_forecast_points(selected, history)
     diagnostics = {
-        "algorithm": "anchor-majority-sequence",
+        "algorithm": "exact-majority-set-packing",
         "majority_floor": majority_floor,
         "anchor_radius_minutes": ANCHOR_RADIUS_MINUTES,
         "max_candidate_spread_minutes": MAX_CANDIDATE_SPREAD_MINUTES,
@@ -198,11 +183,12 @@ def generate_candidate_clusters(
     radius_minutes: int = ANCHOR_RADIUS_MINUTES,
     max_spread_minutes: int = MAX_CANDIDATE_SPREAD_MINUTES,
 ) -> list[CandidateCluster]:
-    """Return majority-supported candidate feed slots.
+    """Return immutable majority-supported candidate feed slots.
 
-    Each model contributes at most one point to a candidate slot: the
-    point nearest the anchor time.  Candidates are deduplicated by the
-    exact set of model points they consume.
+    For each anchor time, the generator enumerates every majority-sized
+    model subset and asks each model in that subset for its nearest point
+    inside the shared radius. Candidates are deduplicated by the exact set
+    of model points they consume.
     """
     available = {
         slug: forecast
@@ -213,71 +199,98 @@ def generate_candidate_clusters(
         return []
 
     majority_floor = _majority_floor(len(available))
-
-    # Collect every model prediction as a potential anchor.
-    anchor_times: list[datetime] = []
-    for forecast in available.values():
-        for point in forecast.points:
-            anchor_times.append(point.time)
+    all_model_slugs = sorted(available)
+    anchor_times = [
+        point.time for forecast in available.values() for point in forecast.points
+    ]
 
     candidates: list[CandidateCluster] = []
     seen_point_keys: set[tuple[str, ...]] = set()
 
     for anchor_time in anchor_times:
-        # Pull in the nearest prediction from each model within radius.
-        chosen: list[tuple[str, int, float, float]] = []
-        for slug, forecast in available.items():
-            best_distance = float("inf")
-            best_index = -1
-            best_timestamp = 0.0
-            best_volume = 0.0
-            for index, point in enumerate(forecast.points):
-                distance = abs(
-                    (point.time - anchor_time).total_seconds()
-                ) / 60.0
-                if distance <= radius_minutes and distance < best_distance:
-                    best_distance = distance
-                    best_index = index
-                    best_timestamp = point.time.timestamp()
-                    best_volume = point.volume_oz
-            if best_index >= 0:
-                chosen.append((slug, best_index, best_timestamp, best_volume))
+        for subset_size in range(majority_floor, len(all_model_slugs) + 1):
+            for subset in combinations(all_model_slugs, subset_size):
+                candidate = _build_candidate_for_anchor(
+                    anchor_time=anchor_time,
+                    subset=subset,
+                    available=available,
+                    radius_minutes=radius_minutes,
+                    max_spread_minutes=max_spread_minutes,
+                )
+                if candidate is None or candidate.point_key in seen_point_keys:
+                    continue
+                seen_point_keys.add(candidate.point_key)
+                candidates.append(candidate)
 
-        if len(chosen) < majority_floor:
-            continue
+    return sorted(candidates, key=lambda candidate: candidate.time)
 
-        # Sort so point_key, point_timestamps, and point_volumes are aligned.
-        chosen.sort(key=lambda item: f"{item[0]}:{item[1]}")
 
-        point_key = tuple(f"{slug}:{index}" for slug, index, _, _ in chosen)
-        if point_key in seen_point_keys:
-            continue
-
-        timestamps = np.array([ts for _, _, ts, _ in chosen], dtype=float)
-        volumes = np.array([vol for _, _, _, vol in chosen], dtype=float)
-        spread = (float(np.max(timestamps)) - float(np.min(timestamps))) / 60.0
-        if spread > max_spread_minutes:
-            continue
-
-        seen_point_keys.add(point_key)
-        candidates.append(
-            CandidateCluster(
-                time=datetime.fromtimestamp(float(np.median(timestamps))),
-                volume_oz=float(np.median(volumes)),
-                support=len(chosen),
-                spread_minutes=spread,
-                models=tuple(sorted(slug for slug, _, _, _ in chosen)),
-                point_key=point_key,
-                point_timestamps=tuple(ts for _, _, ts, _ in chosen),
-                point_volumes=tuple(vol for _, _, _, vol in chosen),
-            )
+def _build_candidate_for_anchor(
+    anchor_time: datetime,
+    subset: tuple[str, ...],
+    available: dict[str, Forecast],
+    radius_minutes: int,
+    max_spread_minutes: int,
+) -> CandidateCluster | None:
+    """Build one candidate slot for one anchor and one model subset."""
+    chosen_points: list[tuple[str, int, ForecastPoint]] = []
+    for slug in subset:
+        nearest = _nearest_point_within_radius(
+            forecast=available[slug],
+            anchor_time=anchor_time,
+            radius_minutes=radius_minutes,
         )
+        if nearest is None:
+            return None
+        chosen_points.append((slug, nearest[0], nearest[1]))
 
-    return sorted(candidates, key=lambda c: c.time)
+    chosen_points.sort(key=lambda item: f"{item[0]}:{item[1]}")
+    timestamps = np.array(
+        [point.time.timestamp() for _, _, point in chosen_points],
+        dtype=float,
+    )
+    spread_minutes = (float(np.max(timestamps)) - float(np.min(timestamps))) / 60.0
+    if spread_minutes > max_spread_minutes:
+        return None
+
+    volumes = np.array(
+        [point.volume_oz for _, _, point in chosen_points],
+        dtype=float,
+    )
+    return CandidateCluster(
+        time=datetime.fromtimestamp(float(np.median(timestamps))),
+        volume_oz=float(np.median(volumes)),
+        support=len(chosen_points),
+        spread_minutes=spread_minutes,
+        models=tuple(slug for slug, _, _ in chosen_points),
+        point_key=tuple(f"{slug}:{index}" for slug, index, _ in chosen_points),
+    )
+
+
+def _nearest_point_within_radius(
+    forecast: Forecast,
+    anchor_time: datetime,
+    radius_minutes: int,
+) -> tuple[int, ForecastPoint] | None:
+    """Return the nearest forecast point inside the shared anchor radius."""
+    best_index = -1
+    best_point: ForecastPoint | None = None
+    best_distance = float("inf")
+
+    for index, point in enumerate(forecast.points):
+        distance_minutes = abs((point.time - anchor_time).total_seconds()) / 60.0
+        if distance_minutes <= radius_minutes and distance_minutes < best_distance:
+            best_index = index
+            best_point = point
+            best_distance = distance_minutes
+
+    if best_point is None:
+        return None
+    return best_index, best_point
 
 
 # ===================================================================
-# Sequence selection (greedy with single-use enforcement)
+# Sequence selection (exact set-packing via MILP)
 # ===================================================================
 
 
@@ -287,152 +300,91 @@ def select_candidate_sequence(
     conflict_minutes: int = SELECTION_CONFLICT_WINDOW_MINUTES,
     spread_penalty_per_hour: float = SPREAD_PENALTY_PER_HOUR,
 ) -> list[CandidateCluster]:
-    """Select a high-utility non-overlapping, non-reusing sequence.
+    """Select the highest-utility valid candidate sequence exactly.
 
-    Uses backtracking search with upper-bound pruning over
-    forward-ordered subsequences.  This is not globally optimal --
-    it cannot discover sequences where an earlier candidate becomes
-    valid only after a later candidate claims shared points -- but
-    it covers the vast majority of practical cases and runs in
-    milliseconds for ~17 candidates.
-
-    Constraints enforced jointly:
-      - Temporal non-overlap (conflict window).
-      - Single-use model points (each ``slug:index`` claimed at most once).
-      - Majority support after removing claimed points.
-
-    Args:
-        candidates: Candidate clusters from ``generate_candidate_clusters``.
-        majority_floor: Minimum distinct models for a valid candidate.
-        conflict_minutes: Temporal proximity that makes two candidates
-            competing explanations for the same feed.
-        spread_penalty_per_hour: Utility penalty per hour of intra-cluster
-            spread.
-
-    Returns:
-        Selected candidates sorted chronologically.
+    The MILP has one binary decision per candidate. Constraints enforce:
+      - each model point is used at most once
+      - candidates inside the conflict window cannot both survive
     """
-    if not candidates:
+    eligible = [
+        candidate for candidate in candidates if candidate.support >= majority_floor
+    ]
+    if not eligible:
         return []
 
-    ordered = sorted(candidates, key=lambda c: c.time)
+    weights = np.array(
+        [
+            _candidate_utility(candidate, spread_penalty_per_hour)
+            for candidate in eligible
+        ],
+        dtype=float,
+    )
 
-    def utility(candidate: CandidateCluster) -> float:
-        return (
-            candidate.support * 10.0
-            - spread_penalty_per_hour * (candidate.spread_minutes / 60.0)
+    rows: list[np.ndarray] = []
+    lower_bounds: list[float] = []
+    upper_bounds: list[float] = []
+    point_memberships: dict[str, list[int]] = defaultdict(list)
+    for candidate_index, candidate in enumerate(eligible):
+        for point_key in candidate.point_key:
+            point_memberships[point_key].append(candidate_index)
+
+    for indices in point_memberships.values():
+        row = np.zeros(len(eligible), dtype=float)
+        row[indices] = 1.0
+        rows.append(row)
+        lower_bounds.append(-np.inf)
+        upper_bounds.append(1.0)
+
+    for left_index, left_candidate in enumerate(eligible):
+        for right_index in range(left_index + 1, len(eligible)):
+            right_candidate = eligible[right_index]
+            gap_minutes = (
+                abs((left_candidate.time - right_candidate.time).total_seconds()) / 60.0
+            )
+            if gap_minutes >= conflict_minutes:
+                continue
+            row = np.zeros(len(eligible), dtype=float)
+            row[left_index] = 1.0
+            row[right_index] = 1.0
+            rows.append(row)
+            lower_bounds.append(-np.inf)
+            upper_bounds.append(1.0)
+
+    if not rows:
+        return [
+            candidate for candidate, weight in zip(eligible, weights) if weight > 0.0
+        ]
+
+    result = milp(
+        c=-weights,
+        integrality=np.ones(len(eligible), dtype=int),
+        bounds=Bounds(
+            lb=np.zeros(len(eligible), dtype=float),
+            ub=np.ones(len(eligible), dtype=float),
+        ),
+        constraints=LinearConstraint(
+            np.vstack(rows),
+            np.array(lower_bounds, dtype=float),
+            np.array(upper_bounds, dtype=float),
+        ),
+    )
+    if not result.success:
+        raise RuntimeError(
+            f"Consensus Blend MILP failed: {result.message or 'unknown error'}"
         )
 
-    # Suffix sums of original utilities for upper-bound pruning.
-    suffix_utility = [0.0] * (len(ordered) + 1)
-    for i in range(len(ordered) - 1, -1, -1):
-        suffix_utility[i] = suffix_utility[i + 1] + utility(ordered[i])
-
-    best: dict = {"utility": 0.0, "selection": []}
-
-    def search(
-        index: int,
-        selected: list[CandidateCluster],
-        claimed: frozenset[str],
-        total_utility: float,
-    ) -> None:
-        if total_utility > best["utility"]:
-            best["utility"] = total_utility
-            best["selection"] = list(selected)
-
-        for i in range(index, len(ordered)):
-            # Pruning: remaining upper bound cannot beat current best.
-            if total_utility + suffix_utility[i] <= best["utility"]:
-                return
-
-            candidate = ordered[i]
-
-            # Single-use: find unclaimed contributing points.
-            unclaimed_indices = [
-                j
-                for j, key in enumerate(candidate.point_key)
-                if key not in claimed
-            ]
-            if len(unclaimed_indices) < majority_floor:
-                continue
-
-            # Rebuild the candidate from unclaimed evidence if needed.
-            actual = candidate
-            if len(unclaimed_indices) < len(candidate.point_key):
-                actual = _rebuild_candidate(candidate, unclaimed_indices)
-
-            # Temporal non-overlap with all previously selected.
-            if _has_temporal_conflict(actual, selected, conflict_minutes):
-                continue
-
-            search(
-                i + 1,
-                selected + [actual],
-                claimed | frozenset(actual.point_key),
-                total_utility + utility(actual),
-            )
-
-    search(0, [], frozenset(), 0.0)
-    return best["selection"]
+    selected = [eligible[index] for index, value in enumerate(result.x) if value > 0.5]
+    return sorted(selected, key=lambda candidate: candidate.time)
 
 
-def _rebuild_candidate(
-    original: CandidateCluster,
-    unclaimed_indices: list[int],
-) -> CandidateCluster:
-    """Rebuild a candidate from its unclaimed evidence only.
-
-    Recomputes the median timestamp, median volume, support, spread,
-    and model list from the subset of points that have not been claimed
-    by a previously selected consensus feed.
-    """
-    timestamps = np.array(
-        [original.point_timestamps[i] for i in unclaimed_indices],
-        dtype=float,
-    )
-    volumes = np.array(
-        [original.point_volumes[i] for i in unclaimed_indices],
-        dtype=float,
-    )
-    spread = (
-        (float(np.max(timestamps)) - float(np.min(timestamps))) / 60.0
-        if len(timestamps) > 1
-        else 0.0
-    )
-    return CandidateCluster(
-        time=datetime.fromtimestamp(float(np.median(timestamps))),
-        volume_oz=float(np.median(volumes)),
-        support=len(unclaimed_indices),
-        spread_minutes=spread,
-        models=tuple(
-            sorted(
-                original.point_key[i].split(":")[0]
-                for i in unclaimed_indices
-            )
-        ),
-        point_key=tuple(original.point_key[i] for i in unclaimed_indices),
-        point_timestamps=tuple(
-            original.point_timestamps[i] for i in unclaimed_indices
-        ),
-        point_volumes=tuple(
-            original.point_volumes[i] for i in unclaimed_indices
-        ),
-    )
-
-
-def _has_temporal_conflict(
+def _candidate_utility(
     candidate: CandidateCluster,
-    selected: list[CandidateCluster],
-    conflict_minutes: int,
-) -> bool:
-    """Return True if the candidate is too close to any selected candidate."""
-    for existing in selected:
-        gap_minutes = (
-            abs((candidate.time - existing.time).total_seconds()) / 60.0
-        )
-        if gap_minutes < conflict_minutes:
-            return True
-    return False
+    spread_penalty_per_hour: float,
+) -> float:
+    """Return the utility used by the exact selector."""
+    return candidate.support * 10.0 - spread_penalty_per_hour * (
+        candidate.spread_minutes / 60.0
+    )
 
 
 # ===================================================================
