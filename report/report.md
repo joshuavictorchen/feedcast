@@ -4,20 +4,21 @@
 
 ## Next Feeds
 
-**Consensus Blend** predicts **9 feeds**
-over the next 24 hours, totaling **30.3 oz**.
+**Consensus Blend** predicts **10 feeds**
+over the next 24 hours, totaling **34.7 oz**.
 
 | Feed | Time | Gap | Volume |
 | ---- | ---- | --- | ------ |
-| 1 | **1:41 PM** | 2.0h | 3.2 oz |
-| 2 | **4:04 PM** | 2.4h | 3.2 oz |
-| 3 | **6:09 PM** | 2.1h | 3.2 oz |
-| 4 | **8:52 PM** | 2.7h | 3.6 oz |
-| 5 | **11:34 PM** | 2.7h | 3.6 oz |
-| 6 | **2:23 AM** | 2.8h | 3.6 oz |
-| 7 | **5:11 AM** | 2.8h | 3.6 oz |
-| 8 | **8:17 AM** | 3.1h | 3.3 oz |
-| 9 | **11:00 AM** | 2.7h | 3.1 oz |
+| 1 | **1:41 PM** | 2.0h | 3.5 oz |
+| 2 | **4:04 PM** | 2.4h | 3.5 oz |
+| 3 | **6:09 PM** | 2.1h | 3.5 oz |
+| 4 | **8:40 PM** | 2.5h | 3.7 oz |
+| 5 | **11:34 PM** | 2.9h | 3.5 oz |
+| 6 | **2:04 AM** | 2.5h | 3.5 oz |
+| 7 | **4:25 AM** | 2.3h | 3.5 oz |
+| 8 | **6:51 AM** | 2.4h | 3.5 oz |
+| 9 | **9:10 AM** | 2.3h | 3.5 oz |
+| 10 | **11:07 AM** | 2.0h | 3.1 oz |
 
 ![Featured Forecast](schedule.png)
 
@@ -33,7 +34,7 @@ over the next 24 hours, totaling **30.3 oz**.
 | Analog Trajectory | Available | 1:41 PM | 1:41 PM, 3:33 PM, 5:34 PM, 8:52 PM, 12:16 AM, 3:23 AM, 6:38 AM, 9:10 AM, 10:52 AM |
 | Latent Hunger State | Available | 1:34 PM | 1:34 PM, 4:04 PM, 6:34 PM, 9:04 PM, 11:34 PM, 2:04 AM, 4:34 AM, 7:04 AM, 9:34 AM |
 | Survival Hazard | Available | 1:52 PM | 1:52 PM, 4:04 PM, 6:16 PM, 8:27 PM, 11:34 PM, 2:41 AM, 5:48 AM, 8:55 AM, 11:07 AM |
-| Consensus Blend | Featured | 1:41 PM | 1:41 PM, 4:04 PM, 6:09 PM, 8:52 PM, 11:34 PM, 2:23 AM, 5:11 AM, 8:17 AM, 11:00 AM |
+| Consensus Blend | Featured | 1:41 PM | 1:41 PM, 4:04 PM, 6:09 PM, 8:40 PM, 11:34 PM, 2:04 AM, 4:25 AM, 6:51 AM, 9:10 AM, 11:07 AM |
 
 ## Prior Run Retrospective
 
@@ -152,26 +153,23 @@ walk-forward accuracy beyond the day-part split.
 
 ### Consensus Blend (featured)
 
-Median-timestamp ensemble across the scripted base models. It does
-not align forecasts by feed index, because different models may
-emit different numbers of future feeds. Instead, on each step it
-takes the next unconsumed point from every available model,
-computes the median timestamp as an anchor, and forms a cluster
-from points within +/- 90 minutes of that anchor.
+Majority-vote ensemble across the scripted base models. The blend
+builds immutable candidate feed slots around each predicted point,
+including majority-sized subsets of the available models, then solves
+an exact set-packing problem to choose one non-overlapping feed
+sequence.
 
-Points that fall earlier than the cluster window are discarded as
-leading outliers. If fewer than two models fall into the current
-cluster, the earliest candidate is discarded and the procedure
-retries. Once a cluster contains at least two models, the
-consensus point uses the median timestamp and mean volume across
-that cluster, with its gap measured from the previous consensus
-point. The process repeats until fewer than two models have
-points left. This lets the blend stay robust when one model
-predicts an extra snack feed or drifts earlier/later than the
-others.
+Each candidate uses the median timestamp and median volume of its
+contributing model predictions. The exact selector enforces two hard
+rules: one model prediction can only support one consensus feed, and
+two candidate feeds inside the conflict window cannot both survive.
+
+This keeps the blend from reusing the same evidence twice while still
+letting tight majority agreement compete directly against wider
+all-model agreement.
 
 ---
 
 *Export: `export_narababy_silas_20260323.csv` · Dataset: `sha256:7b6cdd2f...`
-· Commit: `82780ed (dirty)`
-· Generated: 2026-03-24 16:27:47*
+· Commit: `0f9b43f (dirty)`
+· Generated: 2026-03-25 01:35:19*

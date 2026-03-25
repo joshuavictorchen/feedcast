@@ -1,4 +1,4 @@
-run_id: 20260324-162747
+run_id: 20260325-013519
 cutoff: '2026-03-23T11:41:13'
 featured_slug: consensus_blend
 forecasts:
@@ -269,11 +269,94 @@ forecasts:
       latent_hunger: 9
       survival_hazard: 9
     unavailable_components: {}
-    skipped_outlier_points: 1
+    algorithm: exact-majority-set-packing
+    majority_floor: 3
+    anchor_radius_minutes: 120
+    max_candidate_spread_minutes: 180
+    selection_conflict_window_minutes: 90
+    spread_penalty_per_hour: 0.25
+    candidate_count: 70
+    selected_candidate_count: 10
+    selected_candidates:
+    - time: '2026-03-23 13:41:23.697076'
+      support: 3
+      spread_minutes: 18.0
+      models:
+      - analog_trajectory
+      - latent_hunger
+      - survival_hazard
+    - time: '2026-03-23 16:04:38.248348'
+      support: 4
+      spread_minutes: 48.7
+      models:
+      - analog_trajectory
+      - latent_hunger
+      - slot_drift
+      - survival_hazard
+    - time: '2026-03-23 18:09:12.333919'
+      support: 4
+      spread_minutes: 60.0
+      models:
+      - analog_trajectory
+      - latent_hunger
+      - slot_drift
+      - survival_hazard
+    - time: '2026-03-23 20:40:02.077465'
+      support: 4
+      spread_minutes: 122.8
+      models:
+      - analog_trajectory
+      - latent_hunger
+      - slot_drift
+      - survival_hazard
+    - time: '2026-03-23 23:34:48.356250'
+      support: 4
+      spread_minutes: 55.7
+      models:
+      - analog_trajectory
+      - latent_hunger
+      - slot_drift
+      - survival_hazard
+    - time: '2026-03-24 02:04:55.646724'
+      support: 3
+      spread_minutes: 55.5
+      models:
+      - latent_hunger
+      - slot_drift
+      - survival_hazard
+    - time: '2026-03-24 04:25:25.182915'
+      support: 3
+      spread_minutes: 71.5
+      models:
+      - analog_trajectory
+      - latent_hunger
+      - slot_drift
+    - time: '2026-03-24 06:51:35.388895'
+      support: 4
+      spread_minutes: 110.7
+      models:
+      - analog_trajectory
+      - latent_hunger
+      - slot_drift
+      - survival_hazard
+    - time: '2026-03-24 09:10:01.520228'
+      support: 3
+      spread_minutes: 39.2
+      models:
+      - analog_trajectory
+      - latent_hunger
+      - survival_hazard
+    - time: '2026-03-24 11:07:27.291696'
+      support: 3
+      spread_minutes: 17.6
+      models:
+      - analog_trajectory
+      - slot_drift
+      - survival_hazard
 retrospective:
   available: false
   same_dataset: true
   dataset_id_short: sha256:7b6cdd2f...
-  prior_run_id: 20260324-162213
+  prior_run_id: 20260324-162747
   observed_horizon_hours: 0.0
   results: []

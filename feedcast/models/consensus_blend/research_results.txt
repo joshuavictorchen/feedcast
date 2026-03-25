@@ -1,0 +1,65 @@
+Export: exports/export_narababy_silas_20260323.csv
+Dataset: sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0
+Cutoff: 2026-03-23 11:41:13
+Run: 2026-03-25T01:27:58
+
+=== INTER-FEED GAP ANALYSIS ===
+
+Date         Feeds  Gaps (min)                                            Min    Med
+2026-03-23       5  163  215  98  75                                       75    131
+2026-03-22       9  188  203  181  72  210  78  94  240                    72    184
+2026-03-21      10  170  184  198  143  76  90  40  214  214               40    170
+2026-03-20       8  182  205  179  178  180  174  159                     159    179
+2026-03-19       9  157  179  194  123  189  96  153  113                  96    155
+2026-03-18       8  211  198  151  272  209  153  146                     146    198
+2026-03-17       8  252  205  146  107  208  123  184                     107    184
+2026-03-16      13  205  208  128  28  34  130  55  21  95  41  165  54     21     75
+2026-03-15      11  188  237  205  35  99  51  151  64  115  57            35    107
+
+Recency-weighted (half-life 4.0d): P25=96  Median=165  Min=21  Max=272
+
+=== INTER-MODEL PREDICTION SPREAD ===
+
+Cutoff 2026-03-18 22:51: 9 actuals, 9 multi-model matches
+Cutoff 2026-03-19 21:28: 8 actuals, 8 multi-model matches
+Cutoff 2026-03-20 21:10: 9 actuals, 9 multi-model matches
+Cutoff 2026-03-21 22:36: 8 actuals, 8 multi-model matches
+Cutoff 2026-03-22 23:27: 5 actuals, 5 multi-model matches
+
+Spread: P50=102  P75=119  P90=131  Max=151
+
+=== PRODUCTION EXACT SELECTOR SCORES ===
+
+Production selector constants: radius=120m  max_spread=180m  conflict=90m  spread_penalty=0.25/h
+
+Cutoff                 Actual  Prod_N Prod_Scr Prod_Cnt Prod_Tim
+2026-03-18 22:51:13         9      10     70.5     94.7     52.4
+2026-03-19 21:28:52         8      11     69.7     84.0     57.8
+2026-03-20 21:10:28         9      10     67.0     93.4     48.1
+2026-03-21 22:36:06         8      10     61.6     89.1     42.5
+2026-03-22 23:27:49         5       4     78.4     89.9     68.4
+
+Recency-weighted means:
+  Production: score=69.8  count=90.1  timing=54.6
+
+=== SELECTOR PARAMETER SWEEP ===
+
+Scores the immutable-candidate exact selector directly against the retrospective scorer.
+
+Radius Spread Conflict Penalty     Score    Count   Timing   Pred
+    90    150       90    0.25      69.8     90.1     54.6    8.5
+    90    150       90    1.00      69.8     90.1     54.6    8.5
+    90    150       90    2.00      69.8     90.1     54.6    8.5
+    90    150       90    5.00      69.8     90.1     54.6    8.5
+    90    180       90    0.25      69.8     90.1     54.6    8.5
+    90    180       90    1.00      69.8     90.1     54.6    8.5
+    90    180       90    2.00      69.8     90.1     54.6    8.5
+    90    180       90    5.00      69.8     90.1     54.6    8.5
+   120    150       90    0.25      69.8     90.1     54.6    8.5
+   120    150       90    1.00      69.8     90.1     54.6    8.5
+   120    150       90    2.00      69.8     90.1     54.6    8.5
+   120    150       90    5.00      69.8     90.1     54.6    8.5
+   120    180       90    0.25      69.8     90.1     54.6    8.5  <- production
+   120    180       90    1.00      69.8     90.1     54.6    8.5
+   120    180       90    2.00      69.8     90.1     54.6    8.5
+

@@ -1,9 +1,9 @@
 {
   "runs": [
     {
-      "run_id": "20260324-162747",
-      "timestamp": "2026-03-24T16:27:47",
-      "git_commit": "82780ed",
+      "run_id": "20260325-013519",
+      "timestamp": "2026-03-25T01:35:19",
+      "git_commit": "0f9b43f",
       "git_dirty": true,
       "dataset_id": "sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0",
       "source_file": "export_narababy_silas_20260323.csv",
@@ -212,48 +212,53 @@
         "consensus_blend": [
           {
             "time": "2026-03-23T13:41:23.697076",
-            "volume_oz": 3.225,
+            "volume_oz": 3.5,
             "gap_hours": 2.003
           },
           {
             "time": "2026-03-23T16:04:38.248348",
-            "volume_oz": 3.187,
+            "volume_oz": 3.456,
             "gap_hours": 2.387
           },
           {
             "time": "2026-03-23T18:09:12.333919",
-            "volume_oz": 3.2,
+            "volume_oz": 3.5,
             "gap_hours": 2.076
           },
           {
-            "time": "2026-03-23T20:52:24.434289",
-            "volume_oz": 3.622,
-            "gap_hours": 2.72
+            "time": "2026-03-23T20:40:02.077465",
+            "volume_oz": 3.683,
+            "gap_hours": 2.514
           },
           {
             "time": "2026-03-23T23:34:48.356250",
-            "volume_oz": 3.552,
-            "gap_hours": 2.707
+            "volume_oz": 3.5,
+            "gap_hours": 2.913
           },
           {
-            "time": "2026-03-24T02:23:20.406406",
-            "volume_oz": 3.607,
-            "gap_hours": 2.809
+            "time": "2026-03-24T02:04:55.646724",
+            "volume_oz": 3.5,
+            "gap_hours": 2.502
           },
           {
-            "time": "2026-03-24T05:11:52.456562",
-            "volume_oz": 3.593,
-            "gap_hours": 2.809
+            "time": "2026-03-24T04:25:25.182915",
+            "volume_oz": 3.5,
+            "gap_hours": 2.342
           },
           {
-            "time": "2026-03-24T08:17:40.870120",
-            "volume_oz": 3.305,
-            "gap_hours": 3.097
+            "time": "2026-03-24T06:51:35.388895",
+            "volume_oz": 3.5,
+            "gap_hours": 2.436
           },
           {
-            "time": "2026-03-24T11:00:09.206934",
-            "volume_oz": 3.055,
-            "gap_hours": 2.708
+            "time": "2026-03-24T09:10:01.520228",
+            "volume_oz": 3.5,
+            "gap_hours": 2.307
+          },
+          {
+            "time": "2026-03-24T11:07:27.291696",
+            "volume_oz": 3.092,
+            "gap_hours": 1.957
           }
         ]
       },
@@ -261,7 +266,7 @@
         "available": false,
         "same_dataset": true,
         "dataset_id_short": "sha256:7b6cdd2f...",
-        "prior_run_id": "20260324-162213",
+        "prior_run_id": "20260324-162747",
         "observed_horizon_hours": 0.0,
         "results": []
       }
