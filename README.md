@@ -125,8 +125,8 @@ Each run updates these artifacts:
 Feedcast includes a replay-based tuning tool for scripted models. It tests
 parameter values against the latest 24 hours of known actuals and ranks them
 by forecast accuracy, so model developers can make data-driven parameter
-choices. Define candidate values inline or in a YAML file, and the tool
-evaluates the cross-product and reports which combination scored best.
+choices. Define sweep candidates in a YAML file, run replay against a model,
+and use the ranked results to decide whether to change its constants.
 
 Replay is a directional tool for recent-pattern fitting, not robust
 out-of-sample validation. Full usage and examples:
@@ -266,10 +266,9 @@ are not model concepts.
 `.venv/bin/python scripts/run_replay.py <slug>`. Add `KEY=VALUE` args
 to test with overridden constants.
 
-**Tune a model against the latest observed 24 hours:** Run
-`.venv/bin/python scripts/run_replay.py <slug> sweep.yaml` or use
-inline comma-separated candidates like `LOOKBACK_DAYS=5,7,9`. See
-[`feedcast/replay/README.md`](feedcast/replay/README.md) for details.
+**Tune a model against the latest observed 24 hours:** Define candidates
+in a YAML file and run `.venv/bin/python scripts/run_replay.py <slug> sweep.yaml`.
+See [`feedcast/replay/README.md`](feedcast/replay/README.md) for details.
 
 **Change the featured default:** Set `FEATURED_DEFAULT` in
 `feedcast/models/__init__.py` to any available model slug.

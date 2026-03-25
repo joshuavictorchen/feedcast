@@ -15,20 +15,11 @@ Results are written to `.replay-results/` (gitignored).
 
 # Score with a parameter override
 .venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5
-
-# Tune: comma-separated values trigger a sweep
-.venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5,7,9
-
-# Multi-param sweep (cross-product: 3 × 2 = 6 evaluations)
-.venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5,7,9 DRIFT_WEIGHT_HALF_LIFE_DAYS=2.0,3.0
-
-# JSON output for agents
-.venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5,7,9 --json
 ```
 
-## YAML input
+## Tuning
 
-For structured sweeps, put param candidates in a YAML file:
+Define candidate values in a YAML file and pass it as an argument:
 
 ```yaml
 # sweep.yaml
@@ -43,6 +34,18 @@ MATCH_COST_THRESHOLD_HOURS: [1.5, 2.0, 2.5]
 
 Scalar values in YAML are treated as single overrides. List values define
 sweep candidates.
+
+Use `--json` when an agent needs the full artifact:
+
+```bash
+.venv/bin/python scripts/run_replay.py slot_drift sweep.yaml --json
+```
+
+For quick experiments, inline comma-separated values also work:
+
+```bash
+.venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5,7,9
+```
 
 ## How it works
 

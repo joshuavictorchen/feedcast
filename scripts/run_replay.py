@@ -7,11 +7,11 @@ Usage:
     # Score with overrides
     .venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5
 
-    # Tune with inline candidates
-    .venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5,7,9
-
-    # Tune from a YAML file
+    # Tune from a YAML file (preferred)
     .venv/bin/python scripts/run_replay.py slot_drift sweep.yaml
+
+    # Tune with inline candidates (quick experiments)
+    .venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5,7,9
 
     # JSON output for agents
     .venv/bin/python scripts/run_replay.py slot_drift --json
@@ -60,8 +60,9 @@ def main() -> None:
         nargs="*",
         metavar="PARAM=VALUES | FILE.yaml",
         help=(
-            "Params as KEY=VALUE (comma-separated for sweeps), "
-            "or a YAML file. List values in YAML trigger a sweep."
+            "Params as KEY=VALUE, or a YAML file for tuning sweeps "
+            "(preferred). Comma-separated values trigger inline sweeps; "
+            "list values in YAML trigger a sweep."
         ),
     )
     parser.add_argument(
