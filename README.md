@@ -263,13 +263,12 @@ uses them. Reserve `feedcast/models/shared.py` for reusable utilities that
 are not model concepts.
 
 **Replay a model against the latest observed 24 hours:** Run
-`.venv/bin/python scripts/run_replay.py score --model <slug>`. Add
-`--param KEY=VALUE` to test with overridden constants.
+`.venv/bin/python scripts/run_replay.py <slug>`. Add `KEY=VALUE` args
+to test with overridden constants.
 
 **Tune a model against the latest observed 24 hours:** Run
-`.venv/bin/python scripts/run_replay.py tune --model <slug>` with
-`--param KEY=VALUE` flags specifying candidate values. The harness
-evaluates the cross-product and ranks results. See
+`.venv/bin/python scripts/run_replay.py <slug> sweep.yaml` or use
+inline comma-separated candidates like `LOOKBACK_DAYS=5,7,9`. See
 [`feedcast/replay/README.md`](feedcast/replay/README.md) for details.
 
 **Change the featured default:** Set `FEATURED_DEFAULT` in

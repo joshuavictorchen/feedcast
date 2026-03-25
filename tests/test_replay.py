@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta
@@ -58,7 +59,7 @@ def _write_export(path: Path) -> None:
 
 
 class ReplayScoreTests(unittest.TestCase):
-    """Score subcommand behavior."""
+    """Replay score behavior."""
 
     def test_score_consensus_writes_artifact(self) -> None:
         """Scoring consensus_blend should replay and persist a JSON artifact."""
@@ -122,7 +123,7 @@ class ReplayScoreTests(unittest.TestCase):
 
 
 class ReplayTuneTests(unittest.TestCase):
-    """Tune subcommand behavior."""
+    """Replay tune behavior."""
 
     def test_tune_evaluates_cross_product(self) -> None:
         """Tuning should evaluate the full cross-product and rank results."""
@@ -160,6 +161,63 @@ class ReplayTuneTests(unittest.TestCase):
         """Tuning with no candidates should fail."""
         with self.assertRaises(ValueError, msg="at least one"):
             tune_model("slot_drift", candidates_by_name={})
+
+
+class CLIParsingTests(unittest.TestCase):
+    """CLI param-parsing behavior."""
+
+    def setUp(self) -> None:
+        # Import the parsing functions from the CLI module.
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+        from run_replay import _parse_params
+
+        self._parse_params = _parse_params
+
+    def test_inline_single_value(self) -> None:
+        """KEY=VALUE with one value should produce a single-element list."""
+        result = self._parse_params(["LOOKBACK_DAYS=5"])
+        self.assertEqual(result, {"LOOKBACK_DAYS": [5]})
+
+    def test_inline_comma_separated(self) -> None:
+        """Comma-separated values should produce multiple candidates."""
+        result = self._parse_params(["LOOKBACK_DAYS=5,7,9"])
+        self.assertEqual(result, {"LOOKBACK_DAYS": [5, 7, 9]})
+
+    def test_inline_json_array_is_single_candidate(self) -> None:
+        """A JSON array should be one candidate, not split on commas."""
+        result = self._parse_params(["WEIGHTS=[1,1,2,2]"])
+        self.assertEqual(result, {"WEIGHTS": [[1, 1, 2, 2]]})
+
+    def test_inline_float_values(self) -> None:
+        """Float values should be parsed correctly."""
+        result = self._parse_params(["HALF_LIFE=2.0,3.0"])
+        self.assertEqual(result, {"HALF_LIFE": [2.0, 3.0]})
+
+    def test_yaml_file_list_values(self) -> None:
+        """YAML list values should produce multiple candidates."""
+        with tempfile.NamedTemporaryFile(
+            suffix=".yaml", mode="w", delete=False
+        ) as handle:
+            handle.write("LOOKBACK_DAYS: [5, 7, 9]\nHALF_LIFE: 3.0\n")
+            yaml_path = handle.name
+
+        try:
+            result = self._parse_params([yaml_path])
+            self.assertEqual(result["LOOKBACK_DAYS"], [5, 7, 9])
+            # Scalar YAML values become single-element lists.
+            self.assertEqual(result["HALF_LIFE"], [3.0])
+        finally:
+            Path(yaml_path).unlink()
+
+    def test_yaml_missing_file_raises(self) -> None:
+        """A missing YAML file should raise ValueError."""
+        with self.assertRaises(ValueError, msg="not found"):
+            self._parse_params(["/nonexistent/sweep.yaml"])
+
+    def test_invalid_format_raises(self) -> None:
+        """An arg without = and not a .yaml path should raise ValueError."""
+        with self.assertRaises(ValueError):
+            self._parse_params(["NOT_A_VALID_PARAM"])
 
 
 if __name__ == "__main__":

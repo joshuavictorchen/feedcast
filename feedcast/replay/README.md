@@ -42,7 +42,7 @@ MATCH_COST_THRESHOLD_HOURS: [1.5, 2.0, 2.5]
 ```
 
 Scalar values in YAML are treated as single overrides. List values define
-sweep candidates. YAML files and inline params can be mixed.
+sweep candidates.
 
 ## How it works
 
