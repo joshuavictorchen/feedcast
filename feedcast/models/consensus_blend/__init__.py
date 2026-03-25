@@ -1,4 +1,4 @@
-"""Consensus Blend: median-timestamp ensemble across scripted base models."""
+"""Consensus Blend: majority-vote selector across scripted base models."""
 
 from .model import (
     MODEL_METHODOLOGY,

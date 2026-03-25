@@ -1,63 +1,77 @@
 # Consensus Blend Design Decisions
 
-## Lockstep median-timestamp walk
+## Anchor-based candidate slots
 
-The production algorithm walks models in lockstep, consuming one
-point per model per step.  The median timestamp anchors each step,
-making it robust to a single model drifting earlier or later.
-Mean volume is used because the models produce similar ranges and
-outlier volume is less harmful than outlier timing.
+The production algorithm no longer walks forecasts in lockstep.
+Instead, every model prediction is treated as a possible anchor for
+one real feed. Around that anchor, the selector pulls the nearest
+prediction from each available model inside a shared radius and
+forms one candidate slot.
 
-## +/- 90 minute match window
+This lets the blend recover majority agreement even when the models
+disagree by more than a narrow clustering threshold. The old flat
+clustering approach split some real feeds into multiple local
+clusters; the anchor view keeps one candidate tied to one proposed
+feed explanation.
 
-The window must be wide enough to capture inter-model disagreement
-about the same feed (research shows P50 spread ~102 minutes) while
-narrow enough to avoid merging distinct feeds (recent minimum
-inter-feed gap ~72 minutes on the tightest days).  90 minutes is a
-pragmatic compromise; the lockstep walk's sequential consumption
-provides additional separation that flat clustering does not.
+## Simple-majority support floor
 
-## Leading outlier discard
+The user requirement here is explicit: consensus means simple
+majority of the available models. With four available models, a
+2-of-4 split is not consensus. With three available models, 2-of-3
+is enough. This is enforced when candidate slots are generated, not
+as an afterthought during aggregation.
 
-When one model's next point falls before the cluster window, it is
-a "leading outlier" — likely an extra snack prediction or early
-drift.  Discarding it and re-anchoring prevents the outlier from
-pulling the median and avoids misaligning all downstream pairings.
+This rule is stricter than the old blend and stricter than the first
+pool-then-cluster prototype. It removes minority-supported echo
+feeds by construction.
 
-## Minimum 2-model agreement
+## Non-overlapping sequence selection
 
-A single model predicting a feed is not consensus.  At least two
-models must place a point in the cluster window for a consensus
-point to be emitted.
+Candidate slots are not emitted directly. Several nearby candidates
+can describe the same real feed, especially when every model point
+is allowed to anchor its own slot. Weighted interval scheduling
+forces those candidates to compete. The selected schedule is the
+highest-utility non-overlapping sequence instead of the union of all
+local agreements.
+
+Support drives utility. Spread is a secondary penalty, so tighter
+majority candidates win when support is equal. The current selector
+does not impose a hard count budget because retrospective research
+showed that soft or hard count caps reduced the headline score more
+than they helped.
+
+## Wide anchor radius and spread cap
+
+Recent research showed model disagreement for the same real feed is
+often wider than one hour. The production selector therefore uses a
+two-hour anchor radius to recover majority support across that
+spread. A separate spread cap rejects candidates that become too
+diffuse to defend as one feed.
+
+This is a deliberate tradeoff. A narrower radius or spread cap
+reduced over-prediction, but it also pushed the blend back below the
+lockstep baseline on retrospective headline score.
+
+## 75-minute conflict window
+
+The selector treats candidates closer than 75 minutes as competing
+explanations for the same feed. That number is lower than
+`MIN_INTERVAL_HOURS` because the recent data includes real short-gap
+feeds around 72-75 minutes. Using a stricter 90-minute conflict
+window collapsed too many valid near-term feeds and lost score.
+
+## Legacy lockstep baseline
+
+The old lockstep median-timestamp walk stays in `model.py` as a
+research baseline. It is no longer production, but it remains useful
+for regression comparisons and future tuning.
 
 ## Known limitations
 
-**Misalignment cascades.** When one model has an extra point, the
-lockstep walk discards it, but this shifts that model's index
-relative to the others.  Downstream clusters may pair the wrong
-points.
-
-**Phantom consensus.** If two models predict 14:00 and two predict
-16:00, the median is 15:00 — a time no model actually believes in.
-The 90-minute window usually prevents this, but borderline splits
-can still produce compromise times.
-
-**Equal weighting.** All models contribute equally regardless of
-historical accuracy.  A model that consistently scores poorly has
-the same influence as the best performer.
-
-## Planned replacement: pool-then-cluster with sequence selection
-
-A candidate replacement pools all model predictions into agreement
-clusters (agglomerative complete-linkage), scores each cluster by
-support and tightness, then selects the best non-conflicting
-sequence using weighted interval scheduling.  This resolves the
-cascade and phantom problems by decoupling clustering from
-sequence formation.
-
-Research (see research.py) confirmed the candidate generator
-improves timing accuracy (+2.7 weighted timing score) but
-over-predicts feed count (-8.4 weighted count score) because flat
-clustering lacks sequence awareness.  The replacement will only
-be promoted once it beats the lockstep blend on retrospective
-headline score.  The sequence selector is the missing piece.
+The production selector still leans toward timing accuracy over
+strict count control. In the recent retrospective sweep, the
+highest-scoring majority selector still predicted more feeds than the
+old lockstep blend on several cutoffs. That tradeoff was accepted
+because the user prioritized maximum accuracy and timing-first
+behavior over preserving the old count profile.

@@ -43,7 +43,7 @@ dataset.
 | Analog Trajectory | Instance-based ML: finds similar historical states and averages their futures |
 | Latent Hunger State | Mechanistic hidden state: hunger rises over time, feeds reset it proportional to volume |
 | Survival Hazard | Day-part Weibull hazard: feeding probability increases with elapsed time |
-| Consensus Blend | Median-timestamp ensemble across the scripted models |
+| Consensus Blend | Majority-vote sequence selector across the scripted models |
 
 **LLM agents** get the export CSV, a shared prompt, and a persistent workspace:
 
@@ -64,7 +64,7 @@ never auto-featured.
 | Parse Activities | Filter feeding events from the raw CSV export |
 | Build Events | Create bottle-centered events with optional breastfeed volume merging (per model) |
 | Run Models | Execute scripted models independently |
-| Consensus Blend | Median-timestamp ensemble across scripted models |
+| Consensus Blend | Majority-vote sequence selector across scripted models |
 | Select Featured | Choose the consensus blend, or fall back to a static tiebreaker |
 | Run Agents | Claude and Codex produce independent forecasts (optional) |
 | Retrospective | Score the prior run's predictions against newly observed actuals |
@@ -158,12 +158,12 @@ feedcast/
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
       research_results.txt     Saved research output
-    consensus_blend/           Median-timestamp ensemble across scripted models
-      model.py                 Production lockstep blend + candidate generator for research
+    consensus_blend/           Majority-vote ensemble across scripted models
+      model.py                 Production sequence selector + lockstep research baseline
       CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
-      research.py              Scorer-based evaluation with recency weighting
+      research.py              Production-vs-baseline evaluation and selector sweeps
       research_results.txt     Saved research output
   evaluation/                  Retrospective forecast scoring
     scoring.py                 Shared scorer (Hungarian matching, weighted F1 + timing)

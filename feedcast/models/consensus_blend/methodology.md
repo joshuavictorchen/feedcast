@@ -1,19 +1,17 @@
 # Consensus Blend
 
-Median-timestamp ensemble across the scripted base models. It does
-not align forecasts by feed index, because different models may
-emit different numbers of future feeds. Instead, on each step it
-takes the next unconsumed point from every available model,
-computes the median timestamp as an anchor, and forms a cluster
-from points within +/- 90 minutes of that anchor.
+Majority-vote ensemble across the scripted base models. Instead of
+walking model forecasts in lockstep, the blend proposes candidate
+feed slots around each predicted point by pulling in the nearest
+prediction from every available model inside a shared time radius.
 
-Points that fall earlier than the cluster window are discarded as
-leading outliers. If fewer than two models fall into the current
-cluster, the earliest candidate is discarded and the procedure
-retries. Once a cluster contains at least two models, the
-consensus point uses the median timestamp and mean volume across
-that cluster, with its gap measured from the previous consensus
-point. The process repeats until fewer than two models have
-points left. This lets the blend stay robust when one model
-predicts an extra snack feed or drifts earlier/later than the
-others.
+Only candidate slots backed by a simple majority of the available
+models survive. Those candidates then compete in a weighted
+interval scheduler that keeps the best non-overlapping sequence,
+favoring higher model support and tighter timing agreement.
+
+Each consensus feed uses the median timestamp and median volume of
+its contributing model predictions. This prevents 2-vs-2 split
+votes from becoming consensus and avoids emitting multiple nearby
+"echo" feeds when several local candidate clusters are really
+describing the same underlying feed.
