@@ -16,7 +16,7 @@ from itertools import combinations
 import numpy as np
 from scipy.optimize import Bounds, LinearConstraint, milp
 
-from feedcast.data import MIN_INTERVAL_HOURS, FeedEvent, Forecast, ForecastPoint
+from feedcast.data import FeedEvent, Forecast, ForecastPoint
 from feedcast.models.shared import load_methodology, normalize_forecast_points
 
 MODEL_NAME = "Consensus Blend"
@@ -43,6 +43,9 @@ SPREAD_PENALTY_PER_HOUR = 0.25
 # --- Availability floor ---
 
 MIN_CONSENSUS_MODELS = 2
+
+# Minimum gap between feeds when computing gap_hours for forecast points.
+MIN_INTERVAL_HOURS = 1.5
 
 
 @dataclass(frozen=True)

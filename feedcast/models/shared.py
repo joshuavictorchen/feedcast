@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from feedcast.data import ForecastPoint, MIN_POINT_GAP_MINUTES
+from feedcast.data import ForecastPoint
 
 
 class ForecastUnavailable(RuntimeError):
@@ -52,30 +52,27 @@ def normalize_forecast_points(
     cutoff: datetime,
     horizon_hours: int,
 ) -> list[ForecastPoint]:
-    """Clamp forecast points to a clean, ordered next-window schedule."""
-    normalized: list[ForecastPoint] = []
+    """Filter and sort forecast points within the horizon window.
+
+    Keeps points strictly inside (cutoff, horizon_end), sorted by time.
+    Recomputes gap_hours from adjacent points and clips volume to a sane
+    range. Does NOT adjust timestamps — model output is preserved as-is.
+    """
     horizon_end = cutoff + timedelta(hours=horizon_hours)
-    for point in sorted(points, key=lambda item: item.time):
-        if point.time <= cutoff or point.time >= horizon_end:
-            continue
+    window = sorted(
+        (p for p in points if cutoff < p.time < horizon_end),
+        key=lambda item: item.time,
+    )
 
-        adjusted_time = point.time
-        if normalized:
-            minimum_time = normalized[-1].time + timedelta(
-                minutes=MIN_POINT_GAP_MINUTES
-            )
-            if adjusted_time < minimum_time:
-                adjusted_time = minimum_time
-        if adjusted_time >= horizon_end:
-            break
-
+    normalized: list[ForecastPoint] = []
+    for point in window:
         gap_hours = point.gap_hours
         if normalized:
-            gap_hours = (adjusted_time - normalized[-1].time).total_seconds() / 3600
+            gap_hours = (point.time - normalized[-1].time).total_seconds() / 3600
 
         normalized.append(
             ForecastPoint(
-                time=adjusted_time,
+                time=point.time,
                 volume_oz=float(np.clip(point.volume_oz, 0.1, 8.0)),
                 gap_hours=float(max(gap_hours, 0.1)),
             )

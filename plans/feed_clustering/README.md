@@ -182,31 +182,32 @@ to reason about episodes can call `group_into_episodes()` themselves.
 
 ### Phase 0: Cleanup — migrate constants, remove forecast timestamp mutation
 
-**Constant migration:** Four constants in `data.py` are model concerns,
-not data-parsing concerns:
+**Status: DONE**
 
-| Constant | From | To | Reason |
-|---|---|---|---|
-| `SNACK_THRESHOLD_OZ` | `data.py:22` | `models/slot_drift/research.py` | Only used there |
-| `MIN_INTERVAL_HOURS` | `data.py:23` | `models/consensus_blend/model.py` | Only used there |
-| `MAX_INTERVAL_HOURS` | `data.py:24` | Remove | Dead code (unused) |
-| `MIN_POINT_GAP_MINUTES` | `data.py:25` | `models/shared.py` | Forecast normalization |
+**Constant migration:** Four constants removed from `data.py`:
 
-**Forecast timestamp mutation:** `normalize_forecast_points()` in
-`models/shared.py` currently nudges predicted timestamps forward to
-enforce a 45-minute minimum gap. This silently rewrites model output.
-Remove the time mutation — keep horizon clipping and sort order, but
-stop adjusting timestamps. If a model emits non-monotonic times, fail
-fast rather than silently fixing.
+| Constant | Action | Detail |
+|---|---|---|
+| `SNACK_THRESHOLD_OZ` | Moved to `models/slot_drift/research.py` | Only consumer; defined as local constant with comment |
+| `MIN_INTERVAL_HOURS` | Moved to `models/consensus_blend/model.py` | Only consumer; added alongside other selector constants |
+| `MAX_INTERVAL_HOURS` | Removed | Dead code (no consumer anywhere) |
+| `MIN_POINT_GAP_MINUTES` | Removed entirely | Only consumer was the timestamp nudging logic, which was also removed |
 
-Note: this is a behavioral change for all models. The 45-minute gap
-doesn't block current cluster examples (closest is 50 min apart), but
-removing it makes model output honest and unblocks tighter clusters
-if they appear in future data.
+**Forecast timestamp mutation:** Removed the 45-minute minimum gap
+enforcement from `normalize_forecast_points()` in `models/shared.py`.
+The function now filters to the horizon window, sorts by time, clips
+volume to [0.1, 8.0], and recomputes gap_hours — but does NOT adjust
+timestamps. Model output is preserved as-is.
 
-Separately: Consensus Blend has its own 90-minute conflict rule
-(`consensus_blend/model.py`). That should be revisited after clustering
-lands but is not part of Phase 0.
+`MIN_POINT_GAP_MINUTES` was removed entirely (not migrated) because
+its only consumer was the nudging logic.
+
+Implementation verified: 29 tests pass, all model imports resolve,
+normalizer preserves close-together points correctly.
+
+Note: Consensus Blend still has its own 90-minute conflict rule
+(`SELECTION_CONFLICT_WINDOW_MINUTES` in `consensus_blend/model.py`).
+That should be revisited after clustering lands (Phase 4).
 
 ### Phase 1: Research — cluster labeling and episode-boundary rule
 

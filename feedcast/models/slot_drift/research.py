@@ -27,8 +27,10 @@ from feedcast.data import (
     build_feed_events,
     hour_of_day,
     load_export_snapshot,
-    SNACK_THRESHOLD_OZ,
 )
+
+# Volume threshold for filtering snack-sized feeds in research analysis.
+SNACK_THRESHOLD_OZ = 1.5
 from feedcast.models.slot_drift.model import (
     LOOKBACK_DAYS,
     MATCH_COST_THRESHOLD_HOURS,
