@@ -1,24 +1,24 @@
 # Silas Feeding Forecast
 
-**Monday, March 23, 2026** · 24 days old · Cutoff: 11:41 AM
+**Wednesday, March 25, 2026** · 26 days old · Cutoff: 12:34 AM
 
 ## Next Feeds
 
 **Consensus Blend** predicts **10 feeds**
-over the next 24 hours, totaling **34.7 oz**.
+over the next 24 hours, totaling **34.2 oz**.
 
 | Feed | Time | Gap | Volume |
 | ---- | ---- | --- | ------ |
-| 1 | **1:41 PM** | 2.0h | 3.5 oz |
-| 2 | **4:04 PM** | 2.4h | 3.5 oz |
-| 3 | **6:09 PM** | 2.1h | 3.5 oz |
-| 4 | **8:40 PM** | 2.5h | 3.7 oz |
-| 5 | **11:34 PM** | 2.9h | 3.5 oz |
-| 6 | **2:04 AM** | 2.5h | 3.5 oz |
-| 7 | **4:25 AM** | 2.3h | 3.5 oz |
-| 8 | **6:51 AM** | 2.4h | 3.5 oz |
-| 9 | **9:10 AM** | 2.3h | 3.5 oz |
-| 10 | **11:07 AM** | 2.0h | 3.1 oz |
+| 1 | **3:39 AM** | 3.1h | 3.6 oz |
+| 2 | **6:48 AM** | 3.2h | 3.5 oz |
+| 3 | **9:58 AM** | 3.2h | 3.5 oz |
+| 4 | **12:08 PM** | 2.2h | 3.1 oz |
+| 5 | **2:10 PM** | 2.0h | 3.5 oz |
+| 6 | **4:15 PM** | 2.1h | 3.1 oz |
+| 7 | **6:12 PM** | 1.9h | 3.4 oz |
+| 8 | **7:52 PM** | 1.7h | 3.5 oz |
+| 9 | **9:28 PM** | 1.6h | 3.5 oz |
+| 10 | **11:36 PM** | 2.1h | 3.5 oz |
 
 ![Featured Forecast](schedule.png)
 
@@ -30,20 +30,40 @@ over the next 24 hours, totaling **34.7 oz**.
 
 | Model | Status | First Feed | Feed Times |
 | ----- | ------ | ---------- | ---------- |
-| Slot Drift | Available | 4:22 PM | 4:22 PM, 6:02 PM, 7:02 PM, 11:20 PM, 1:46 AM, 4:25 AM, 7:39 AM, 11:10 AM |
-| Analog Trajectory | Available | 1:41 PM | 1:41 PM, 3:33 PM, 5:34 PM, 8:52 PM, 12:16 AM, 3:23 AM, 6:38 AM, 9:10 AM, 10:52 AM |
-| Latent Hunger State | Available | 1:34 PM | 1:34 PM, 4:04 PM, 6:34 PM, 9:04 PM, 11:34 PM, 2:04 AM, 4:34 AM, 7:04 AM, 9:34 AM |
-| Survival Hazard | Available | 1:52 PM | 1:52 PM, 4:04 PM, 6:16 PM, 8:27 PM, 11:34 PM, 2:41 AM, 5:48 AM, 8:55 AM, 11:07 AM |
-| Consensus Blend | Featured | 1:41 PM | 1:41 PM, 4:04 PM, 6:09 PM, 8:40 PM, 11:34 PM, 2:04 AM, 4:25 AM, 6:51 AM, 9:10 AM, 11:07 AM |
+| Slot Drift | Available | 4:35 AM | 4:35 AM, 10:01 AM, 10:46 AM, 12:14 PM, 3:31 PM, 5:59 PM, 7:52 PM, 9:54 PM |
+| Analog Trajectory | Available | 3:37 AM | 3:37 AM, 6:35 AM, 9:40 AM, 11:55 AM, 2:10 PM, 4:15 PM, 6:12 PM, 8:11 PM, 10:37 PM |
+| Latent Hunger State | Available | 3:07 AM | 3:07 AM, 5:25 AM, 7:43 AM, 10:00 AM, 12:18 PM, 2:35 PM, 4:53 PM, 7:11 PM, 9:28 PM, 11:46 PM |
+| Survival Hazard | Available | 3:41 AM | 3:41 AM, 6:48 AM, 9:55 AM, 12:02 PM, 2:08 PM, 4:15 PM, 6:22 PM, 8:29 PM, 11:36 PM |
+| Consensus Blend | Featured | 3:39 AM | 3:39 AM, 6:48 AM, 9:58 AM, 12:08 PM, 2:10 PM, 4:15 PM, 6:12 PM, 7:52 PM, 9:28 PM, 11:36 PM |
 
 ## Prior Run Retrospective
 
-No new actuals since the prior run
-(same dataset: `sha256:7b6cdd2f...`).
+Comparing prior run `20260325-013519` predictions
+against actual bottle feeds observed in the current export
+(observed horizon:
+24.0h,
+coverage: 100%).
+
+| Model | Score | Count | Timing | Pred/Actual/Matched | Status |
+| ----- | ----- | ----- | ------ | ------------------- | ------ |
+| Slot Drift | 53.3 | 100.0 | 28.4 | 8/8/8 | Full 24h observed |
+| Analog Trajectory | 69.1 | 95.6 | 49.9 | 9/8/8 | Full 24h observed |
+| Latent Hunger State | 54.0 | 94.6 | 30.9 | 9/8/8 | Full 24h observed |
+| Survival Hazard | 59.5 | 95.6 | 37.0 | 9/8/8 | Full 24h observed |
+| Consensus Blend | 59.5 | 90.9 | 39.0 | 10/8/8 | Full 24h observed |
 
 ## Historical Retrospective Accuracy
 
-No completed retrospective history yet.
+Aggregated from stored prior-run retrospectives. These scores
+reflect the model versions that made those earlier predictions.
+
+| Model | Comparisons | Full 24h Runs | Mean Score | Mean Count | Mean Timing | Avg Coverage |
+| ----- | ----------- | ------------- | ---------- | ---------- | ----------- | ------------ |
+| Analog Trajectory | 1 | 1 | 69.1 | 95.6 | 49.9 | 100% |
+| Consensus Blend | 1 | 1 | 59.5 | 90.9 | 39.0 | 100% |
+| Survival Hazard | 1 | 1 | 59.5 | 95.6 | 37.0 | 100% |
+| Latent Hunger State | 1 | 1 | 54.0 | 94.6 | 30.9 | 100% |
+| Slot Drift | 1 | 1 | 53.3 | 100.0 | 28.4 | 100% |
 
 ## Methodologies
 
@@ -153,23 +173,29 @@ walk-forward accuracy beyond the day-part split.
 
 ### Consensus Blend (featured)
 
-Majority-vote ensemble across the scripted base models. The blend
-builds immutable candidate feed slots around each predicted point,
-including majority-sized subsets of the available models, then solves
-an exact set-packing problem to choose one non-overlapping feed
-sequence.
+Combines the four scripted models into one forecast by finding where
+a majority of models agree that a feed will happen.
 
-Each candidate uses the median timestamp and median volume of its
-contributing model predictions. The exact selector enforces two hard
-rules: one model prediction can only support one consensus feed, and
-two candidate feeds inside the conflict window cannot both survive.
+For each predicted feed from any model, the blend looks at what the
+other models predict nearby (within a 2-hour window) and asks: do
+at least 3 of 4 models place a feed in this region? If so, that
+region becomes a candidate consensus feed. Its predicted time is the
+median of the contributing models' timestamps, and its volume is the
+median of their volumes.
 
-This keeps the blend from reusing the same evidence twice while still
-letting tight majority agreement compete directly against wider
-all-model agreement.
+Many overlapping candidates can describe the same real feed, so the
+blend picks the best non-overlapping set. Two rules prevent double-
+counting: each individual model prediction can only support one
+consensus feed, and two consensus feeds cannot be closer than 90
+minutes apart. The final schedule is the highest-quality set of
+feeds that satisfies both rules.
+
+This approach means the consensus naturally favors feeds where
+multiple models agree on timing, while isolated predictions that
+only one or two models support are filtered out.
 
 ---
 
-*Export: `export_narababy_silas_20260323.csv` · Dataset: `sha256:7b6cdd2f...`
-· Commit: `0f9b43f (dirty)`
-· Generated: 2026-03-25 01:35:19*
+*Export: `export_narababy_silas_20260325.csv` · Dataset: `sha256:eb791b62...`
+· Commit: `072620e`
+· Generated: 2026-03-25 01:56:58*
