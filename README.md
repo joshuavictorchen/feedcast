@@ -158,6 +158,13 @@ feedcast/
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
       research_results.txt     Saved research output
+    consensus_blend/           Median-timestamp ensemble across scripted models
+      model.py                 Production lockstep blend + candidate generator for research
+      CHANGELOG.md             Reverse-chronological behavior changes
+      methodology.md           Report methodology text
+      design.md                Design decisions and rationale
+      research.py              Scorer-based evaluation with recency weighting
+      research_results.txt     Saved research output
   evaluation/                  Retrospective forecast scoring
     scoring.py                 Shared scorer (Hungarian matching, weighted F1 + timing)
     methodology.md             Scoring design rationale and parameter choices
