@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 
 from feedcast.data import FeedEvent, Forecast, ForecastPoint
 from feedcast.models.consensus_blend.model import (
+    _collapse_to_episode_points,
     _majority_floor,
     generate_candidate_clusters,
     run_consensus_blend,
@@ -293,6 +294,123 @@ class ConsensusBlendTests(unittest.TestCase):
             ("model_a", "model_b", "model_c", "model_d"),
             candidate_models,
         )
+
+
+    def test_collapse_merges_cluster_predictions_into_one_episode(self) -> None:
+        """Close-together forecast points should collapse into one episode point."""
+        cutoff = datetime(2026, 3, 24, 12, 0, 0)
+        points = [
+            ForecastPoint(
+                time=cutoff + timedelta(hours=3),
+                volume_oz=3.0,
+                gap_hours=3.0,
+            ),
+            # 50-min gap: within the 73-min base cluster rule.
+            ForecastPoint(
+                time=cutoff + timedelta(hours=3, minutes=50),
+                volume_oz=1.0,
+                gap_hours=50 / 60,
+            ),
+            # Standalone feed well outside cluster range.
+            ForecastPoint(
+                time=cutoff + timedelta(hours=6),
+                volume_oz=4.0,
+                gap_hours=2.17,
+            ),
+        ]
+
+        collapsed = _collapse_to_episode_points(points)
+
+        self.assertEqual(len(collapsed), 2)
+        # First episode: canonical time at 3h, volume = 3.0 + 1.0.
+        self.assertEqual(collapsed[0].time, cutoff + timedelta(hours=3))
+        self.assertAlmostEqual(collapsed[0].volume_oz, 4.0)
+        # Second episode: standalone feed at 6h.
+        self.assertEqual(collapsed[1].time, cutoff + timedelta(hours=6))
+        self.assertAlmostEqual(collapsed[1].volume_oz, 4.0)
+
+    def test_cluster_predictions_produce_same_consensus_as_clean(self) -> None:
+        """A model's cluster predictions should produce the same consensus
+        as a single episode-level prediction after collapsing."""
+        cutoff = datetime(2026, 3, 24, 12, 0, 0)
+        history = [_history_event(cutoff)]
+
+        # Model A predicts a cluster: 3h feed + 3h50m top-up (50-min gap).
+        cluster_result = run_consensus_blend(
+            base_forecasts=[
+                Forecast(
+                    name="model_a",
+                    slug="model_a",
+                    points=[
+                        ForecastPoint(
+                            time=cutoff + timedelta(hours=3),
+                            volume_oz=3.0,
+                            gap_hours=3.0,
+                        ),
+                        ForecastPoint(
+                            time=cutoff + timedelta(hours=3, minutes=50),
+                            volume_oz=1.0,
+                            gap_hours=50 / 60,
+                        ),
+                    ],
+                    methodology="",
+                    diagnostics={},
+                ),
+                _forecast("model_b", [3.08]),
+                _forecast("model_c", [3.17]),
+                _forecast("model_d", [3.25]),
+            ],
+            history=history,
+            cutoff=cutoff,
+            horizon_hours=24,
+        )
+
+        # Model A predicts one clean feed at 3h (same canonical time as cluster).
+        clean_result = run_consensus_blend(
+            base_forecasts=[
+                _forecast("model_a", [3.0]),
+                _forecast("model_b", [3.08]),
+                _forecast("model_c", [3.17]),
+                _forecast("model_d", [3.25]),
+            ],
+            history=history,
+            cutoff=cutoff,
+            horizon_hours=24,
+        )
+
+        # Both should produce the same consensus schedule.
+        self.assertEqual(len(cluster_result.points), len(clean_result.points))
+        for cluster_point, clean_point in zip(
+            cluster_result.points, clean_result.points
+        ):
+            self.assertEqual(cluster_point.time, clean_point.time)
+
+    def test_conflict_window_admits_76_minute_episode_pair(self) -> None:
+        """Two majority-supported feeds 76 minutes apart should both survive.
+
+        The 75-minute conflict window admits pairs at 75+ minutes. This
+        locks in the lowered window: at the old 90-minute setting, one of
+        these feeds would be suppressed.
+        """
+        cutoff = datetime(2026, 3, 24, 12, 0, 0)
+        history = [_history_event(cutoff)]
+        # All four models agree on two feeds 76 minutes apart.
+        early_offset = 3.0
+        late_offset = early_offset + 76 / 60  # 76 minutes later
+        forecast = run_consensus_blend(
+            base_forecasts=[
+                _forecast("model_a", [early_offset, late_offset]),
+                _forecast("model_b", [early_offset + 0.05, late_offset + 0.05]),
+                _forecast("model_c", [early_offset + 0.1, late_offset + 0.1]),
+                _forecast("model_d", [early_offset + 0.15, late_offset + 0.15]),
+            ],
+            history=history,
+            cutoff=cutoff,
+            horizon_hours=24,
+        )
+
+        self.assertTrue(forecast.available)
+        self.assertEqual(len(forecast.points), 2)
 
 
 if __name__ == "__main__":

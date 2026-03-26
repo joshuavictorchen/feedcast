@@ -36,6 +36,7 @@ from feedcast.models.consensus_blend.model import (
     SPREAD_PENALTY_PER_HOUR,
     CandidateCluster,
     _candidates_to_forecast_points,
+    _collapse_forecast_dict,
     _majority_floor,
     generate_candidate_clusters,
     run_consensus_blend,
@@ -355,6 +356,9 @@ def _sweep_selector_parameters(
         }
         if len(available) < 2:
             continue
+        # Collapse model predictions into episodes before candidate generation,
+        # matching production behavior in _blend_by_sequence_selection().
+        available = _collapse_forecast_dict(available)
         weight = _recency_weight(cutoff, cutoffs[-1])
         cutoff_data.append(
             (weight, cutoff, actuals, observed_until, history_at_cutoff, available)

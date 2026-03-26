@@ -409,6 +409,8 @@ the same `score_forecast()` code path. No separate changes needed.
 
 ### Phase 4: Consensus blend update
 
+**Status: DONE**
+
 1. Collapse each model's predictions into episodes before candidate
    generation. Convert episodes to representative ForecastPoints
    (canonical timestamp, summed volume) and pass those to the existing
@@ -419,54 +421,25 @@ the same `score_forecast()` code path. No separate changes needed.
 4. Evaluate the 90-minute conflict window under episode semantics via
    the existing research sweep.
 
-**Phase 4 decision points (pending user input):**
+**Phase 4 decision points (resolved):**
 
-- **DP1: 90-minute conflict window.**
-  After collapsing, distinct episodes can be as close as ~75 minutes
-  (the tightest confirmed non-cluster gap in the labeled data). The
-  current 90-minute conflict window would suppress consensus slots for
-  episode pairs in the 75–89 minute range. Options:
-  (a) Keep 90 min. Document for future revisit.
-  (b) Run the research sweep with collapse in place; change the constant
-      in this phase if data clearly supports it, otherwise defer.
-  (c) Lower to 80 min (match cluster ceiling) without waiting for data.
-  **Recommendation:** (b). The sweep already tests 75/90/105. Re-running
-  after adding collapse shows whether a lower value improves scores.
-
-- **DP2: Research script scope.**
-  `_sweep_selector_parameters()` calls `generate_candidate_clusters()`
-  directly, bypassing the blend entry point. Without updating it, the
-  sweep evaluates a candidate generation path that no longer matches
-  production. Options:
-  (a) Update the sweep to collapse before generating candidates.
-  (b) Leave as-is and note the discrepancy.
-  **Recommendation:** (a). A sweep that diverges from production is
-  misleading.
-
-- **DP3: Documentation scope.**
-  The blend's behavior is changing materially. Options:
-  (a) Update `design.md` only (as original plan says).
-  (b) Update `design.md` + `methodology.md`.
-  (c) Also update `feedcast/research/index.md` (stale guidance).
-  **Recommendation:** (b). Research index update belongs to Phase 5.
-
-- **DP4: Diagnostics scope.**
-  Should the blend's diagnostics include raw-vs-collapsed per-model
-  feed counts? Options:
-  (a) Add now — low cost, aids debugging.
-  (b) Defer to Phase 6 (reports and diagnostics).
-  **Recommendation:** (b) unless trivially cheap.
-
-- **DP5: Existing diagnostics key semantics.**
-  `component_forecast_counts` currently means raw per-model point counts.
-  After pre-collapse, silently repurposing that key to mean collapsed
-  episode counts would create semantic drift. Options:
-  (a) Keep `component_forecast_counts` raw for now; add collapsed counts
-      only if DP4 chooses to surface them.
-  (b) Change `component_forecast_counts` to collapsed counts now.
-  (c) Split now into explicit raw and collapsed keys.
-  **Recommendation:** (a) if DP4 is deferred; otherwise (c). Avoid
-  silently changing what an existing diagnostics key means.
+- **DP1: 90-minute conflict window.** Chose (b): ran the research sweep
+  with collapse in place. All conflict window values (75/90/105) produce
+  identical scores, but direct comparison of selected candidates shows
+  75 allows more realistic close-episode predictions on at least one
+  cutoff (03/24: 76-minute episode pair selected at 75, suppressed at
+  90). Lowered to 75 minutes — just above the 73-minute base cluster
+  rule. One confirmed non-cluster gap at 74.8 minutes is still
+  suppressed; 75 is a conservative floor, not an exact match.
+- **DP2: Research script scope.** Chose (a): sweep updated to collapse
+  before generating candidates, matching production.
+- **DP3: Documentation scope.** Chose (b): `design.md` and
+  `methodology.md` both updated.
+- **DP4: Diagnostics scope.** Chose (b): deferred to Phase 6.
+- **DP5: Existing diagnostics key semantics.** Chose (a):
+  `component_forecast_counts` still reports raw per-model point counts.
+  The collapse happens inside `_blend_by_sequence_selection()` on a copy;
+  diagnostics in `run_consensus_blend()` read from the original.
 
 **Phase 4 implementation constraints (resolved by agents):**
 
@@ -490,6 +463,41 @@ the same `score_forecast()` code path. No separate changes needed.
   blend output when cluster predictions are present; (b) without
   cluster predictions, output is identical. Clustering logic coverage is
   Phase 2's responsibility.
+
+**Implementation notes:**
+
+Added `_collapse_to_episode_points()` and `_collapse_forecast_dict()`
+helpers to `consensus_blend/model.py`. The blend calls
+`_collapse_forecast_dict(component_forecasts)` at the top of
+`_blend_by_sequence_selection()` before any candidate generation. The
+research script's `_sweep_selector_parameters()` imports and uses the
+same `_collapse_forecast_dict()` when building per-cutoff data, so
+sweep results match production behavior.
+
+**Sweep results (20260325 export, 4 cutoffs):** All parameter
+combinations (radius 90/120, spread 150/180, conflict 75/90/105,
+penalty 0.25–5.0) produce identical scores: 64.0 headline, 85.6 count,
+48.0 timing. However, direct comparison of selected candidates shows
+conflict=75 admits a 76-minute episode pair on the 03/24 cutoff that
+conflict=90 suppresses. Lowered `SELECTION_CONFLICT_WINDOW_MINUTES`
+from 90 to 75 — a more principled floor just above the 73-minute base
+cluster rule. One confirmed non-cluster gap at 74.8 minutes is still
+suppressed; 75 is a conservative floor, not an exact match.
+
+**Documentation:** `design.md` updated with a new "Episode collapsing
+before candidate generation" section. `methodology.md` updated to
+describe pre-voting episode collapsing. `CHANGELOG.md` updated with
+the behavior change.
+
+**Tests:** 3 new tests in `tests/test_consensus_blend.py`:
+`test_collapse_merges_cluster_predictions_into_one_episode` (unit test
+for the collapse helper),
+`test_cluster_predictions_produce_same_consensus_as_clean` (integration
+test confirming cluster predictions produce the same consensus as clean
+single-episode predictions), and
+`test_conflict_window_admits_76_minute_episode_pair` (regression test
+locking in the lowered 75-minute conflict window). Full suite: 53 tests
+pass (3 new + 50 existing).
 
 ### Phase 5: Model and agent awareness
 

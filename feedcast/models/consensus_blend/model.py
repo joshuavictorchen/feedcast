@@ -1,21 +1,23 @@
 """Consensus Blend forecast model.
 
-The production runtime builds immutable majority-supported candidate
-feed slots around each model prediction, then solves an exact
-set-packing problem that picks the best non-overlapping sequence
-without reusing any model prediction twice.
+The production runtime collapses each component model's predictions into
+episodes, builds immutable majority-supported candidate feed slots
+around each episode-level prediction, then solves an exact set-packing
+problem that picks the best non-overlapping sequence without reusing
+any model prediction twice.
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from itertools import combinations
 
 import numpy as np
 from scipy.optimize import Bounds, LinearConstraint, milp
 
+from feedcast.clustering import group_into_episodes
 from feedcast.data import FeedEvent, Forecast, ForecastPoint
 from feedcast.models.shared import load_methodology, normalize_forecast_points
 
@@ -34,8 +36,17 @@ ANCHOR_RADIUS_MINUTES = 120
 MAX_CANDIDATE_SPREAD_MINUTES = 180
 
 # Selected consensus slots closer than this are competing explanations for
-# the same real feed. This matches the 90-minute physiological floor.
-SELECTION_CONFLICT_WINDOW_MINUTES = 90
+# the same real feed. Set to 75 minutes: just above the 73-minute base
+# cluster rule. This admits episode pairs at 75+ minutes (e.g., the
+# 76-minute pair observed on 03/24) while still suppressing pairs that
+# would be ambiguous with cluster boundaries. A 74.8-minute non-cluster
+# gap in the labeled data is still suppressed — 75 is a conservative
+# floor, not an exact match. Before episode collapsing was added, this
+# was 90 minutes — a blunt proxy that also suppressed legitimate close
+# episodes. Now that clusters are collapsed before candidate generation,
+# the window only needs to guard against duplicate candidate slots, not
+# cluster-internal feeds.
+SELECTION_CONFLICT_WINDOW_MINUTES = 75
 
 # Support is the primary signal. Spread breaks ties in favor of tighter slots.
 SPREAD_PENALTY_PER_HOUR = 0.25
@@ -150,8 +161,12 @@ def _blend_by_sequence_selection(
     history: list[FeedEvent],
 ) -> tuple[list[ForecastPoint], dict]:
     """Build candidate slots and select an exact non-overlapping sequence."""
-    majority_floor = _majority_floor(len(component_forecasts))
-    candidates = generate_candidate_clusters(component_forecasts)
+    # Collapse each model's predictions into episodes before voting.
+    # This prevents cluster-internal predictions from creating spurious
+    # candidate slots or inflating model agreement.
+    collapsed_forecasts = _collapse_forecast_dict(component_forecasts)
+    majority_floor = _majority_floor(len(collapsed_forecasts))
+    candidates = generate_candidate_clusters(collapsed_forecasts)
     selected = select_candidate_sequence(candidates, majority_floor)
     points = _candidates_to_forecast_points(selected, history)
     diagnostics = {
@@ -393,6 +408,50 @@ def _candidate_utility(
 # ===================================================================
 # Helpers
 # ===================================================================
+
+
+def _collapse_to_episode_points(
+    points: list[ForecastPoint],
+) -> list[ForecastPoint]:
+    """Collapse forecast points into episode-level representatives.
+
+    Groups close-together predictions into episodes using the shared
+    cluster rule, then converts each episode back to a single
+    ForecastPoint with the canonical timestamp and summed volume.
+    """
+    if not points:
+        return []
+    episodes = group_into_episodes(points)
+    collapsed: list[ForecastPoint] = []
+    for episode in episodes:
+        previous_time = collapsed[-1].time if collapsed else None
+        gap_hours = (
+            (episode.time - previous_time).total_seconds() / 3600.0
+            if previous_time is not None
+            else 0.0
+        )
+        collapsed.append(
+            ForecastPoint(
+                time=episode.time,
+                volume_oz=episode.volume_oz,
+                gap_hours=gap_hours,
+            )
+        )
+    return collapsed
+
+
+def _collapse_forecast_dict(
+    forecasts: dict[str, Forecast],
+) -> dict[str, Forecast]:
+    """Return a new dict with each forecast's points collapsed into episodes.
+
+    Used by the blend and research sweep to pre-collapse model predictions
+    before candidate generation.
+    """
+    return {
+        slug: replace(forecast, points=_collapse_to_episode_points(forecast.points))
+        for slug, forecast in forecasts.items()
+    }
 
 
 def _candidates_to_forecast_points(

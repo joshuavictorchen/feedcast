@@ -7,13 +7,32 @@ around 3pm and 1 predicts 4pm, the consensus should reflect the
 majority, not split the difference. Simple majority (more than half)
 is the threshold: 3-of-4, 2-of-3, or 2-of-2.
 
+## Episode collapsing before candidate generation
+
+Before any candidate search begins, each model's predictions are
+collapsed into episodes using the shared cluster rule
+(`feedcast/clustering.py`). If a model predicts a 3pm feed and a
+3:50pm top-up (50-minute gap, within the 73-minute base rule), those
+two predictions become one episode-level point at 3pm with summed
+volume. This prevents cluster-internal predictions from anchoring
+spurious candidate slots or inflating a model's apparent agreement
+with other models.
+
+The collapse is applied inside `_blend_by_sequence_selection()` to a
+copy of each forecast — the caller's forecasts are not mutated. The
+research sweep also collapses before generating candidates so that
+sweep results match production behavior.
+
+See `feedcast/research/feed_clustering/findings.md` for the boundary
+rule derivation.
+
 ## How candidates are built
 
-Each model prediction anchors a search: "which other models predict
-something nearby?" For each anchor, the blend tries every majority-
-sized group of models (all 3-of-4 combinations and the full 4-of-4)
-and pulls each model's nearest prediction within a 2-hour radius.
-If a group's predictions pass the spread cap (3 hours max), it
+Each episode-level model prediction anchors a search: "which other
+models predict something nearby?" For each anchor, the blend tries
+every majority-sized group of models (all 3-of-4 combinations and the
+full 4-of-4) and pulls each model's nearest prediction within a 2-hour
+radius. If a group's predictions pass the spread cap (3 hours max), it
 becomes a candidate.
 
 Candidates are fixed once created — they are never modified during
@@ -32,7 +51,16 @@ set subject to two hard rules:
    consensus feed, it cannot also be counted as evidence for another.
 
 2. **Minimum spacing:** Two consensus feeds cannot be closer than
-   90 minutes (the physiological minimum between real feeds).
+   75 minutes. This sits just above the 73-minute base cluster rule
+   and admits episode pairs at 75+ minutes (e.g., the 76-minute pair
+   observed on 03/24) while still suppressing pairs that would be
+   ambiguous with cluster boundaries. One confirmed non-cluster gap
+   at 74.8 minutes is still suppressed — 75 is a conservative floor,
+   not an exact match. Before episode collapsing, this was 90 minutes
+   — a blunt proxy that also suppressed legitimate close episodes.
+   Now that clusters are collapsed before candidate generation, the
+   window only guards against duplicate candidate slots for the same
+   real feed.
 
 ## Why the 2-hour search radius?
 
