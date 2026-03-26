@@ -349,10 +349,13 @@ tests pass (18 new + 29 existing).
 - Raw feed count diagnostics deferred to Phase 6 (reports). Phase 3
   ships episode-only scoring.
 - Cross-cutoff actual cluster policy: group actuals using pre-cutoff
-  context so that post-cutoff attachment feeds attach to their
-  pre-cutoff anchors. Include cross-cutoff episodes in scoring if
-  the complexity cost is low; otherwise exclude episodes whose
-  canonical timestamp precedes the cutoff. Assess during implementation.
+  context so that post-cutoff attachment feeds correctly attach to
+  their pre-cutoff anchors, then exclude episodes whose canonical
+  timestamp precedes the cutoff. This means a post-cutoff attachment
+  whose anchor is pre-cutoff is excluded from scoring rather than
+  scored as a phantom standalone. Document this behavior in the
+  evaluation methodology. Revisit if retrospective data shows the
+  edge case matters in practice.
 
 ### Phase 4: Consensus blend update
 
