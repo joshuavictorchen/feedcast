@@ -409,11 +409,87 @@ the same `score_forecast()` code path. No separate changes needed.
 
 ### Phase 4: Consensus blend update
 
-1. Apply the cluster rule to each model's predictions before the blend
-   votes (collapse cluster predictions into episode-predictions first).
-2. Update consensus blend `design.md`.
-3. Flag: the 90-minute conflict rule may need revisiting once episode
-   semantics are in place.
+1. Collapse each model's predictions into episodes before candidate
+   generation. Convert episodes to representative ForecastPoints
+   (canonical timestamp, summed volume) and pass those to the existing
+   candidate generator and MILP selector.
+2. Update the research script sweep to collapse before generating
+   candidates, matching production behavior.
+3. Update consensus blend `design.md` and `methodology.md`.
+4. Evaluate the 90-minute conflict window under episode semantics via
+   the existing research sweep.
+
+**Phase 4 decision points (pending user input):**
+
+- **DP1: 90-minute conflict window.**
+  After collapsing, distinct episodes can be as close as ~75 minutes
+  (the tightest confirmed non-cluster gap in the labeled data). The
+  current 90-minute conflict window would suppress consensus slots for
+  episode pairs in the 75–89 minute range. Options:
+  (a) Keep 90 min. Document for future revisit.
+  (b) Run the research sweep with collapse in place; change the constant
+      in this phase if data clearly supports it, otherwise defer.
+  (c) Lower to 80 min (match cluster ceiling) without waiting for data.
+  **Recommendation:** (b). The sweep already tests 75/90/105. Re-running
+  after adding collapse shows whether a lower value improves scores.
+
+- **DP2: Research script scope.**
+  `_sweep_selector_parameters()` calls `generate_candidate_clusters()`
+  directly, bypassing the blend entry point. Without updating it, the
+  sweep evaluates a candidate generation path that no longer matches
+  production. Options:
+  (a) Update the sweep to collapse before generating candidates.
+  (b) Leave as-is and note the discrepancy.
+  **Recommendation:** (a). A sweep that diverges from production is
+  misleading.
+
+- **DP3: Documentation scope.**
+  The blend's behavior is changing materially. Options:
+  (a) Update `design.md` only (as original plan says).
+  (b) Update `design.md` + `methodology.md`.
+  (c) Also update `feedcast/research/index.md` (stale guidance).
+  **Recommendation:** (b). Research index update belongs to Phase 5.
+
+- **DP4: Diagnostics scope.**
+  Should the blend's diagnostics include raw-vs-collapsed per-model
+  feed counts? Options:
+  (a) Add now — low cost, aids debugging.
+  (b) Defer to Phase 6 (reports and diagnostics).
+  **Recommendation:** (b) unless trivially cheap.
+
+- **DP5: Existing diagnostics key semantics.**
+  `component_forecast_counts` currently means raw per-model point counts.
+  After pre-collapse, silently repurposing that key to mean collapsed
+  episode counts would create semantic drift. Options:
+  (a) Keep `component_forecast_counts` raw for now; add collapsed counts
+      only if DP4 chooses to surface them.
+  (b) Change `component_forecast_counts` to collapsed counts now.
+  (c) Split now into explicit raw and collapsed keys.
+  **Recommendation:** (a) if DP4 is deferred; otherwise (c). Avoid
+  silently changing what an existing diagnostics key means.
+
+**Phase 4 implementation constraints (resolved by agents):**
+
+- Collapse happens inside `_blend_by_sequence_selection()`, before
+  `generate_candidate_clusters()`. Each model's ForecastPoints are
+  grouped into episodes via `group_into_episodes()` and converted back
+  to ForecastPoints (canonical timestamp, summed volume, inter-episode
+  gap). A new dict of collapsed forecasts is passed to candidate
+  generation; the caller's forecasts are not mutated.
+- The existing candidate generator, MILP selector, and output conversion
+  operate unchanged on collapsed inputs.
+- `gap_hours` on collapsed ForecastPoints is computed as inter-episode
+  gap but is not load-bearing: candidate generation and selection do not
+  use it, and `_candidates_to_forecast_points()` recomputes it for
+  output.
+- Consensus output is episode-level. If multiple models predict cluster
+  internal structure, those predictions collapse before voting. This is
+  consistent with D2 (models are not penalized for predicting clusters)
+  and Phase 3 evaluation semantics.
+- Testing confirms the integration: (a) collapse happens and changes
+  blend output when cluster predictions are present; (b) without
+  cluster predictions, output is identical. Clustering logic coverage is
+  Phase 2's responsibility.
 
 ### Phase 5: Model and agent awareness
 
