@@ -333,6 +333,27 @@ tests pass (18 new + 29 existing).
 3. Verify replay inherits cluster-aware scoring via the same code path.
 4. Hard cutover: no tracker versioning. Nuke `tracker.json` if needed.
 
+**Phase 3 implementation constraints (resolved before coding):**
+
+- Clustering goes inside `score_forecast()`, not at call sites. Replay,
+  tracker, and consensus-blend research inherit automatically.
+- One episode = one weight, based on canonical timestamp. No
+  constituent-count scaling.
+- Episode matching uses first-feed timestamp (D4).
+- Do not collapse event caches separately — only the scorer collapses.
+- Do not auto-delete `tracker.json` in code. Delete manually when the
+  scorer semantics change.
+- Rename `predicted_count`, `actual_count`, `matched_count` on
+  `ForecastScore` to episode-based names. These flow through tracker,
+  report, and replay — all references must be updated.
+- Raw feed count diagnostics deferred to Phase 6 (reports). Phase 3
+  ships episode-only scoring.
+- Cross-cutoff actual cluster policy: group actuals using pre-cutoff
+  context so that post-cutoff attachment feeds attach to their
+  pre-cutoff anchors. Include cross-cutoff episodes in scoring if
+  the complexity cost is low; otherwise exclude episodes whose
+  canonical timestamp precedes the cutoff. Assess during implementation.
+
 ### Phase 4: Consensus blend update
 
 1. Apply the cluster rule to each model's predictions before the blend
