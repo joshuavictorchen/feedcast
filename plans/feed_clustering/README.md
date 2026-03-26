@@ -326,6 +326,8 @@ tests pass (18 new + 29 existing).
 
 ### Phase 3: Evaluation integration
 
+**Status: DONE**
+
 1. Update `score_forecast()` to apply episode grouping to both actuals
    and predictions before matching.
 2. Update `feedcast/evaluation/methodology.md` to document cluster-aware
@@ -356,6 +358,54 @@ tests pass (18 new + 29 existing).
   scored as a phantom standalone. Document this behavior in the
   evaluation methodology. Revisit if retrospective data shows the
   edge case matters in practice.
+
+**Implementation notes:**
+
+Updated `score_forecast()` in `feedcast/evaluation/scoring.py` to
+collapse both actuals and predictions into episodes before matching.
+The collapse is internal to the scorer — all call sites (tracker,
+replay, consensus-blend research) inherit automatically.
+
+**Scoring flow after Phase 3:**
+1. Group ALL actuals (including pre-cutoff) into episodes using
+   `group_into_episodes()`.
+2. Filter: keep episodes whose canonical time is in
+   `(prediction_time, evaluation_end]`. Cross-cutoff episodes excluded.
+3. Window predictions to scoring window, then group into episodes.
+4. Compute horizon weights, match episodes via Hungarian assignment.
+5. Return episode-level counts and scores.
+
+**Field rename (hard cutover):** `ForecastScore` fields renamed from
+`predicted_count`/`actual_count`/`matched_count` to
+`predicted_episode_count`/`actual_episode_count`/`matched_episode_count`.
+All downstream references updated: `RetrospectiveResult` in tracker.py,
+serialization in tracker.py and report.py, replay runner output,
+consensus-blend research, and `scripts/run_replay.py` display.
+
+**Methodology:** `feedcast/evaluation/methodology.md` updated with a
+new "Episode collapsing" section documenting cluster-aware scoring,
+the cross-cutoff exclusion policy, and a reference to the research
+article. All "feed" language updated to "episode" throughout.
+
+**Report template:** `feedcast/templates/report.md.j2` updated to
+describe retrospective comparison in episode terms. Column header
+changed to "Episodes (Pred/Actual/Matched)".
+
+**Hard cutover:** `tracker.json` reset to empty `{"runs": []}`.
+`report/diagnostics.yaml` deleted (contained stale `*_feed_count`
+keys). `report/report.md` and chart PNGs are stale snapshots from
+the prior pipeline run but are NOT deleted — they are rendered
+artifacts that will regenerate on the next `run_forecast.py`
+invocation. Deleting them would break README links for no functional
+gain. The report's data is correct for when it was generated; only
+the terminology will update on next render.
+
+**Tests:** 3 new tests in `tests/test_scoring.py` (actual cluster
+collapse, predicted cluster collapse, cross-cutoff exclusion).
+Full suite: 50 tests pass (3 new + 47 existing).
+
+**Replay verification:** Replay inherits cluster-aware scoring via
+the same `score_forecast()` code path. No separate changes needed.
 
 ### Phase 4: Consensus blend update
 

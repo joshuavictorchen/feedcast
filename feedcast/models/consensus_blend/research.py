@@ -292,8 +292,8 @@ def _report_production_scores(
                     "score": production_score.score,
                     "count_score": production_score.count_score,
                     "timing_score": production_score.timing_score,
-                    "predicted": production_score.predicted_count,
-                    "actual": production_score.actual_count,
+                    "predicted": production_score.predicted_episode_count,
+                    "actual": production_score.actual_episode_count,
                 },
             )
         )
@@ -421,7 +421,7 @@ def _sweep_selector_parameters(
                                 "score": score.score,
                                 "count_score": score.count_score,
                                 "timing_score": score.timing_score,
-                                "predicted": score.predicted_count,
+                                "predicted": score.predicted_episode_count,
                             },
                         )
                     )

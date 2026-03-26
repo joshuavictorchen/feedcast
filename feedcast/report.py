@@ -230,7 +230,7 @@ def _prepare_retrospective(retrospective: Retrospective) -> dict[str, Any]:
                 "count_display": _fmt_score(result.count_score),
                 "timing_display": _fmt_score(result.timing_score),
                 "feeds_display": (
-                    f"{result.predicted_feed_count}/{result.actual_feed_count}/{result.matched_feed_count}"
+                    f"{result.predicted_episode_count}/{result.actual_episode_count}/{result.matched_episode_count}"
                     if result.score is not None
                     else "n/a"
                 ),
@@ -277,9 +277,9 @@ def _write_diagnostics(
                     "score": result.score,
                     "count_score": result.count_score,
                     "timing_score": result.timing_score,
-                    "predicted_feed_count": result.predicted_feed_count,
-                    "actual_feed_count": result.actual_feed_count,
-                    "matched_feed_count": result.matched_feed_count,
+                    "predicted_episode_count": result.predicted_episode_count,
+                    "actual_episode_count": result.actual_episode_count,
+                    "matched_episode_count": result.matched_episode_count,
                     "status": result.status,
                 }
                 for result in retrospective.results

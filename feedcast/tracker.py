@@ -37,9 +37,9 @@ class RetrospectiveResult:
     score: float | None
     count_score: float | None
     timing_score: float | None
-    predicted_feed_count: int
-    actual_feed_count: int
-    matched_feed_count: int
+    predicted_episode_count: int
+    actual_episode_count: int
+    matched_episode_count: int
     status: str
 
 
@@ -191,9 +191,9 @@ def compute_retrospective(
                     score=None,
                     count_score=None,
                     timing_score=None,
-                    predicted_feed_count=0,
-                    actual_feed_count=0,
-                    matched_feed_count=0,
+                    predicted_episode_count=0,
+                    actual_episode_count=0,
+                    matched_episode_count=0,
                     status="Unavailable in prior run",
                 )
             )
@@ -208,9 +208,9 @@ def compute_retrospective(
                     score=None,
                     count_score=None,
                     timing_score=None,
-                    predicted_feed_count=0,
-                    actual_feed_count=0,
-                    matched_feed_count=0,
+                    predicted_episode_count=0,
+                    actual_episode_count=0,
+                    matched_episode_count=0,
                     status="No predictions emitted",
                 )
             )
@@ -224,9 +224,9 @@ def compute_retrospective(
                     score=None,
                     count_score=None,
                     timing_score=None,
-                    predicted_feed_count=0,
-                    actual_feed_count=0,
-                    matched_feed_count=0,
+                    predicted_episode_count=0,
+                    actual_episode_count=0,
+                    matched_episode_count=0,
                     status="No observed horizon yet",
                 )
             )
@@ -249,9 +249,9 @@ def compute_retrospective(
                 score=forecast_score.score,
                 count_score=forecast_score.count_score,
                 timing_score=forecast_score.timing_score,
-                predicted_feed_count=forecast_score.predicted_count,
-                actual_feed_count=forecast_score.actual_count,
-                matched_feed_count=forecast_score.matched_count,
+                predicted_episode_count=forecast_score.predicted_episode_count,
+                actual_episode_count=forecast_score.actual_episode_count,
+                matched_episode_count=forecast_score.matched_episode_count,
                 status=status,
             )
         )
@@ -379,9 +379,9 @@ def _serialize_retrospective(retrospective: Retrospective) -> dict[str, Any]:
                 "score": _round_or_none(result.score),
                 "count_score": _round_or_none(result.count_score),
                 "timing_score": _round_or_none(result.timing_score),
-                "predicted_feed_count": result.predicted_feed_count,
-                "actual_feed_count": result.actual_feed_count,
-                "matched_feed_count": result.matched_feed_count,
+                "predicted_episode_count": result.predicted_episode_count,
+                "actual_episode_count": result.actual_episode_count,
+                "matched_episode_count": result.matched_episode_count,
                 "status": result.status,
             }
             for result in retrospective.results

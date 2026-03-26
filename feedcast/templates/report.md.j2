@@ -37,14 +37,14 @@ No new actuals since the prior run
 No prior run available yet.
 {% endif -%}
 {% else -%}
-Comparing prior run `{{ retrospective.prior_run_id }}` predictions
-against actual bottle feeds observed in the current export
+Comparing prior run `{{ retrospective.prior_run_id }}` predicted episodes
+against actual feeding episodes observed in the current export
 (observed horizon:
 {{ "%.1f" | format(retrospective.observed_horizon_hours) }}h,
 coverage: {{ retrospective.coverage_display }}).
 
-| Model | Score | Count | Timing | Pred/Actual/Matched | Status |
-| ----- | ----- | ----- | ------ | ------------------- | ------ |
+| Model | Score | Count | Timing | Episodes (Pred/Actual/Matched) | Status |
+| ----- | ----- | ----- | ------ | ------------------------------ | ------ |
 {% for result in retrospective.results -%}
 | {{ result.name }} | {{ result.score_display }} | {{ result.count_display }} | {{ result.timing_display }} | {{ result.feeds_display }} | {{ result.status }} |
 {% endfor %}

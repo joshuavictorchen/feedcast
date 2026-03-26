@@ -44,7 +44,7 @@ class ScoreForecastTests(unittest.TestCase):
         self.assertEqual(result.score, 100.0)
         self.assertEqual(result.count_score, 100.0)
         self.assertEqual(result.timing_score, 100.0)
-        self.assertEqual(result.matched_count, 2)
+        self.assertEqual(result.matched_episode_count, 2)
 
     def test_thirty_minute_error_halves_timing_credit(self) -> None:
         """The timing half-life should be soft rather than a hard threshold."""
@@ -72,9 +72,9 @@ class ScoreForecastTests(unittest.TestCase):
             observed_until=cutoff + timedelta(hours=2),
         )
 
-        self.assertEqual(result.predicted_count, 1)
-        self.assertEqual(result.actual_count, 0)
-        self.assertEqual(result.matched_count, 0)
+        self.assertEqual(result.predicted_episode_count, 1)
+        self.assertEqual(result.actual_episode_count, 0)
+        self.assertEqual(result.matched_episode_count, 0)
         self.assertEqual(result.count_score, 0.0)
         self.assertEqual(result.timing_score, 0.0)
         self.assertEqual(result.score, 0.0)
@@ -112,7 +112,7 @@ class ScoreForecastTests(unittest.TestCase):
             observed_until=cutoff + timedelta(hours=24),
         )
 
-        self.assertEqual(result.matched_count, 0)
+        self.assertEqual(result.matched_episode_count, 0)
         self.assertEqual(result.count_score, 0.0)
         self.assertEqual(result.timing_score, 0.0)
 
@@ -142,11 +142,78 @@ class ScoreForecastTests(unittest.TestCase):
             / sum(matched_actual_weights)
         )
 
-        self.assertEqual(result.predicted_count, 5)
-        self.assertEqual(result.actual_count, 6)
-        self.assertEqual(result.matched_count, 5)
+        self.assertEqual(result.predicted_episode_count, 5)
+        self.assertEqual(result.actual_episode_count, 6)
+        self.assertEqual(result.matched_episode_count, 5)
         self.assertAlmostEqual(result.count_score, expected_count_score, places=3)
         self.assertAlmostEqual(result.timing_score, expected_timing_score, places=3)
+
+
+    def test_actual_cluster_collapses_before_matching(self) -> None:
+        """Actual feeds forming a cluster should be scored as one episode."""
+        cutoff = datetime(2026, 3, 24, 8, 0, 0)
+        result = score_forecast(
+            predicted_points=[_point(cutoff, 2)],
+            actual_events=[
+                # Two actual feeds 50 min apart → one episode at +2h
+                _event(cutoff, 2),
+                _event(cutoff, 2 + 50 / 60),
+            ],
+            prediction_time=cutoff,
+            observed_until=cutoff + timedelta(hours=24),
+        )
+
+        # One predicted episode matches one actual episode
+        self.assertEqual(result.actual_episode_count, 1)
+        self.assertEqual(result.predicted_episode_count, 1)
+        self.assertEqual(result.matched_episode_count, 1)
+        self.assertEqual(result.count_score, 100.0)
+
+    def test_predicted_cluster_collapses_before_matching(self) -> None:
+        """Predicted feeds forming a cluster should be scored as one episode."""
+        cutoff = datetime(2026, 3, 24, 8, 0, 0)
+        result = score_forecast(
+            predicted_points=[
+                # Two predicted feeds 40 min apart → one predicted episode
+                _point(cutoff, 2),
+                _point(cutoff, 2 + 40 / 60),
+            ],
+            actual_events=[_event(cutoff, 2)],
+            prediction_time=cutoff,
+            observed_until=cutoff + timedelta(hours=24),
+        )
+
+        self.assertEqual(result.predicted_episode_count, 1)
+        self.assertEqual(result.actual_episode_count, 1)
+        self.assertEqual(result.matched_episode_count, 1)
+        self.assertEqual(result.count_score, 100.0)
+
+    def test_cross_cutoff_cluster_excluded(self) -> None:
+        """Actual cluster anchored before cutoff is excluded from scoring.
+
+        The attachment at +0.5h is post-cutoff but its anchor is pre-cutoff,
+        so the whole episode (canonical time = anchor) falls outside the
+        scoring window.
+        """
+        cutoff = datetime(2026, 3, 24, 8, 0, 0)
+        result = score_forecast(
+            predicted_points=[_point(cutoff, 3)],
+            actual_events=[
+                # Anchor before cutoff, attachment after
+                _event(cutoff, -0.5),
+                _event(cutoff, 0.5),
+                # Independent actual feed at +3h
+                _event(cutoff, 3),
+            ],
+            prediction_time=cutoff,
+            observed_until=cutoff + timedelta(hours=24),
+        )
+
+        # Only the +3h actual survives as an episode; the cross-cutoff
+        # cluster is excluded because its canonical time is -0.5h
+        self.assertEqual(result.actual_episode_count, 1)
+        self.assertEqual(result.matched_episode_count, 1)
+        self.assertEqual(result.score, 100.0)
 
 
 if __name__ == "__main__":

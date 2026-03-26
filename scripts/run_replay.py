@@ -239,9 +239,9 @@ def _print_score_summary(payload: dict[str, object]) -> None:
         print(f"Count:    {score['count']}")
         print(f"Timing:   {score['timing']}")
         print(
-            f"Feeds:    predicted={score['predicted_count']} "
-            f"actual={score['actual_count']} "
-            f"matched={score['matched_count']}"
+            f"Episodes: predicted={score['predicted_episode_count']} "
+            f"actual={score['actual_episode_count']} "
+            f"matched={score['matched_episode_count']}"
         )
     elif result.get("error_message"):
         print(f"Error:    {result['error_message']}")

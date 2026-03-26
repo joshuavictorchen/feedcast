@@ -2,8 +2,12 @@
 
 The scoring model intentionally separates two questions:
 
-1. Did the forecast predict the right number of feeds in the observed window?
-2. For the feeds that plausibly correspond, how close were the timestamps?
+1. Did the forecast predict the right number of episodes in the observed window?
+2. For the episodes that plausibly correspond, how close were the timestamps?
+
+Both actuals and predictions are collapsed into episodes before matching,
+so cluster feeds are scored as single feeding events. See
+feedcast/research/feed_clustering/findings.md for the boundary rule.
 
 This keeps the metric diagnosable while still producing one headline score.
 """
@@ -18,6 +22,7 @@ from typing import Sequence
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from feedcast.clustering import FeedEpisode, group_into_episodes
 from feedcast.data import FeedEvent, ForecastPoint, HORIZON_HOURS
 
 DEFAULT_HORIZON_WEIGHT_HALF_LIFE_HOURS = 24.0
@@ -40,15 +45,17 @@ class ScoringConfig:
 class ForecastScore:
     """Normalized score for one forecast over one observed window.
 
+    Counts reflect episodes (after cluster collapsing), not raw feeds.
+
     Attributes:
         score: Headline 0-100 score from the geometric mean of count and timing.
-        count_score: 0-100 weighted F1 over feed count in the observed window.
-        timing_score: 0-100 weighted timing credit on matched feeds only.
+        count_score: 0-100 weighted F1 over episode count in the observed window.
+        timing_score: 0-100 weighted timing credit on matched episodes only.
         observed_horizon_hours: How much of the 24-hour horizon was observable.
         coverage_ratio: Observed-horizon fraction in [0, 1].
-        predicted_count: Predicted feeds that fall inside the observed window.
-        actual_count: Actual bottle feeds observed inside the same window.
-        matched_count: One-to-one matches accepted by the assignment step.
+        predicted_episode_count: Predicted episodes inside the observed window.
+        actual_episode_count: Actual episodes observed inside the same window.
+        matched_episode_count: One-to-one matches accepted by the assignment step.
     """
 
     score: float
@@ -56,9 +63,9 @@ class ForecastScore:
     timing_score: float
     observed_horizon_hours: float
     coverage_ratio: float
-    predicted_count: int
-    actual_count: int
-    matched_count: int
+    predicted_episode_count: int
+    actual_episode_count: int
+    matched_episode_count: int
 
 
 @dataclass(frozen=True)
@@ -82,9 +89,18 @@ def score_forecast(
 ) -> ForecastScore:
     """Score a forecast against newly observed bottle feeds.
 
+    Both actuals and predictions are collapsed into episodes before
+    matching. Actuals are grouped with pre-cutoff context so that
+    post-cutoff attachment feeds attach to their pre-cutoff anchors;
+    episodes whose canonical timestamp precedes the cutoff are then
+    excluded. Predictions are windowed first (they should not exist
+    before cutoff) and then grouped.
+
     Args:
         predicted_points: Forecast points emitted at ``prediction_time``.
         actual_events: Actual bottle-feed events from the next dataset.
+            May include events before ``prediction_time`` for grouping
+            context.
         prediction_time: Cutoff timestamp used when the forecast was generated.
         observed_until: Latest timestamp covered by the new dataset.
         config: Scoring constants.
@@ -106,37 +122,44 @@ def score_forecast(
         raise ValueError("Scoring requires an observed window after prediction_time.")
 
     evaluation_end = prediction_time + timedelta(hours=observed_horizon_hours)
+
+    # Actuals: group with pre-cutoff context so cross-cutoff attachments
+    # attach to their anchors, then keep only episodes in the scoring window.
+    actual_episodes = [
+        episode
+        for episode in group_into_episodes(list(actual_events))
+        if prediction_time < episode.time <= evaluation_end
+    ]
+
+    # Predictions: window first (predictions should not exist before cutoff),
+    # then group so that clustered predictions collapse before matching.
     predicted_window = [
         point
         for point in predicted_points
         if prediction_time < point.time <= evaluation_end
     ]
-    actual_window = [
-        event
-        for event in actual_events
-        if prediction_time < event.time <= evaluation_end
-    ]
+    predicted_episodes = group_into_episodes(predicted_window)
 
     predicted_weights = [
         _horizon_weight(
-            hours_from_prediction=(point.time - prediction_time).total_seconds()
+            hours_from_prediction=(episode.time - prediction_time).total_seconds()
             / 3600.0,
             half_life_hours=config.horizon_weight_half_life_hours,
         )
-        for point in predicted_window
+        for episode in predicted_episodes
     ]
     actual_weights = [
         _horizon_weight(
-            hours_from_prediction=(event.time - prediction_time).total_seconds()
+            hours_from_prediction=(episode.time - prediction_time).total_seconds()
             / 3600.0,
             half_life_hours=config.horizon_weight_half_life_hours,
         )
-        for event in actual_window
+        for episode in actual_episodes
     ]
 
-    matched_pairs = _match_points(
-        predicted_points=predicted_window,
-        actual_events=actual_window,
+    matched_pairs = _match_episodes(
+        predicted_episodes=predicted_episodes,
+        actual_episodes=actual_episodes,
         predicted_weights=predicted_weights,
         actual_weights=actual_weights,
         config=config,
@@ -160,26 +183,26 @@ def score_forecast(
         timing_score=round(timing_score * 100.0, 3),
         observed_horizon_hours=round(observed_horizon_hours, 3),
         coverage_ratio=round(observed_horizon_hours / config.horizon_hours, 6),
-        predicted_count=len(predicted_window),
-        actual_count=len(actual_window),
-        matched_count=len(matched_pairs),
+        predicted_episode_count=len(predicted_episodes),
+        actual_episode_count=len(actual_episodes),
+        matched_episode_count=len(matched_pairs),
     )
 
 
-def _match_points(
-    predicted_points: Sequence[ForecastPoint],
-    actual_events: Sequence[FeedEvent],
+def _match_episodes(
+    predicted_episodes: Sequence[FeedEpisode],
+    actual_episodes: Sequence[FeedEpisode],
     predicted_weights: Sequence[float],
     actual_weights: Sequence[float],
     config: ScoringConfig,
 ) -> list[_MatchedPair]:
-    """Return the best one-to-one matches with optional unmatched events.
+    """Return the best one-to-one episode matches with optional unmatched events.
 
     The padded assignment matrix lets either side choose a zero-value dummy
     partner instead of being forced into a bad real-world match.
     """
-    predicted_count = len(predicted_points)
-    actual_count = len(actual_events)
+    predicted_count = len(predicted_episodes)
+    actual_count = len(actual_episodes)
     total_size = predicted_count + actual_count
 
     if total_size == 0:
@@ -190,9 +213,11 @@ def _match_points(
         cost[:predicted_count, :actual_count] = _INVALID_MATCH_COST
 
     pair_details: dict[tuple[int, int], _MatchedPair] = {}
-    for predicted_index, point in enumerate(predicted_points):
-        for actual_index, event in enumerate(actual_events):
-            error_minutes = abs((point.time - event.time).total_seconds()) / 60.0
+    for predicted_index, predicted in enumerate(predicted_episodes):
+        for actual_index, actual in enumerate(actual_episodes):
+            error_minutes = abs(
+                (predicted.time - actual.time).total_seconds()
+            ) / 60.0
             error_hours = error_minutes / 60.0
             if error_hours > config.max_match_gap_hours:
                 continue
@@ -202,7 +227,7 @@ def _match_points(
                 half_life_minutes=config.timing_credit_half_life_minutes,
             )
             # The assignment should protect early-horizon matches when pairings
-            # conflict, because the final metric values those feeds more highly.
+            # conflict, because the final metric values those episodes more highly.
             pair_credit = (
                 (predicted_weights[predicted_index] + actual_weights[actual_index])
                 / 2.0

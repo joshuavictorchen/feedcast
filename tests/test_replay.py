@@ -86,7 +86,7 @@ class ReplayScoreTests(unittest.TestCase):
 
             saved = json.loads(result_path.read_text(encoding="utf-8"))
             self.assertEqual(saved["model"]["slug"], "consensus_blend")
-            self.assertEqual(saved["result"]["score"]["actual_count"], 8)
+            self.assertEqual(saved["result"]["score"]["actual_episode_count"], 8)
 
     def test_score_with_overrides_includes_overrides(self) -> None:
         """Scoring with overrides should record them in the result."""
