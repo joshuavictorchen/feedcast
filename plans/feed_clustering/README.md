@@ -254,6 +254,8 @@ Research artifacts: `feedcast/research/feed_clustering/`
 
 ### Phase 2: Shared episode grouping function
 
+**Status: DONE**
+
 1. Create `feedcast/clustering.py` with:
    - Cluster rule constants (from Phase 1 research).
    - `FeedEpisode` dataclass (canonical time, total volume, constituent
@@ -263,6 +265,64 @@ Research artifacts: `feedcast/research/feed_clustering/`
 2. Unit tests for grouping: normal feeds, single-attachment clusters,
    multi-attachment clusters, edge cases (small anchor, back-to-back
    clusters, etc.).
+
+**Phase 2 implementation constraints (resolved before coding):**
+
+- Models keep raw histories. Phase 2 defines the shared cluster rule and
+  episode grouper; it does NOT change model inputs.
+- Inputs must already be strictly chronological. The grouper validates
+  this and fails fast on unsorted or non-increasing timestamps; it does
+  not sort internally.
+- Episode chaining is transitive across consecutive boundaries. If
+  `A -> B` and `B -> C` both satisfy the rule, all three feeds belong to
+  one episode even if `A -> C` exceeds the extension window.
+- No minimum anchor volume. A small feed may start an episode.
+- Episode timestamp = first constituent timestamp.
+- Episode volume = sum of constituent `volume_oz` values only. The
+  bottle-vs-breastfeed split on `FeedEvent` is ignored for clustering.
+- Prefer the simplest API that supports both `FeedEvent` and
+  `ForecastPoint` cleanly. Do not add extra abstraction unless a later
+  phase actually needs it.
+
+**Implementation notes:**
+
+Created `feedcast/clustering.py` with one public function and one
+dataclass. The module encodes the adopted Phase 1 rule as three
+constants (`BASE_GAP_MINUTES = 73`, `EXTENSION_GAP_MINUTES = 80`,
+`SECOND_FEED_MAX_OZ = 1.50`).
+
+**`FeedEpisode`** (frozen dataclass): `time` (first constituent's
+timestamp), `volume_oz` (sum), `feed_count`, and `constituents`
+(typed tuple of the original `FeedEvent` or `ForecastPoint` objects).
+No `gap_hours` field — consumers derive inter-episode gaps themselves.
+
+**`group_into_episodes()`** accepts `Sequence[FeedEvent]` or
+`Sequence[ForecastPoint]`. Both types share `.time` and `.volume_oz`
+by coincidence of their existing design, so no protocol or wrapper
+is needed. The function:
+- Validates strictly increasing timestamps (`ValueError` on
+  duplicates or out-of-order).
+- Walks feeds linearly, comparing each feed to the *last constituent*
+  of the current episode (not the anchor) for transitive chaining.
+- Returns one `FeedEpisode` per group. A non-clustered feed becomes
+  a single-constituent episode.
+
+**How downstream phases use this:**
+- Phase 3 (evaluation): call `group_into_episodes()` on both actuals
+  and predictions before Hungarian matching.
+- Phase 4 (consensus): collapse each model's predictions into episodes
+  before voting.
+- Phase 5 (models): models may optionally import and call the function
+  on their history to reason about episodes. No model is required to.
+- Phase 6 (reports): default to episode counts/timings in tables.
+
+**Tests:** 18 tests in `tests/test_clustering.py` covering empty input,
+singletons, simple and multi-attachment clusters, both arms of the
+boundary rule (base gap and extension), boundary inclusivity, small
+anchors, back-to-back clusters, transitive chaining beyond the
+extension window, unsorted and duplicate timestamp rejection,
+constituent preservation, and ForecastPoint inputs. Full suite: 47
+tests pass (18 new + 29 existing).
 
 ### Phase 3: Evaluation integration
 
