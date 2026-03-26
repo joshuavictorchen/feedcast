@@ -1,0 +1,271 @@
+{
+  "export_path": "exports/export_narababy_silas_20260325.csv",
+  "dataset_id": "sha256:eb791b625b6982da5b4e0d7d53e2b8ee4570b8b7db100ae3e063795cc54c5784",
+  "label_counts": {
+    "same_episode": 17,
+    "new_episode": 79,
+    "ambiguous": 0
+  },
+  "fit_boundary_count": 96,
+  "adopted_rule": {
+    "family": "adopted_rule",
+    "description": "same_episode if gap <= 73 minutes, or if gap <= 80 minutes and second feed <= 1.50 oz",
+    "fit_boundary_count": 96,
+    "predicted_same_episode_count": 17,
+    "same_episode_true_positive_count": 17,
+    "false_collapse_count": 0,
+    "missed_cluster_count": 0,
+    "total_error_count": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "false_collapse_examples": [],
+    "missed_cluster_examples": [],
+    "complexity_rank": 3,
+    "simplicity_penalty": 153.0
+  },
+  "best_gap_only_rule": {
+    "family": "gap_only",
+    "description": "same_episode if gap <= 73 minutes",
+    "fit_boundary_count": 96,
+    "predicted_same_episode_count": 16,
+    "same_episode_true_positive_count": 16,
+    "false_collapse_count": 0,
+    "missed_cluster_count": 1,
+    "total_error_count": 1,
+    "precision": 1.0,
+    "recall": 0.941176,
+    "false_collapse_examples": [],
+    "missed_cluster_examples": [
+      "73->74 03/22 16:36 4.00 -> 03/22 17:53 1.25 (77.5m)"
+    ],
+    "complexity_rank": 1,
+    "simplicity_penalty": 73.0
+  },
+  "best_by_family": {
+    "piecewise_small_second_extension": {
+      "family": "piecewise_small_second_extension",
+      "description": "same_episode if gap <= 73 minutes, or if gap <= 78 minutes and second feed <= 1.50 oz",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 17,
+      "same_episode_true_positive_count": 17,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 0,
+      "total_error_count": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [],
+      "complexity_rank": 3,
+      "simplicity_penalty": 151.0
+    },
+    "gap_only": {
+      "family": "gap_only",
+      "description": "same_episode if gap <= 73 minutes",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 16,
+      "same_episode_true_positive_count": 16,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 1,
+      "total_error_count": 1,
+      "precision": 1.0,
+      "recall": 0.941176,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [
+        "73->74 03/22 16:36 4.00 -> 03/22 17:53 1.25 (77.5m)"
+      ],
+      "complexity_rank": 1,
+      "simplicity_penalty": 73.0
+    },
+    "gap_and_small_second": {
+      "family": "gap_and_small_second",
+      "description": "same_episode if gap <= 73 minutes and second feed <= 3.00 oz",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 16,
+      "same_episode_true_positive_count": 16,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 1,
+      "total_error_count": 1,
+      "precision": 1.0,
+      "recall": 0.941176,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [
+        "73->74 03/22 16:36 4.00 -> 03/22 17:53 1.25 (77.5m)"
+      ],
+      "complexity_rank": 2,
+      "simplicity_penalty": 73.0
+    },
+    "always_new_episode": {
+      "family": "always_new_episode",
+      "description": "Always treat the next feed as a new episode.",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 0,
+      "same_episode_true_positive_count": 0,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 17,
+      "total_error_count": 17,
+      "precision": 1.0,
+      "recall": 0.0,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [
+        "4->5 03/15 13:35 3.00 -> 03/15 14:10 1.00 (35.5m)",
+        "6->7 03/15 15:49 2.00 -> 03/15 16:40 2.00 (51.3m)",
+        "8->9 03/15 19:11 2.50 -> 03/15 20:15 0.50 (64.0m)",
+        "10->11 03/15 22:10 3.25 -> 03/15 23:06 0.50 (56.5m)",
+        "15->16 03/16 10:50 2.00 -> 03/16 11:18 1.00 (27.6m)"
+      ],
+      "complexity_rank": 0,
+      "simplicity_penalty": 0.0
+    }
+  },
+  "overall_shortlist": [
+    {
+      "family": "piecewise_small_second_extension",
+      "description": "same_episode if gap <= 73 minutes, or if gap <= 78 minutes and second feed <= 1.50 oz",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 17,
+      "same_episode_true_positive_count": 17,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 0,
+      "total_error_count": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [],
+      "complexity_rank": 3,
+      "simplicity_penalty": 151.0
+    },
+    {
+      "family": "gap_only",
+      "description": "same_episode if gap <= 73 minutes",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 16,
+      "same_episode_true_positive_count": 16,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 1,
+      "total_error_count": 1,
+      "precision": 1.0,
+      "recall": 0.941176,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [
+        "73->74 03/22 16:36 4.00 -> 03/22 17:53 1.25 (77.5m)"
+      ],
+      "complexity_rank": 1,
+      "simplicity_penalty": 73.0
+    },
+    {
+      "family": "gap_and_small_second",
+      "description": "same_episode if gap <= 73 minutes and second feed <= 3.00 oz",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 16,
+      "same_episode_true_positive_count": 16,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 1,
+      "total_error_count": 1,
+      "precision": 1.0,
+      "recall": 0.941176,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [
+        "73->74 03/22 16:36 4.00 -> 03/22 17:53 1.25 (77.5m)"
+      ],
+      "complexity_rank": 2,
+      "simplicity_penalty": 73.0
+    },
+    {
+      "family": "piecewise_small_second_extension",
+      "description": "same_episode if gap <= 52 minutes, or if gap <= 78 minutes and second feed <= 1.50 oz",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 16,
+      "same_episode_true_positive_count": 16,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 1,
+      "total_error_count": 1,
+      "precision": 1.0,
+      "recall": 0.941176,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [
+        "84->85 03/23 19:26 2.00 -> 03/23 20:38 2.60 (72.1m)"
+      ],
+      "complexity_rank": 3,
+      "simplicity_penalty": 130.0
+    },
+    {
+      "family": "gap_only",
+      "description": "same_episode if gap <= 72 minutes",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 15,
+      "same_episode_true_positive_count": 15,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 2,
+      "total_error_count": 2,
+      "precision": 1.0,
+      "recall": 0.882353,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [
+        "73->74 03/22 16:36 4.00 -> 03/22 17:53 1.25 (77.5m)",
+        "84->85 03/23 19:26 2.00 -> 03/23 20:38 2.60 (72.1m)"
+      ],
+      "complexity_rank": 1,
+      "simplicity_penalty": 72.0
+    },
+    {
+      "family": "gap_and_small_second",
+      "description": "same_episode if gap <= 73 minutes and second feed <= 2.60 oz",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 15,
+      "same_episode_true_positive_count": 15,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 2,
+      "total_error_count": 2,
+      "precision": 1.0,
+      "recall": 0.882353,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [
+        "64->65 03/21 14:48 1.00 -> 03/21 15:28 3.00 (40.2m)",
+        "73->74 03/22 16:36 4.00 -> 03/22 17:53 1.25 (77.5m)"
+      ],
+      "complexity_rank": 2,
+      "simplicity_penalty": 73.2
+    },
+    {
+      "family": "piecewise_small_second_extension",
+      "description": "same_episode if gap <= 45 minutes, or if gap <= 78 minutes and second feed <= 1.50 oz",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 15,
+      "same_episode_true_positive_count": 15,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 2,
+      "total_error_count": 2,
+      "precision": 1.0,
+      "recall": 0.882353,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [
+        "6->7 03/15 15:49 2.00 -> 03/15 16:40 2.00 (51.3m)",
+        "84->85 03/23 19:26 2.00 -> 03/23 20:38 2.60 (72.1m)"
+      ],
+      "complexity_rank": 3,
+      "simplicity_penalty": 123.0
+    },
+    {
+      "family": "always_new_episode",
+      "description": "Always treat the next feed as a new episode.",
+      "fit_boundary_count": 96,
+      "predicted_same_episode_count": 0,
+      "same_episode_true_positive_count": 0,
+      "false_collapse_count": 0,
+      "missed_cluster_count": 17,
+      "total_error_count": 17,
+      "precision": 1.0,
+      "recall": 0.0,
+      "false_collapse_examples": [],
+      "missed_cluster_examples": [
+        "4->5 03/15 13:35 3.00 -> 03/15 14:10 1.00 (35.5m)",
+        "6->7 03/15 15:49 2.00 -> 03/15 16:40 2.00 (51.3m)",
+        "8->9 03/15 19:11 2.50 -> 03/15 20:15 0.50 (64.0m)",
+        "10->11 03/15 22:10 3.25 -> 03/15 23:06 0.50 (56.5m)",
+        "15->16 03/16 10:50 2.00 -> 03/16 11:18 1.00 (27.6m)"
+      ],
+      "complexity_rank": 0,
+      "simplicity_penalty": 0.0
+    }
+  ]
+}

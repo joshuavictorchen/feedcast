@@ -211,6 +211,8 @@ That should be revisited after clustering lands (Phase 4).
 
 ### Phase 1: Research — cluster labeling and episode-boundary rule
 
+**Status: DONE**
+
 1. Create `feedcast/research/feed_clustering/` with the standard layout.
 2. Create `labels.yaml` — walk through historical data in an interactive
    session with the user. User identifies clusters. Labels support
@@ -224,6 +226,31 @@ That should be revisited after clustering lands (Phase 4).
    - Outputs the derived rule and its accuracy on the labeled data.
 4. Write `findings.md` documenting the phenomenon, the labeling process,
    and the derived rule. Written so fresh agents can repeat the process.
+
+**Implementation notes:**
+
+Labeled 96 boundaries from the 20260325 export (97 bottle feeds since
+`DATA_FLOOR = 2026-03-15`): 17 `same_episode`, 79 `new_episode`,
+0 `ambiguous`.
+
+Chosen rule:
+
+    same_episode if gap <= 73 minutes,
+    or if gap <= 80 minutes and second feed <= 1.50 oz
+
+On labeled data: fp=0, fn=0. The base gap of 73 minutes is the tightest
+threshold with zero false collapses (a confirmed non-cluster at 74.8
+minutes prevents any higher base). The extension to 80 minutes for
+small second feeds captures one additional cluster at 77.5 min / 1.25 oz
+while rejecting non-clusters in that gap range (74.8 min / 2.00 oz,
+76.1 min / 3.00 oz). The 80-minute extension window provides headroom
+beyond the tightest fit of 78 minutes.
+
+Gap-only fallback (`gap <= 73`): fp=0, fn=1. Documented in findings.md
+as the conservative alternative.
+
+Research artifacts: `feedcast/research/feed_clustering/`
+(`labels.yaml`, `analysis.py`, `findings.md`, `artifacts/`).
 
 ### Phase 2: Shared episode grouping function
 

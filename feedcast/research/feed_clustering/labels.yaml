@@ -1,0 +1,605 @@
+# Feed clustering boundary labels
+#
+# Each entry is a boundary between two consecutive bottle feeds.
+# Label meanings:
+#   same_episode  — this feed continues the previous feeding episode (cluster-internal)
+#   new_episode   — this feed starts a new independent feeding episode
+#   ambiguous     — borderline case, excluded from rule fitting
+#
+# Initial guess used for bootstrap: gap < 75 minutes → same_episode
+# Status: user-corrected draft as of 2026-03-25
+#
+# Data source: exports/export_narababy_silas_20260325.csv
+# Data floor: 2026-03-15 (DATA_FLOOR in feedcast/data.py)
+# Total bottle feeds: 97
+# Total boundaries: 96
+
+boundaries:
+  # 03/15
+  - feed_a: "2026-03-15T03:04"
+    feed_b: "2026-03-15T06:13"
+    gap_minutes: 188.2
+    volumes: [3.00, 3.60]
+    label: new_episode
+
+  - feed_a: "2026-03-15T06:13"
+    feed_b: "2026-03-15T10:10"
+    gap_minutes: 237.5
+    volumes: [3.60, 3.00]
+    label: new_episode
+
+  - feed_a: "2026-03-15T10:10"
+    feed_b: "2026-03-15T13:35"
+    gap_minutes: 204.7
+    volumes: [3.00, 3.00]
+    label: new_episode
+
+  - feed_a: "2026-03-15T13:35"
+    feed_b: "2026-03-15T14:10"
+    gap_minutes: 35.5
+    volumes: [3.00, 1.00]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-15T14:10"
+    feed_b: "2026-03-15T15:49"
+    gap_minutes: 98.9
+    volumes: [1.00, 2.00]
+    label: new_episode
+
+  - feed_a: "2026-03-15T15:49"
+    feed_b: "2026-03-15T16:40"
+    gap_minutes: 51.3
+    volumes: [2.00, 2.00]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-15T16:40"
+    feed_b: "2026-03-15T19:11"
+    gap_minutes: 150.6
+    volumes: [2.00, 2.50]
+    label: new_episode
+
+  - feed_a: "2026-03-15T19:11"
+    feed_b: "2026-03-15T20:15"
+    gap_minutes: 64.0
+    volumes: [2.50, 0.50]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-15T20:15"
+    feed_b: "2026-03-15T22:10"
+    gap_minutes: 114.8
+    volumes: [0.50, 3.25]
+    label: new_episode
+
+  - feed_a: "2026-03-15T22:10"
+    feed_b: "2026-03-15T23:06"
+    gap_minutes: 56.5
+    volumes: [3.25, 0.50]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-15T23:06"
+    feed_b: "2026-03-16T01:49"
+    gap_minutes: 162.6
+    volumes: [0.50, 3.50]
+    label: new_episode
+
+  # 03/16
+  - feed_a: "2026-03-16T01:49"
+    feed_b: "2026-03-16T05:14"
+    gap_minutes: 205.2
+    volumes: [3.50, 3.00]
+    label: new_episode
+
+  - feed_a: "2026-03-16T05:14"
+    feed_b: "2026-03-16T08:42"
+    gap_minutes: 207.8
+    volumes: [3.00, 3.75]
+    label: new_episode
+
+  - feed_a: "2026-03-16T08:42"
+    feed_b: "2026-03-16T10:50"
+    gap_minutes: 128.4
+    volumes: [3.75, 2.00]
+    label: new_episode
+
+  - feed_a: "2026-03-16T10:50"
+    feed_b: "2026-03-16T11:18"
+    gap_minutes: 27.6
+    volumes: [2.00, 1.00]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-16T11:18"
+    feed_b: "2026-03-16T11:52"
+    gap_minutes: 33.9
+    volumes: [1.00, 0.50]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-16T11:52"
+    feed_b: "2026-03-16T14:02"
+    gap_minutes: 130.3
+    volumes: [0.50, 3.00]
+    label: new_episode
+
+  - feed_a: "2026-03-16T14:02"
+    feed_b: "2026-03-16T14:58"
+    gap_minutes: 55.4
+    volumes: [3.00, 0.50]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-16T14:58"
+    feed_b: "2026-03-16T15:19"
+    gap_minutes: 21.4
+    volumes: [0.50, 0.50]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-16T15:19"
+    feed_b: "2026-03-16T16:53"
+    gap_minutes: 94.5
+    volumes: [0.50, 1.50]
+    label: new_episode
+
+  - feed_a: "2026-03-16T16:53"
+    feed_b: "2026-03-16T17:34"
+    gap_minutes: 40.6
+    volumes: [1.50, 1.50]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-16T17:34"
+    feed_b: "2026-03-16T20:19"
+    gap_minutes: 164.9
+    volumes: [1.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-16T20:19"
+    feed_b: "2026-03-16T21:13"
+    gap_minutes: 53.8
+    volumes: [3.50, 1.00]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-16T21:13"
+    feed_b: "2026-03-17T00:40"
+    gap_minutes: 207.2
+    volumes: [1.00, 3.50]
+    label: new_episode
+
+  # 03/17
+  - feed_a: "2026-03-17T00:40"
+    feed_b: "2026-03-17T04:52"
+    gap_minutes: 251.8
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-17T04:52"
+    feed_b: "2026-03-17T08:17"
+    gap_minutes: 204.9
+    volumes: [3.50, 4.00]
+    label: new_episode
+
+  - feed_a: "2026-03-17T08:17"
+    feed_b: "2026-03-17T10:43"
+    gap_minutes: 146.4
+    volumes: [4.00, 2.50]
+    label: new_episode
+
+  - feed_a: "2026-03-17T10:43"
+    feed_b: "2026-03-17T12:30"
+    gap_minutes: 107.0
+    volumes: [2.50, 1.00]
+    label: new_episode
+
+  - feed_a: "2026-03-17T12:30"
+    feed_b: "2026-03-17T15:58"
+    gap_minutes: 208.3
+    volumes: [1.00, 4.00]
+    label: new_episode
+
+  - feed_a: "2026-03-17T15:58"
+    feed_b: "2026-03-17T18:01"
+    gap_minutes: 122.5
+    volumes: [4.00, 2.50]
+    label: new_episode
+
+  - feed_a: "2026-03-17T18:01"
+    feed_b: "2026-03-17T21:05"
+    gap_minutes: 183.8
+    volumes: [2.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-17T21:05"
+    feed_b: "2026-03-18T00:30"
+    gap_minutes: 205.4
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  # 03/18
+  - feed_a: "2026-03-18T00:30"
+    feed_b: "2026-03-18T04:02"
+    gap_minutes: 211.4
+    volumes: [3.50, 3.25]
+    label: new_episode
+
+  - feed_a: "2026-03-18T04:02"
+    feed_b: "2026-03-18T07:20"
+    gap_minutes: 198.2
+    volumes: [3.25, 3.10]
+    label: new_episode
+
+  - feed_a: "2026-03-18T07:20"
+    feed_b: "2026-03-18T09:51"
+    gap_minutes: 150.8
+    volumes: [3.10, 2.50]
+    label: new_episode
+
+  - feed_a: "2026-03-18T09:51"
+    feed_b: "2026-03-18T14:23"
+    gap_minutes: 272.4
+    volumes: [2.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-18T14:23"
+    feed_b: "2026-03-18T17:52"
+    gap_minutes: 208.6
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-18T17:52"
+    feed_b: "2026-03-18T20:25"
+    gap_minutes: 153.3
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-18T20:25"
+    feed_b: "2026-03-18T22:51"
+    gap_minutes: 145.9
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-18T22:51"
+    feed_b: "2026-03-19T01:25"
+    gap_minutes: 153.8
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  # 03/19
+  - feed_a: "2026-03-19T01:25"
+    feed_b: "2026-03-19T04:02"
+    gap_minutes: 157.0
+    volumes: [3.50, 2.00]
+    label: new_episode
+
+  - feed_a: "2026-03-19T04:02"
+    feed_b: "2026-03-19T07:00"
+    gap_minutes: 178.7
+    volumes: [2.00, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-19T07:00"
+    feed_b: "2026-03-19T10:14"
+    gap_minutes: 193.9
+    volumes: [3.50, 2.50]
+    label: new_episode
+
+  - feed_a: "2026-03-19T10:14"
+    feed_b: "2026-03-19T12:18"
+    gap_minutes: 123.5
+    volumes: [2.50, 1.50]
+    label: new_episode
+
+  - feed_a: "2026-03-19T12:18"
+    feed_b: "2026-03-19T15:27"
+    gap_minutes: 188.9
+    volumes: [1.50, 3.80]
+    label: new_episode
+
+  - feed_a: "2026-03-19T15:27"
+    feed_b: "2026-03-19T17:02"
+    gap_minutes: 95.5
+    volumes: [3.80, 2.00]
+    label: new_episode
+
+  - feed_a: "2026-03-19T17:02"
+    feed_b: "2026-03-19T19:35"
+    gap_minutes: 153.1
+    volumes: [2.00, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-19T19:35"
+    feed_b: "2026-03-19T21:28"
+    gap_minutes: 113.2
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-19T21:28"
+    feed_b: "2026-03-20T00:13"
+    gap_minutes: 164.5
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  # 03/20
+  - feed_a: "2026-03-20T00:13"
+    feed_b: "2026-03-20T03:15"
+    gap_minutes: 182.2
+    volumes: [3.50, 3.00]
+    label: new_episode
+
+  - feed_a: "2026-03-20T03:15"
+    feed_b: "2026-03-20T06:40"
+    gap_minutes: 205.3
+    volumes: [3.00, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-20T06:40"
+    feed_b: "2026-03-20T09:40"
+    gap_minutes: 179.4
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-20T09:40"
+    feed_b: "2026-03-20T12:37"
+    gap_minutes: 177.6
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-20T12:37"
+    feed_b: "2026-03-20T15:38"
+    gap_minutes: 180.3
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-20T15:38"
+    feed_b: "2026-03-20T18:31"
+    gap_minutes: 173.6
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-20T18:31"
+    feed_b: "2026-03-20T21:10"
+    gap_minutes: 158.7
+    volumes: [3.50, 2.75]
+    label: new_episode
+
+  - feed_a: "2026-03-20T21:10"
+    feed_b: "2026-03-21T00:27"
+    gap_minutes: 197.5
+    volumes: [2.75, 3.50]
+    label: new_episode
+
+  # 03/21
+  - feed_a: "2026-03-21T00:27"
+    feed_b: "2026-03-21T03:17"
+    gap_minutes: 169.6
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-21T03:17"
+    feed_b: "2026-03-21T06:21"
+    gap_minutes: 184.2
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-21T06:21"
+    feed_b: "2026-03-21T09:39"
+    gap_minutes: 197.6
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-21T09:39"
+    feed_b: "2026-03-21T12:02"
+    gap_minutes: 142.7
+    volumes: [3.50, 2.00]
+    label: new_episode
+
+  - feed_a: "2026-03-21T12:02"
+    feed_b: "2026-03-21T13:18"
+    gap_minutes: 76.1
+    volumes: [2.00, 3.00]
+    label: new_episode
+
+  - feed_a: "2026-03-21T13:18"
+    feed_b: "2026-03-21T14:48"
+    gap_minutes: 89.9
+    volumes: [3.00, 1.00]
+    label: new_episode
+
+  - feed_a: "2026-03-21T14:48"
+    feed_b: "2026-03-21T15:28"
+    gap_minutes: 40.2
+    volumes: [1.00, 3.00]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-21T15:28"
+    feed_b: "2026-03-21T19:02"
+    gap_minutes: 214.2
+    volumes: [3.00, 4.00]
+    label: new_episode
+
+  - feed_a: "2026-03-21T19:02"
+    feed_b: "2026-03-21T22:36"
+    gap_minutes: 213.7
+    volumes: [4.00, 4.30]
+    label: new_episode
+
+  - feed_a: "2026-03-21T22:36"
+    feed_b: "2026-03-22T02:22"
+    gap_minutes: 226.5
+    volumes: [4.30, 3.50]
+    label: new_episode
+
+  # 03/22
+  - feed_a: "2026-03-22T02:22"
+    feed_b: "2026-03-22T05:30"
+    gap_minutes: 187.8
+    volumes: [3.50, 4.50]
+    label: new_episode
+
+  - feed_a: "2026-03-22T05:30"
+    feed_b: "2026-03-22T08:53"
+    gap_minutes: 203.4
+    volumes: [4.50, 3.25]
+    label: new_episode
+
+  - feed_a: "2026-03-22T08:53"
+    feed_b: "2026-03-22T11:54"
+    gap_minutes: 181.1
+    volumes: [3.25, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-22T11:54"
+    feed_b: "2026-03-22T13:06"
+    gap_minutes: 71.6
+    volumes: [3.50, 1.00]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-22T13:06"
+    feed_b: "2026-03-22T16:36"
+    gap_minutes: 209.8
+    volumes: [1.00, 4.00]
+    label: new_episode
+
+  - feed_a: "2026-03-22T16:36"
+    feed_b: "2026-03-22T17:53"
+    gap_minutes: 77.5
+    volumes: [4.00, 1.25]
+    label: same_episode  # user-confirmed cluster
+
+  - feed_a: "2026-03-22T17:53"
+    feed_b: "2026-03-22T19:28"
+    gap_minutes: 94.4
+    volumes: [1.25, 4.50]
+    label: new_episode
+
+  - feed_a: "2026-03-22T19:28"
+    feed_b: "2026-03-22T23:27"
+    gap_minutes: 239.7
+    volumes: [4.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-22T23:27"
+    feed_b: "2026-03-23T02:30"
+    gap_minutes: 182.3
+    volumes: [3.50, 3.70]
+    label: new_episode
+
+  # 03/23
+  - feed_a: "2026-03-23T02:30"
+    feed_b: "2026-03-23T05:13"
+    gap_minutes: 163.3
+    volumes: [3.70, 4.50]
+    label: new_episode
+
+  - feed_a: "2026-03-23T05:13"
+    feed_b: "2026-03-23T08:48"
+    gap_minutes: 214.9
+    volumes: [4.50, 4.00]
+    label: new_episode
+
+  - feed_a: "2026-03-23T08:48"
+    feed_b: "2026-03-23T10:26"
+    gap_minutes: 98.1
+    volumes: [4.00, 2.00]
+    label: new_episode
+
+  - feed_a: "2026-03-23T10:26"
+    feed_b: "2026-03-23T11:41"
+    gap_minutes: 74.8
+    volumes: [2.00, 2.00]
+    label: new_episode  # user-corrected non-cluster
+
+  - feed_a: "2026-03-23T11:41"
+    feed_b: "2026-03-23T14:32"
+    gap_minutes: 171.4
+    volumes: [2.00, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-23T14:32"
+    feed_b: "2026-03-23T17:40"
+    gap_minutes: 187.8
+    volumes: [3.50, 4.75]
+    label: new_episode
+
+  - feed_a: "2026-03-23T17:40"
+    feed_b: "2026-03-23T19:26"
+    gap_minutes: 105.9
+    volumes: [4.75, 2.00]
+    label: new_episode
+
+  - feed_a: "2026-03-23T19:26"
+    feed_b: "2026-03-23T20:38"
+    gap_minutes: 72.1
+    volumes: [2.00, 2.60]
+    label: same_episode  # user-confirmed cluster
+
+  - feed_a: "2026-03-23T20:38"
+    feed_b: "2026-03-24T00:38"
+    gap_minutes: 239.6
+    volumes: [2.60, 4.50]
+    label: new_episode
+
+  # 03/24
+  - feed_a: "2026-03-24T00:38"
+    feed_b: "2026-03-24T03:44"
+    gap_minutes: 186.6
+    volumes: [4.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-24T03:44"
+    feed_b: "2026-03-24T06:10"
+    gap_minutes: 146.1
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-24T06:10"
+    feed_b: "2026-03-24T10:05"
+    gap_minutes: 235.2
+    volumes: [3.50, 3.50]
+    label: new_episode
+
+  - feed_a: "2026-03-24T10:05"
+    feed_b: "2026-03-24T12:30"
+    gap_minutes: 144.1
+    volumes: [3.50, 3.25]
+    label: new_episode
+
+  - feed_a: "2026-03-24T12:30"
+    feed_b: "2026-03-24T14:45"
+    gap_minutes: 135.0
+    volumes: [3.25, 3.00]
+    label: new_episode
+
+  - feed_a: "2026-03-24T14:45"
+    feed_b: "2026-03-24T15:35"
+    gap_minutes: 50.8
+    volumes: [3.00, 1.00]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-24T15:35"
+    feed_b: "2026-03-24T18:02"
+    gap_minutes: 147.0
+    volumes: [1.00, 4.00]
+    label: new_episode
+
+  - feed_a: "2026-03-24T18:02"
+    feed_b: "2026-03-24T20:16"
+    gap_minutes: 134.0
+    volumes: [4.00, 3.60]
+    label: new_episode
+
+  - feed_a: "2026-03-24T20:16"
+    feed_b: "2026-03-24T21:25"
+    gap_minutes: 69.1
+    volumes: [3.60, 1.00]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-24T21:25"
+    feed_b: "2026-03-24T22:15"
+    gap_minutes: 49.9
+    volumes: [1.00, 1.50]
+    label: same_episode  # gap < 75 min
+
+  - feed_a: "2026-03-24T22:15"
+    feed_b: "2026-03-25T00:34"
+    gap_minutes: 138.8
+    volumes: [1.50, 4.50]
+    label: new_episode
+
+  # 03/25
+  # Feed 97 (03/25 00:34, 4.50 oz) is the last feed — no boundary after it.
