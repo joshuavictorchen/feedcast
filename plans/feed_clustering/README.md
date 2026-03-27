@@ -501,7 +501,7 @@ pass (3 new + 50 existing).
 
 ### Phase 5: Model and agent cluster awareness
 
-**Status: PLANNING**
+**Status: IN PROGRESS**
 
 Phase 5 makes every model and agent cluster-aware. This includes
 implementation changes to models — not just documentation. Each model
@@ -723,9 +723,13 @@ behavior change).
 
 #### Sub-phase 5d: Latent Hunger
 
+**Status: DONE**
+
 Latent Hunger fits a hunger growth rate from (volume, gap) pairs.
 Cluster-internal pairs are noise: a short gap after any volume biases
-the growth rate estimate downward.
+the growth rate estimate upward (short gap in denominator → large
+implied rate), causing the model to predict shorter gaps than the real
+inter-episode rhythm.
 
 1. Run `research.py` with episode-level history. Compare growth rate
    estimates and forecast quality to raw-input results.
@@ -736,6 +740,52 @@ the growth rate estimate downward.
 5. Update `CHANGELOG.md` with `Problem` / `Research` / `Solution`
    sections documenting the sub-phase outcome.
 6. Run tests and replay verification.
+
+**Implementation notes:**
+
+Updated `research.py` with an episode-level comparison section that
+converts events to episodes, compares volume-gap statistics, and runs
+the multiplicative grid search on episode-level data. Key finding:
+all walk-forward metrics improve substantially (gap1_MAE −20%,
+fcount_MAE −19%). The optimal satiety rate shifted from 0.800 (raw)
+to 0.257 (episode).
+
+Implemented episode-level history in `model.py` using the shared
+`episodes_as_events()` helper. Raw feeds are collapsed into episodes
+before growth-rate estimation, simulation volume computation, and
+current hunger state tracking. Also re-tuned two parameters:
+
+- **SATIETY_RATE 0.386 → 0.257** — re-fitted on episode-level data.
+  The lower rate fits the real volume-gap relationship without cluster
+  inflation. The surface is shallow (0.012h gap1_MAE difference from
+  the old value) but consistently confirmed by replay cross-sweep.
+- **RECENCY_HALF_LIFE_HOURS 48 → 168** — with cluster noise removed,
+  the growth rate estimate benefits from broader averaging across the
+  full lookback window. Control experiment confirmed the interaction:
+  raw data degrades at longer half-lives while episode data improves.
+  168h = LOOKBACK_DAYS × 24, giving 50% weight at the lookback
+  boundary.
+
+Diagnostics keys renamed: `recent_events_in_window` →
+`recent_episodes_in_window`, `fit_events_used` → `fit_episodes_used`.
+
+**Replay gate (20260325 export, 03/24→03/25 window):**
+
+| Metric | Baseline (raw) | Episode-level | Delta |
+|--------|----------------|---------------|-------|
+| Headline | 73.351 | 78.471 | +5.120 |
+| Count F1 | 94.242 | 100.0 | +5.758 |
+| Timing | 57.091 | 61.576 | +4.485 |
+| Episodes | 10/9/9 | 9/9/9 | perfect |
+
+**Tests:** 4 new tests in `tests/test_latent_hunger.py`:
+`test_cluster_pairs_excluded_from_growth_rate` (cluster-internal gaps
+absent from fit details after episode conversion),
+`test_episode_volume_used_for_hunger_reset` (episode summed volume
+produces deeper reset), `test_diagnostics_use_episode_keys`
+(diagnostics use episode naming), `test_satiety_rate_is_episode_tuned`
+(SATIETY_RATE is 0.257). Full suite: 61 tests pass (4 new + 57
+existing). `design.md`, `methodology.md`, `CHANGELOG.md` updated.
 
 #### Sub-phase 5e: Survival Hazard
 

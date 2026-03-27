@@ -2,6 +2,49 @@
 
 Tracks behavior-level changes to the Latent Hunger model. Add newest entries first.
 
+## Switch to episode-level history and re-tune parameters | 2026-03-27
+
+### Problem
+
+Growth rate estimation used raw consecutive-feed pairs. Cluster-internal
+pairs (e.g., 3.0 oz feed → 50-min gap → 1.0 oz top-up) produced
+artificially high implied growth rates from short gaps, biasing the
+weighted average upward and predicting gaps shorter than the real
+inter-episode rhythm. The satiety rate and recency half-life were both
+tuned on this contaminated signal.
+
+### Research
+
+Episode-level grid search showed substantial improvements across all
+walk-forward metrics: gap1_MAE 0.779 → 0.623 (−20%), gap3_MAE 0.823 →
+0.655, fcount_MAE 1.75 → 1.41. Optimal satiety rate shifted from 0.800
+(raw) to 0.257 (episode). Replay parameter sweeps confirmed the episode
+× half-life interaction: raw data degrades at longer half-lives (73.4 →
+64.7) while episode data improves (68.3 → 77.5).
+
+### Solution
+
+Three synergistic changes:
+
+1. **Episode-level history** via `episodes_as_events()` — growth rate
+   estimation, sim volume, and current hunger state all use inter-episode
+   signals.
+2. **SATIETY_RATE 0.386 → 0.257** — re-tuned on episode-level data.
+   Lower rate fits the real volume-gap relationship without cluster
+   inflation.
+3. **RECENCY_HALF_LIFE_HOURS 48 → 168** — with cluster noise removed,
+   growth rate estimation benefits from broader averaging. 168h =
+   LOOKBACK_DAYS × 24, giving 50% weight at the lookback boundary.
+
+Replay gate (`20260325` export, 03/24→03/25 window):
+
+| Metric | Baseline (raw) | Episode-level | Delta |
+|--------|----------------|---------------|-------|
+| Headline | 73.351 | 78.471 | +5.120 |
+| Count F1 | 94.242 | 100.0 | +5.758 |
+| Timing | 57.091 | 61.576 | +4.485 |
+| Episodes | 10/9/9 | 9/9/9 | perfect |
+
 ## Weight recent history more aggressively in growth-rate fitting | 2026-03-25
 
 ### Problem

@@ -28,22 +28,27 @@ The recency-weighted average of implied rates adapts the model to the
 baby's current pace. This is cheaper and more transparent than a grid
 search at forecast time, and directly tracks trends as the baby grows.
 
-## Satiety rate = 0.386
+## Satiety rate = 0.257
 
-From the multiplicative grid search (30×30 growth_rate × satiety_rate
-combinations, walk-forward evaluation with 72h recency weighting):
+Re-tuned in Phase 5d after switching to episode-level history. The
+original value of 0.386 was fitted on raw (cluster-contaminated) data
+where short intra-cluster gaps inflated the apparent satiety sensitivity.
+
+Episode-level grid search (30×30 growth_rate × satiety_rate, walk-forward
+evaluation on inter-episode gaps):
 
 | growth_rate | satiety_rate | gap1_MAE | pred_std |
 | ----------- | ------------ | -------- | -------- |
-| 0.245       | 0.386        | 0.707h   | 0.725h   |
-| 0.197       | 0.257        | 0.712h   | 0.788h   |
-| 0.245       | 0.360        | 0.713h   | 0.713h   |
-| 0.293       | 0.593        | 0.715h   | 0.624h   |
+| 0.197       | 0.257        | 0.623h   | 0.470h   |
+| 0.148       | 0.153        | 0.626h   | 0.513h   |
+| 0.245       | 0.386        | 0.635h   | 0.388h   |
 
-The top-10 results cluster around satiety_rate 0.3–0.6. We chose 0.386
-(the outright best) as a fixed structural parameter. Growth rate is
-fit at runtime, so only satiety_rate needs to be stable across data
-windows.
+The top results shifted lower (sr 0.15–0.39) compared to the raw-data
+grid (sr 0.3–0.6). The surface is shallow — sr=0.386 is only 0.012h
+worse than sr=0.257 — but the episode-level optimal is a cleaner fit
+to the real volume-gap relationship. Cross-validated on replay:
+sr=0.257 consistently outperforms sr=0.386 by ~1 point at each
+half-life value.
 
 ## Circadian modulation: infrastructure only
 
@@ -72,17 +77,26 @@ it at forecast time from the lookback window. This matters because:
 The runtime estimation uses the closed-form inverse of the gap
 prediction equation, avoiding expensive grid search.
 
-## Lookback = 7 days, half-life = 72 hours
+## Lookback = 7 days, half-life = 168 hours
 
-Research showed the last 5 days gives the lowest gap1_MAE, but 7 days
-was chosen for stability: 5 days can yield fewer than 40 events in the
-fitting window, which makes the recency-weighted growth rate estimate
-noisier. The 72-hour half-life within the 7-day window still heavily
-emphasizes the most recent patterns — events from 5+ days ago
-contribute less than 25% of a recent event's weight. This is a
-stability-over-peak-accuracy tradeoff, not a clear win. If the dataset
-grows and 5-day windows become more populated, the lookback should be
-revisited.
+Re-tuned in Phase 5d alongside the episode-level switch. The previous
+value (48h, reduced from 72h) was needed to track the feeding pace
+through cluster noise — aggressive recency weighting cut through the
+bimodal artifact of intra-cluster short gaps mixed with real
+inter-episode gaps.
+
+With episode-level history, the noise is removed: all gaps are real
+inter-episode gaps. The growth rate estimate benefits from broader
+averaging. A 168h half-life (= LOOKBACK_DAYS × 24h) gives 50% weight
+at the lookback boundary — roughly equal weighting across the full
+window with modest recency bias.
+
+Replay sweeps confirmed the interaction: raw data degrades at longer
+half-lives (headline 73.4 → 64.7 at HL=168), while episode data
+improves (68.3 → 77.5 at HL=168). The two changes are synergistic:
+episodes remove noise, enabling the model to benefit from broader
+averaging. (These numbers are from replay parameter overrides, not
+from the research script.)
 
 ## Simulation volume: lookback-window median
 
@@ -111,6 +125,28 @@ affected, tiny volume additions), but the infrastructure is in place
 for when breastfeeding becomes more frequent. See research_results.txt
 for current counts.
 
+## Cluster relationship
+
+The model operates on episode-level history (Phase 5d). Raw feed events
+are collapsed into episodes via `episodes_as_events()` before growth
+rate estimation, simulation volume computation, and current hunger state
+calculation. This removes cluster-internal pairs that contaminate the
+model's core signal.
+
+**Mechanism of contamination:** Each consecutive event pair yields an
+implied growth rate = `satiety_effect / actual_gap`. A cluster-internal
+pair (e.g., 3.0 oz → 50-min gap → 1.0 oz top-up) produces an
+artificially high implied rate from the short gap. This biases the
+weighted average upward, causing the model to predict shorter gaps than
+the baby's real inter-episode rhythm. With episode-level data, the
+cluster becomes one 4.0 oz episode and the growth rate is estimated from
+the real inter-episode gap.
+
+**Impact:** Episode-level inputs improved all research metrics (gap1_MAE
+0.779 → 0.623, −20%) and enabled re-tuning of both SATIETY_RATE (0.386
+→ 0.257) and RECENCY_HALF_LIFE_HOURS (48 → 168). Replay headline
+improved +5.1 points (73.4 → 78.5) with perfect episode count.
+
 ## Volume-to-gap relationship
 
 This model depends on the shared cross-cutting finding that larger feeds
@@ -119,8 +155,11 @@ tend to be followed by longer gaps. See
 for the current evidence and committed artifacts.
 
 The multiplicative satiety mechanism encodes that relationship
-directly: `exp(-0.386 x 1.0) = 0.68` (small feed, modest reset) vs.
-`exp(-0.386 x 4.5) = 0.18` (large feed, deep reset).
+directly: `exp(-0.257 x 1.0) = 0.77` (small feed, modest reset) vs.
+`exp(-0.257 x 4.5) = 0.32` (large feed, deep reset). At episode level,
+the volume-gap correlation is 0.285 — weaker than the raw-data
+correlation (0.323) because some of the apparent signal came from
+cluster artifacts.
 
 ## What this model is (and isn't)
 

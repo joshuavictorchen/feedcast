@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
+from feedcast.clustering import episodes_as_events
 from feedcast.data import (
     FeedEvent,
     Forecast,
@@ -37,9 +38,10 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 HUNGER_THRESHOLD = 1.0
 
 # Multiplicative satiety rate: hunger_after = threshold * exp(-rate * volume).
-# Determined by grid search in research.py. Higher values mean volume has
-# a stronger effect on hunger reset.
-SATIETY_RATE = 0.386
+# Re-tuned on episode-level data (Phase 5d): 0.386 → 0.257. With cleaner
+# inter-episode volumes, a lower rate fits the real volume-gap relationship
+# without the upward bias from cluster-internal short gaps.
+SATIETY_RATE = 0.257
 
 # How many days of recent history to use for growth rate estimation.
 LOOKBACK_DAYS = 7
@@ -49,9 +51,11 @@ LOOKBACK_DAYS = 7
 MIN_FIT_GAPS = 5
 
 # Recency half-life for weighting events in growth rate estimation.
-# Latest-24h replay tuning favored 48h over 72h, which better tracks the
-# current pace when feeding cadence is shifting.
-RECENCY_HALF_LIFE_HOURS = 48
+# Tuned alongside the episode-level switch (Phase 5d): 48 → 168. With
+# cluster noise removed, the growth rate estimate benefits from broader
+# averaging across the full lookback window. 168h = LOOKBACK_DAYS × 24,
+# giving 50% weight at the lookback boundary.
+RECENCY_HALF_LIFE_HOURS = 168
 
 # Circadian modulation of the hunger growth rate. amplitude=0 means no
 # modulation (constant growth). Research found amplitude=0.0 optimal for
@@ -250,8 +254,12 @@ def forecast_latent_hunger(
     Raises:
         ForecastUnavailable: If there are too few recent events.
     """
-    # Filter to events before cutoff.
-    events = [e for e in history if e.time <= cutoff]
+    # Collapse raw feeds into episodes so growth-rate estimation, sim
+    # volume, and current hunger state all use inter-episode signals.
+    # Cluster-internal pairs (short gaps after top-ups) bias the growth
+    # rate upward and the sim volume downward.
+    raw_events = [e for e in history if e.time <= cutoff]
+    events = episodes_as_events(raw_events)
     if len(events) < MIN_FIT_GAPS + 1:
         raise ForecastUnavailable(
             f"Need at least {MIN_FIT_GAPS + 1} events, have {len(events)}"
@@ -354,8 +362,8 @@ def _build_diagnostics(
         "sim_volume_oz": round(sim_volume, 2),
         "current_hunger": round(current_hunger, 4),
         "elapsed_since_last_hours": round(elapsed_since_last, 3),
-        "recent_events_in_window": len(recent_events),
-        "fit_events_used": len(fit_details),
+        "recent_episodes_in_window": len(recent_events),
+        "fit_episodes_used": len(fit_details),
         "implied_growth_rate_range": {
             "min": round(min(implied_rates), 4),
             "max": round(max(implied_rates), 4),

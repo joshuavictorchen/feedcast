@@ -23,6 +23,7 @@ from pathlib import Path
 
 import numpy as np
 
+from feedcast.clustering import episodes_as_events
 from feedcast.data import (
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     build_feed_events,
@@ -718,39 +719,118 @@ def main() -> None:
     log()
 
     # ================================================================
-    # SECTION 10: Summary
+    # SECTION 10: Episode-level comparison
+    # ================================================================
+    log("=== EPISODE-LEVEL COMPARISON ===")
+    log()
+
+    episode_events = episodes_as_events(events)
+    log(f"Raw events: {len(events)}, Episodes: {len(episode_events)} "
+        f"({len(events) - len(episode_events)} feeds collapsed)")
+    log()
+
+    # Episode-level volume-gap statistics.
+    ep_volumes, ep_gaps = [], []
+    for i in range(len(episode_events) - 1):
+        ep_volumes.append(episode_events[i].volume_oz)
+        ep_gaps.append(
+            (episode_events[i + 1].time - episode_events[i].time).total_seconds() / 3600
+        )
+    ep_volumes_arr = np.array(ep_volumes)
+    ep_gaps_arr = np.array(ep_gaps)
+
+    ep_correlation = float(np.corrcoef(ep_volumes_arr, ep_gaps_arr)[0, 1])
+    log(f"Volume-gap correlation: {ep_correlation:.3f} (raw: {correlation:.3f})")
+    log(f"Episode volume: mean={ep_volumes_arr.mean():.2f} std={ep_volumes_arr.std():.2f} "
+        f"min={ep_volumes_arr.min():.2f} max={ep_volumes_arr.max():.2f}")
+    log(f"Episode gaps:   mean={ep_gaps_arr.mean():.2f} std={ep_gaps_arr.std():.2f} "
+        f"min={ep_gaps_arr.min():.2f} max={ep_gaps_arr.max():.2f}")
+    log()
+
+    # Episode-level multiplicative grid search.
+    log("Episode-level multiplicative grid search:")
+    best_ep_mult = {"gap1_mae": float("inf")}
+    best_ep_params = (0.0, 0.0)
+    all_ep_results = []
+    for gr in growth_rates:
+        for sr in satiety_values:
+            result = _evaluate_multiplicative(episode_events, gr, sr)
+            all_ep_results.append((gr, sr, result))
+            if result["gap1_mae"] < best_ep_mult["gap1_mae"]:
+                best_ep_mult = result
+                best_ep_params = (gr, sr)
+
+    gr_ep, sr_ep = best_ep_params
+    log(f"  Best: gr={gr_ep:.3f} sr={sr_ep:.3f}")
+    log(f"  gap1_MAE={best_ep_mult['gap1_mae']:.3f}h  gap3_MAE={best_ep_mult['gap3_mae']:.3f}h  "
+        f"fcount_MAE={best_ep_mult['feed_count_mae']:.2f}  pred_std={best_ep_mult['pred_std']:.3f}h")
+    log()
+
+    log("Top 5 episode-level parameter sets:")
+    sorted_ep = sorted(all_ep_results, key=lambda x: x[2]["gap1_mae"])
+    for gr, sr, res in sorted_ep[:5]:
+        log(f"  gr={gr:.3f} sr={sr:.3f}: "
+            f"gap1={res['gap1_mae']:.3f}h  gap3={res['gap3_mae']:.3f}h  "
+            f"fcount={res['feed_count_mae']:.2f}  pstd={res['pred_std']:.3f}h")
+    log()
+
+    log("Comparison (raw vs episode-level):")
+    log(f"  gap1_MAE:     {best_mult['gap1_mae']:.3f}h vs {best_ep_mult['gap1_mae']:.3f}h")
+    log(f"  gap3_MAE:     {best_mult['gap3_mae']:.3f}h vs {best_ep_mult['gap3_mae']:.3f}h")
+    log(f"  fcount_MAE:   {best_mult['feed_count_mae']:.2f} vs {best_ep_mult['feed_count_mae']:.2f}")
+    log(f"  pred_std:     {best_mult['pred_std']:.3f}h vs {best_ep_mult['pred_std']:.3f}h")
+    log(f"  Best sr:      {sr_m:.3f} vs {sr_ep:.3f}")
+    log()
+
+    # Episode-level sim volume.
+    ep_all_vols = np.array([e.volume_oz for e in episode_events])
+    log(f"Episode median volume: {float(np.median(ep_all_vols)):.2f} oz "
+        f"(raw: {global_median:.2f} oz)")
+    log()
+
+    # ================================================================
+    # SECTION 11: Summary
     # ================================================================
     log("=== FINAL SUMMARY ===")
     log()
-    log("Grid search best (exploratory):")
+    log("--- Raw-data exploratory grid search ---")
     log(f"  growth_rate = {gr_j:.4f}")
     log(f"  satiety_rate = {sr_j:.4f}")
     log(f"  circadian_amp = {amp_j:.3f}")
     log(f"  circadian_phase = {phase_j:.1f}h")
     log(f"  gap1_MAE = {best_joint['gap1_mae']:.3f}h")
-    log(f"  gap3_MAE = {best_joint['gap3_mae']:.3f}h")
-    log(f"  fcount_MAE = {best_joint['feed_count_mae']:.2f}")
-    log(f"  pred_std = {best_joint['pred_std']:.3f}h")
     log()
-    log("Model implementation uses:")
-    log(f"  satiety_rate = {SATIETY_RATE} (fixed from initial grid search)")
-    log(f"  growth_rate = estimated at runtime from recent events")
+    log("--- Episode-level grid search (adopted) ---")
+    log(f"  growth_rate = {gr_ep:.4f}")
+    log(f"  satiety_rate = {sr_ep:.4f}")
+    log(f"  gap1_MAE = {best_ep_mult['gap1_mae']:.3f}h")
+    log(f"  gap3_MAE = {best_ep_mult['gap3_mae']:.3f}h")
+    log(f"  fcount_MAE = {best_ep_mult['feed_count_mae']:.2f}")
+    log(f"  pred_std = {best_ep_mult['pred_std']:.3f}h")
+    log()
+    log("--- Model implementation (Phase 5d) ---")
+    log(f"  history = episode-level via episodes_as_events()")
+    log(f"  satiety_rate = {SATIETY_RATE} (re-tuned on episode-level data)")
+    log(f"  growth_rate = estimated at runtime from recent episodes")
+    log(f"  recency_half_life = {RECENCY_HALF_LIFE_HOURS}h (re-tuned alongside episodes)")
     log(f"  circadian_amplitude = 0.0 (infrastructure present, not active)")
-    log(f"  sim_volume = lookback-window median (adapts to recent trend)")
+    log(f"  sim_volume = lookback-window median of episodes")
     log()
-    log("Note: grid search satiety_rate may differ from model.py because")
-    log("the grid explores the full parameter space while the model fixes")
-    log("satiety_rate and fits only growth_rate at runtime. The model's")
-    log("SATIETY_RATE was chosen from the initial grid search run.")
+    log("Note: the raw-data grid search is preserved above for historical")
+    log("reference. The model operates on episode-level history, so the")
+    log("episode-level grid search is the relevant baseline. The half-life")
+    log("was re-tuned via replay sweeps (not in this script) after the")
+    log("episode switch revealed that cleaner data benefits from broader")
+    log("averaging.")
     log()
     log("Key findings:")
     log("  1. Additive satiety collapses to constant-gap predictor (pred_std near 0)")
     log("  2. Multiplicative satiety produces meaningful volume-sensitive variation")
-    log("  3. Circadian modulation captures real day/night structure (~1.3h spread)")
-    log("     but adds no benefit on top of multiplicative volume sensitivity")
-    log("  4. Volume-to-gap correlation is modest (r=0.35) but real")
-    log("  5. Breastfeed merge has negligible impact on current data")
-    log("  6. Lookback-window median volume adapts to growth trend")
+    log("  3. Circadian modulation adds no benefit on top of volume sensitivity")
+    log("  4. Episode-level data improves all walk-forward metrics (~20%)")
+    log("  5. Optimal satiety_rate shifts lower on episode data (0.257 vs 0.800)")
+    log("  6. Volume-gap correlation is weaker at episode level (cluster artifact removed)")
+    log("  7. Breastfeed merge has negligible impact on current data")
 
     # Save results.
     results_path = OUTPUT_DIR / "research_results.txt"
