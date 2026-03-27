@@ -17,6 +17,7 @@ os.environ.setdefault("MPLCONFIGDIR", str(_mpl_config_dir.resolve()))
 import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import matplotlib.ticker as mticker  # noqa: E402
+from matplotlib.patches import Rectangle  # noqa: E402
 import numpy as np  # noqa: E402
 
 from feedcast.data import (
@@ -28,19 +29,19 @@ from feedcast.data import (
     hour_of_day,
 )
 
-BLUE = "#007AFF"
-ORANGE = "#FF9500"
+BLUE = "#4A8EC2"
+ORANGE = "#D98B3A"
 RED = "#FF3B30"
 GREEN = "#34C759"
 PURPLE = "#AF52DE"
 TEAL = "#5AC8FA"
-BG = "#FAFAFA"
-SEPARATOR = "#E5E5EA"
-LABEL_SECONDARY = "#86868B"
-ORANGE_SOFT = "#FFCC80"
-CARD = "#FFFFFF"
-NIGHT_FILL = "#F0F0F5"
-PROJ_FILL = "#FFF7ED"
+BG = "#EAEAEF"
+SEPARATOR = "#C8C8CE"
+LABEL_SECONDARY = "#78787E"
+ORANGE_SOFT = "#E8CDA0"
+CARD = "#F0F0F4"
+NIGHT_FILL = "#E0E0E6"
+PROJ_FILL = "#EDE8E1"
 DISPLAY_DAYS = 7
 
 MODEL_COLORS = {
@@ -205,6 +206,17 @@ def write_schedule_plot(
     while current_date <= display_end.date():
         all_dates.append(current_date)
         current_date += timedelta(days=1)
+
+    # Remove leading/trailing columns that have no data
+    dates_with_data = (
+        {e.time.date() for e in events if display_start <= e.time <= cutoff}
+        | {p.time.date() for p in forecast_points}
+    )
+    while all_dates and all_dates[-1] not in dates_with_data:
+        all_dates.pop()
+    while all_dates and all_dates[0] not in dates_with_data:
+        all_dates.pop(0)
+
     date_to_x = {date: index for index, date in enumerate(all_dates)}
     projected_dates = {point.time.date() for point in forecast_points}
 
@@ -218,60 +230,19 @@ def write_schedule_plot(
             zorder=0,
             linewidth=0,
         )
-        axis.axvspan(
-            x_position - 0.42,
-            x_position + 0.42,
-            ymin=1 - 6 / 24,
-            ymax=1.0,
-            color=NIGHT_FILL,
-            zorder=1,
-            linewidth=0,
-        )
-        axis.axvspan(
-            x_position - 0.42,
-            x_position + 0.42,
-            ymin=0,
-            ymax=3 / 24,
-            color=NIGHT_FILL,
-            zorder=1,
-            linewidth=0,
-        )
+        # Night bands in data coordinates (immune to ylim padding changes)
+        axis.add_patch(Rectangle(
+            (x_position - 0.42, -0.5), 0.84, 6.5,
+            color=NIGHT_FILL, zorder=1, linewidth=0,
+        ))
+        axis.add_patch(Rectangle(
+            (x_position - 0.42, 21), 0.84, 3.5,
+            color=NIGHT_FILL, zorder=1, linewidth=0,
+        ))
 
     for x_position in range(len(all_dates) + 1):
         axis.axvline(
             x_position - 0.5, color=SEPARATOR, linewidth=0.5, alpha=0.5, zorder=2
-        )
-
-    if cutoff.date() in date_to_x:
-        now_x = date_to_x[cutoff.date()]
-        now_y = hour_of_day(cutoff)
-        axis.plot(
-            [now_x - 0.42, now_x + 0.42],
-            [now_y, now_y],
-            color=RED,
-            linewidth=1.2,
-            alpha=0.5,
-            zorder=9,
-        )
-        axis.scatter(
-            [now_x],
-            [now_y],
-            color="white",
-            s=50,
-            zorder=10,
-            edgecolors=RED,
-            linewidths=1.5,
-        )
-        axis.annotate(
-            "NOW",
-            (now_x + 0.42, now_y),
-            fontsize=6.5,
-            color=RED,
-            fontweight="bold",
-            va="center",
-            ha="left",
-            xytext=(4, 0),
-            textcoords="offset points",
         )
 
     history = [event for event in events if display_start <= event.time <= cutoff]
@@ -334,7 +305,7 @@ def write_schedule_plot(
         edgecolors="white",
         linewidths=0.8,
         zorder=6,
-        marker="D",
+        marker="o",
     )
     label_color = _darken_color(forecast_color)
     for index, point in enumerate(forecast_points):
@@ -360,16 +331,34 @@ def write_schedule_plot(
         fontsize=9,
         fontweight="medium",
     )
-    axis.set_ylim(24, 0)
-    axis.set_yticks(range(0, 25, 3))
-    axis.set_yticklabels([_format_hour(hour) for hour in range(0, 25, 3)], fontsize=9)
-    axis.yaxis.set_minor_locator(mticker.MultipleLocator(1))
-    axis.grid(True, which="major", axis="y", alpha=0.2, color=SEPARATOR, linewidth=0.5)
-    axis.grid(True, which="minor", axis="y", alpha=0.08, color=SEPARATOR, linewidth=0.3)
+    axis.set_ylim(24.5, -0.5)
+    axis.set_yticks(range(0, 25))
+    axis.set_yticklabels([_format_hour(hour) for hour in range(0, 25)], fontsize=7.5)
+    axis.grid(
+        True, which="major", axis="y",
+        alpha=0.6, color="#A0A0A8", linewidth=0.5, linestyle=":",
+    )
+    # Emphasize 3-hour tick labels for scannability
+    for index, tick_label in enumerate(axis.get_yticklabels()):
+        if index % 3 == 0:
+            tick_label.set_fontsize(8.5)
+            tick_label.set_fontweight("medium")
+        else:
+            tick_label.set_alpha(0.6)
     axis.tick_params(axis="both", which="both", length=0)
     axis.set_xlim(-0.55, len(all_dates) - 0.45)
     for spine in axis.spines.values():
         spine.set_visible(False)
+
+    # Compact hour labels on every other column separator for mid-chart readability
+    separator_positions = [i + 0.5 for i in range(0, len(all_dates) - 1, 2)]
+    for x_sep in separator_positions:
+        for hour in range(0, 25, 3):
+            axis.text(
+                x_sep, hour, _short_hour(hour),
+                fontsize=5.5, color="#A0A0A6", ha="center", va="center",
+                fontweight="medium", zorder=2,
+            )
 
     figure.text(
         0.04,
@@ -381,83 +370,37 @@ def write_schedule_plot(
         va="top",
         ha="left",
     )
-    figure.text(
-        0.04,
-        0.93,
-        f"{subtitle} · cutoff {cutoff.strftime('%B %-d, %Y %-I:%M %p')}",
-        fontsize=10.5,
-        color=LABEL_SECONDARY,
-        va="top",
-        ha="left",
+    # Subtitle with inline key: Model · cutoff Time · ● Recorded ● Projected
+    from matplotlib.offsetbox import AnchoredOffsetbox, DrawingArea, HPacker, TextArea
+    from matplotlib.patches import Circle
+
+    subtitle_str = (
+        f"{subtitle} · cutoff {cutoff.strftime('%B %-d, %Y %-I:%M %p')}  ·  "
     )
-
-    from matplotlib.lines import Line2D
-
-    legend_items = [
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="none",
-            markerfacecolor=BLUE,
-            markersize=9,
-            alpha=0.7,
-            markeredgecolor="white",
-            markeredgewidth=0.5,
-            label="Recorded",
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="D",
-            color="none",
-            markerfacecolor=forecast_color,
-            markersize=8,
-            alpha=0.85,
-            markeredgecolor="white",
-            markeredgewidth=0.5,
-            label="Projected",
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="none",
-            markerfacecolor="white",
-            markersize=7,
-            markeredgecolor=RED,
-            markeredgewidth=1.2,
-            label="Now",
-        ),
+    key_items: list = [
+        TextArea(subtitle_str, textprops=dict(fontsize=10.5, color=LABEL_SECONDARY)),
     ]
-    for ounces in [1, 3, 5]:
-        legend_items.append(
-            Line2D(
-                [0],
-                [0],
-                marker="o",
-                color="none",
-                markerfacecolor="#D1D1D6",
-                markeredgecolor="#C7C7CC",
-                markersize=np.sqrt(_volume_to_marker_size(ounces)) / 3.0,
-                markeredgewidth=0.3,
-                label=f"{ounces} fl oz",
-            )
+    for color, label in [(BLUE, "Recorded"), (forecast_color, "Projected")]:
+        dot = DrawingArea(8, 10)
+        dot.add_artist(Circle((4, 5), 3.5, fc=color, ec="white", lw=0.5, alpha=0.85))
+        key_items.append(dot)
+        key_items.append(
+            TextArea(f" {label}   ", textprops=dict(fontsize=10, color=LABEL_SECONDARY))
         )
-    axis.legend(
-        handles=legend_items,
-        loc="lower center",
-        bbox_to_anchor=(0.5, -0.09),
-        ncol=6,
-        fontsize=8.5,
+    box = HPacker(children=key_items, align="center", pad=0, sep=1)
+    axis.add_artist(AnchoredOffsetbox(
+        loc="upper left",
+        child=box,
+        bbox_to_anchor=(0.04, 0.935),
+        bbox_transform=figure.transFigure,
         frameon=False,
-        columnspacing=2.5,
-        handletextpad=0.4,
-    )
+        pad=0,
+    ))
 
-    figure.subplots_adjust(top=0.89, bottom=0.10, left=0.06, right=0.96)
+    figure.subplots_adjust(top=0.88, bottom=0.10, left=0.07, right=0.95)
     figure.savefig(
-        output_path, dpi=200, bbox_inches="tight", facecolor=BG, edgecolor="none"
+        output_path, dpi=200, bbox_inches="tight",
+        facecolor=BG, edgecolor="none", pad_inches=0.4,
     )
     plt.close(figure)
 
@@ -503,6 +446,15 @@ def _format_hour(hour: int) -> str:
     if hour == 12:
         return "12 PM"
     return f"{hour} AM" if hour < 12 else f"{hour - 12} PM"
+
+
+def _short_hour(hour: int) -> str:
+    """Compact hour label for between-column markers (e.g. '6a', '12p')."""
+    if hour in {0, 24}:
+        return "12a"
+    if hour == 12:
+        return "12p"
+    return f"{hour}a" if hour < 12 else f"{hour - 12}p"
 
 
 def _darken_color(hex_color: str) -> str:
