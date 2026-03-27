@@ -57,7 +57,7 @@ trajectories with unusual event counts.
 ## Cluster relationship
 
 The model currently uses raw feed history, including cluster-internal
-feeds. Research (Phase 5c) showed episode-level history substantially
+feeds. Research showed episode-level history substantially
 improves feature quality and neighbor retrieval accuracy, but the
 episode model under-predicts because episode-level trajectories are
 shorter. The median trajectory length (which controls how many
@@ -69,7 +69,7 @@ time-of-day features (the dominant similarity signal) are unaffected
 by clustering, and the gap/volume features, while noisier with raw
 feeds, still produce acceptable neighbor matches. Evaluation
 collapses both predictions and actuals into episodes before scoring
-(Phase 3), so the model is not penalized for predicting cluster
+so the model is not penalized for predicting cluster
 internal structure.
 
 A future path: decouple the trajectory length decision from

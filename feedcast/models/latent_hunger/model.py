@@ -38,9 +38,9 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 HUNGER_THRESHOLD = 1.0
 
 # Multiplicative satiety rate: hunger_after = threshold * exp(-rate * volume).
-# Re-tuned on episode-level data (Phase 5d): 0.386 → 0.257. With cleaner
-# inter-episode volumes, a lower rate fits the real volume-gap relationship
-# without the upward bias from cluster-internal short gaps.
+# Fitted on episode-level data via grid search in research.py. With episode-
+# level volumes, a lower rate fits the real volume-gap relationship without
+# the upward bias from cluster-internal short gaps.
 SATIETY_RATE = 0.257
 
 # How many days of recent history to use for growth rate estimation.
@@ -51,10 +51,9 @@ LOOKBACK_DAYS = 7
 MIN_FIT_GAPS = 5
 
 # Recency half-life for weighting events in growth rate estimation.
-# Tuned alongside the episode-level switch (Phase 5d): 48 → 168. With
-# cluster noise removed, the growth rate estimate benefits from broader
-# averaging across the full lookback window. 168h = LOOKBACK_DAYS × 24,
-# giving 50% weight at the lookback boundary.
+# Set to LOOKBACK_DAYS × 24 so the oldest events in the window get ~50%
+# weight. Broad averaging works because episode-level history is clean —
+# all gaps are real inter-episode gaps, not cluster-internal noise.
 RECENCY_HALF_LIFE_HOURS = 168
 
 # Circadian modulation of the hunger growth rate. amplitude=0 means no

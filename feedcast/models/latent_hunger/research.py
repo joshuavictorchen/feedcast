@@ -808,7 +808,7 @@ def main() -> None:
     log(f"  fcount_MAE = {best_ep_mult['feed_count_mae']:.2f}")
     log(f"  pred_std = {best_ep_mult['pred_std']:.3f}h")
     log()
-    log("--- Model implementation (Phase 5d) ---")
+    log("--- Model implementation (current) ---")
     log(f"  history = episode-level via episodes_as_events()")
     log(f"  satiety_rate = {SATIETY_RATE} (re-tuned on episode-level data)")
     log(f"  growth_rate = estimated at runtime from recent episodes")

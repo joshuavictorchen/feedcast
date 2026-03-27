@@ -1,7 +1,7 @@
 Export: exports/export_narababy_silas_20260325.csv
 Dataset: sha256:eb791b625b6982da5b4e0d7d53e2b8ee4570b8b7db100ae3e063795cc54c5784
 Cutoff: 2026-03-25 00:34:39
-Run: 2026-03-27T00:53:28
+Run: 2026-03-27T01:03:56
 Events (with BF merge): 97
 Events (bottle only):   97
 
@@ -202,7 +202,7 @@ Episode median volume: 3.50 oz (raw: 3.50 oz)
   fcount_MAE = 1.10
   pred_std = 0.470h
 
---- Model implementation (Phase 5d) ---
+--- Model implementation (current) ---
   history = episode-level via episodes_as_events()
   satiety_rate = 0.257 (re-tuned on episode-level data)
   growth_rate = estimated at runtime from recent episodes

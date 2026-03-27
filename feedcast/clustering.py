@@ -4,17 +4,17 @@ Consecutive bottle feeds that occur close in time often represent a single
 feeding episode (e.g., a large feed followed by a small top-up). This module
 provides a deterministic rule for collapsing such feeds into episodes.
 
-The rule was derived from hand-labeled boundary data in Phase 1 research:
+The rule was derived from hand-labeled boundary data:
     feedcast/research/feed_clustering/findings.md
 
 Two consecutive feeds belong to the same episode if:
     gap <= 73 minutes, OR
     gap <= 80 minutes AND the later feed <= 1.50 oz
 
-Intended consumers: evaluation (collapse both actuals and predictions before
-scoring), consensus blend (collapse before voting), and reports (default to
-episode view). Those integrations land in later phases. Models receive raw
-events and may optionally call group_into_episodes() themselves.
+Consumers: evaluation (collapse both actuals and predictions before scoring),
+consensus blend (collapse before voting), reports (default to episode view),
+and models that opt into episode-level history (e.g., Slot Drift, Latent
+Hunger). Models receive raw events and decide how to handle episodes.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from typing import Sequence
 
 from feedcast.data import FeedEvent, ForecastPoint
 
-# Adopted episode-boundary rule (Phase 1 research).
+# Adopted episode-boundary rule (see feedcast/research/feed_clustering/).
 # Two feeds are part of the same episode if the gap satisfies either arm.
 BASE_GAP_MINUTES = 73
 EXTENSION_GAP_MINUTES = 80

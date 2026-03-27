@@ -452,7 +452,7 @@ def generate_piecewise_extension_rules(
 
 
 def adopted_piecewise_rule() -> CandidateRule:
-    """Return the adopted Phase 1 rule, distinct from best-fit search output."""
+    """Return the adopted rule, distinct from best-fit search output."""
     return CandidateRule(
         family="adopted_rule",
         description=(
