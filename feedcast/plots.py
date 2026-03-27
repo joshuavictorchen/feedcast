@@ -35,12 +35,12 @@ RED = "#FF3B30"
 GREEN = "#34C759"
 PURPLE = "#AF52DE"
 TEAL = "#5AC8FA"
-BG = "#EAEAEF"
+BG = "#E0E0E6"
 SEPARATOR = "#C8C8CE"
 LABEL_SECONDARY = "#78787E"
 ORANGE_SOFT = "#E8CDA0"
 CARD = "#F0F0F4"
-NIGHT_FILL = "#E0E0E6"
+NIGHT_FILL = "#D6D6DE"
 PROJ_FILL = "#EDE8E1"
 DISPLAY_DAYS = 7
 
@@ -55,6 +55,16 @@ MODEL_COLORS = {
 }
 FEATURED_COLOR = GREEN
 
+# Muted pastel palette for the trajectory comparison chart
+SPAGHETTI_COLORS = {
+    "slot_drift": "#6BBF7E",
+    "analog_trajectory": "#7EB3D8",
+    "latent_hunger": "#B88ED4",
+    "survival_hazard": "#D98A8A",
+    "claude_forecast": "#A0A0AA",
+    "codex_forecast": "#88C8E0",
+}
+
 
 def write_spaghetti_plot(
     output_path: Path,
@@ -64,115 +74,155 @@ def write_spaghetti_plot(
     cutoff: datetime,
     history_tail_hours: float = 12,
 ) -> None:
-    """Render the compact trajectory comparison chart."""
+    """Render the trajectory comparison chart.
+
+    Each model gets a horizontal lane with volume-sized markers at
+    predicted feed times. The featured model uses the same orange style
+    as the schedule chart; other models use muted pastels.
+    """
     _apply_plot_style()
-    figure, axis = plt.subplots(figsize=(16, 7))
-
-    history_start = cutoff - timedelta(hours=history_tail_hours)
-    recent_events = [event for event in events if history_start <= event.time <= cutoff]
-    if recent_events:
-        times = [event.time for event in recent_events]
-        axis.plot(
-            times,
-            [1] * len(times),
-            "o-",
-            color="#1D1D1F",
-            markersize=7,
-            linewidth=1.5,
-            alpha=0.8,
-            zorder=7,
-            label="Actual (recent)",
-        )
-
-    y_level = 1
-    for forecast in all_forecasts:
-        if (
-            forecast.slug == featured_slug
-            or not forecast.available
-            or not forecast.points
-        ):
-            continue
-        times = [cutoff] + [point.time for point in forecast.points]
-        axis.plot(
-            times,
-            [y_level] * len(times),
-            "o-",
-            color=MODEL_COLORS.get(forecast.slug, "#AEAEB2"),
-            markersize=4,
-            linewidth=1.0,
-            alpha=0.3,
-            zorder=3,
-            label=forecast.name,
-        )
+    from matplotlib.colors import to_rgba
 
     featured = _find_forecast(all_forecasts, featured_slug)
-    times = [cutoff] + [point.time for point in featured.points]
-    axis.plot(
-        times,
-        [y_level] * len(times),
-        "D-",
-        color=FEATURED_COLOR,
-        markersize=9,
-        linewidth=2.5,
-        alpha=0.9,
-        zorder=6,
-        label=f"{featured.name} (featured)",
+    others = [
+        f for f in all_forecasts
+        if f.slug != featured_slug and f.available and f.points
+    ]
+    model_list = [featured] + others
+    num_models = len(model_list)
+
+    figure, axis = plt.subplots(figsize=(16, 2.2 + num_models * 1.1))
+
+    # Time range rounded to hour boundaries
+    hour_start = cutoff.replace(minute=0, second=0, microsecond=0)
+    horizon_end = cutoff + timedelta(hours=HORIZON_HOURS)
+    hour_end = (horizon_end + timedelta(hours=1)).replace(
+        minute=0, second=0, microsecond=0
     )
-    for point in featured.points:
-        axis.annotate(
-            point.time.strftime("%-I:%M"),
-            (point.time, y_level),
-            textcoords="offset points",
-            xytext=(0, 14),
-            fontsize=7.5,
-            ha="center",
-            color=FEATURED_COLOR,
-            fontweight="bold",
+
+    # Lane backgrounds tinted with each model's color
+    lane_height = 0.84
+    for index, forecast in enumerate(model_list):
+        y_pos = num_models - index
+        base_color = (
+            ORANGE if forecast.slug == featured_slug
+            else _spaghetti_color(forecast.slug)
+        )
+        red, green, blue, _ = to_rgba(base_color)
+        axis.add_patch(Rectangle(
+            (mdates.date2num(hour_start), y_pos - lane_height / 2),
+            mdates.date2num(hour_end) - mdates.date2num(hour_start),
+            lane_height,
+            color=(red, green, blue, 0.08), zorder=0, linewidth=0,
+        ))
+
+    # Lane separators
+    for index in range(num_models + 1):
+        axis.axhline(
+            index + 0.5, color=SEPARATOR, linewidth=0.5, alpha=0.5, zorder=2
         )
 
-    axis.axvline(cutoff, color=RED, linewidth=1.2, alpha=0.5, linestyle="--", zorder=8)
-    axis.annotate(
-        "NOW",
-        (cutoff, y_level),
-        textcoords="offset points",
-        xytext=(0, -20),
-        fontsize=8,
-        color=RED,
-        fontweight="bold",
-        ha="center",
+    # Dotted vertical gridlines at each hour
+    current_hour = hour_start
+    while current_hour <= hour_end:
+        axis.axvline(
+            current_hour, color="#A0A0A8", linewidth=0.4,
+            alpha=0.5, linestyle=":", zorder=2,
+        )
+        current_hour += timedelta(hours=1)
+
+    # Feed markers with halos
+    for index, forecast in enumerate(model_list):
+        y_pos = num_models - index
+        is_featured = forecast.slug == featured_slug
+
+        if is_featured:
+            # Featured model: orange with soft halo (matches schedule chart)
+            for point in forecast.points:
+                size = _volume_to_marker_size(point.volume_oz)
+                axis.scatter(
+                    point.time, y_pos,
+                    s=size * 2.5, c=ORANGE_SOFT, alpha=0.2,
+                    zorder=3, linewidths=0,
+                )
+                axis.scatter(
+                    point.time, y_pos,
+                    s=size, c=ORANGE, alpha=0.85,
+                    edgecolors="white", linewidths=0.8, zorder=5,
+                )
+            label_color = _darken_color(ORANGE)
+            for point in forecast.points:
+                axis.annotate(
+                    f"{point.volume_oz:.1f} oz\n"
+                    f"{point.time.strftime('%-I:%M %p').lower()}",
+                    (point.time, y_pos),
+                    textcoords="offset points",
+                    xytext=(0, 14),
+                    fontsize=6,
+                    ha="center",
+                    color=label_color,
+                    fontweight="medium",
+                    linespacing=1.3,
+                )
+        else:
+            # Other models: muted pastel with halo
+            color = _spaghetti_color(forecast.slug)
+            for point in forecast.points:
+                size = _volume_to_marker_size(point.volume_oz)
+                axis.scatter(
+                    point.time, y_pos,
+                    s=size * 2.5, c=color, alpha=0.15,
+                    zorder=3, linewidths=0,
+                )
+                axis.scatter(
+                    point.time, y_pos,
+                    s=size * 0.85, c=color, alpha=0.7,
+                    edgecolors="white", linewidths=0.6, zorder=4,
+                )
+
+    # Y-axis: bold model names colored to match
+    axis.set_yticks(range(1, num_models + 1))
+    y_labels = list(reversed([f.name for f in model_list]))
+    y_colors = list(reversed([
+        ORANGE if f.slug == featured_slug else _spaghetti_color(f.slug)
+        for f in model_list
+    ]))
+    axis.set_yticklabels(y_labels, fontsize=8.5, fontweight="bold")
+    for tick_label, color in zip(axis.get_yticklabels(), y_colors):
+        tick_label.set_color(_darken_color(color))
+
+    axis.set_ylim(0.3, num_models + 0.7)
+    earliest_point = min(p.time for f in model_list for p in f.points)
+    axis.set_xlim(
+        earliest_point - timedelta(minutes=45),
+        hour_end + timedelta(minutes=15),
     )
 
-    axis.set_yticks([])
-    axis.set_ylim(0.5, 1.5)
+    # X-axis: time with date
     axis.xaxis.set_major_locator(mdates.HourLocator(interval=3))
-    axis.xaxis.set_minor_locator(mdates.HourLocator(interval=1))
-    axis.xaxis.set_major_formatter(mdates.DateFormatter("%-I %p"))
+    axis.xaxis.set_major_formatter(mdates.DateFormatter("%-I %p\n%-m/%d"))
     axis.tick_params(axis="both", which="both", length=0)
-    axis.grid(True, which="major", axis="x", alpha=0.15, color=SEPARATOR, linewidth=0.5)
+    for tick_label in axis.get_xticklabels():
+        tick_label.set_fontsize(7.5)
+        tick_label.set_fontweight("medium")
+        tick_label.set_linespacing(1.4)
     for spine in axis.spines.values():
         spine.set_visible(False)
-    axis.legend(loc="upper right", fontsize=9, frameon=False)
 
     figure.text(
-        0.04,
-        0.96,
-        "Forecast Trajectories",
-        fontsize=20,
-        fontweight="bold",
-        color="#1D1D1F",
-        va="top",
+        0.04, 0.965, "Forecast Trajectories",
+        fontsize=22, fontweight="bold", color="#1D1D1F", va="top", ha="left",
     )
     figure.text(
-        0.04,
-        0.92,
+        0.04, 0.925,
         f"All models · cutoff {cutoff.strftime('%B %-d, %Y %-I:%M %p')}",
-        fontsize=10,
-        color=LABEL_SECONDARY,
-        va="top",
+        fontsize=10.5, color=LABEL_SECONDARY, va="top", ha="left",
     )
-    figure.subplots_adjust(top=0.85, bottom=0.08, left=0.04, right=0.96)
+
+    figure.subplots_adjust(top=0.87, bottom=0.08, left=0.12, right=0.96)
     figure.savefig(
-        output_path, dpi=200, bbox_inches="tight", facecolor=BG, edgecolor="none"
+        output_path, dpi=200, bbox_inches="tight",
+        facecolor=BG, edgecolor="none", pad_inches=0.4,
     )
     plt.close(figure)
 
@@ -342,7 +392,7 @@ def write_schedule_plot(
     for index, tick_label in enumerate(axis.get_yticklabels()):
         if index % 3 == 0:
             tick_label.set_fontsize(8.5)
-            tick_label.set_fontweight("medium")
+            tick_label.set_fontweight("bold")
         else:
             tick_label.set_alpha(0.6)
     axis.tick_params(axis="both", which="both", length=0)
@@ -403,6 +453,11 @@ def write_schedule_plot(
         facecolor=BG, edgecolor="none", pad_inches=0.4,
     )
     plt.close(figure)
+
+
+def _spaghetti_color(slug: str) -> str:
+    """Return the muted pastel color for a model in the trajectory chart."""
+    return SPAGHETTI_COLORS.get(slug, "#AEAEB2")
 
 
 def _find_forecast(forecasts: list[Forecast], slug: str) -> Forecast:
