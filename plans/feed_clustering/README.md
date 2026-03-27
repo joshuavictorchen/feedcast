@@ -530,9 +530,10 @@ implementation. Shared context updates come first.
 - Each model sub-phase is self-contained: run research, decide on
   changes, implement, update docs. Decision points within a model
   sub-phase are resolved during implementation based on research data.
-- `CHANGELOG.md` gets an entry when model behavior changes. If a model's
-  research shows no beneficial change, it gets a `design.md` note and
-  nothing else.
+- Each model sub-phase ends with a `CHANGELOG.md` entry using the
+  canonical `Problem` / `Research` / `Solution` sections. If replay
+  fails and no runtime change ships, the `Solution` section records the
+  not-shipped decision.
 - `methodology.md` is updated when the model's report-facing
   description changes.
 - Consensus blend was already updated in Phase 4. Sub-phase 5f revisits
@@ -624,7 +625,8 @@ can inflate the daily count and create spurious template slots.
    construction. If so, implement.
 3. Update `design.md` with cluster relationship and any design changes.
 4. Update `methodology.md` if report-facing description changes.
-5. Update `CHANGELOG.md` if behavior changes.
+5. Update `CHANGELOG.md` with `Problem` / `Research` / `Solution`
+   sections documenting the sub-phase outcome.
 6. Run tests and replay verification.
 
 **Implementation notes:**
@@ -634,13 +636,11 @@ compares raw vs. episode daily counts, template positions, and trial
 alignment. Key finding: median slot count drops from 9 to 8 with
 episode-level history.
 
-Implemented episode-level template building in `model.py`. Added
-`_episodes_as_events()` helper that collapses raw history via
-`group_into_episodes()` and converts episodes to synthetic FeedEvents.
-The episode-level history is used for template building, matching,
-drift estimation, and today's filled-slot identification. Raw history
-is still passed to `_build_forecast_points()` for last-known-feed-time
-gap computation.
+Implemented episode-level template building in `model.py` using the
+shared `episodes_as_events()` helper. The episode-level history is used
+for template building, matching, drift estimation, and today's
+filled-slot identification. Raw history is still passed to
+`_build_forecast_points()` for last-known-feed-time gap computation.
 
 **Replay gate (20260325 export, 03/24→03/25 window):**
 
@@ -662,7 +662,7 @@ semantics and avoid ontology drift.
 
 **Tests:** 4 new tests in `tests/test_slot_drift.py`:
 `test_cluster_feeds_collapse_into_one_event` (unit test for
-`_episodes_as_events`), `test_independent_feeds_stay_separate`
+`episodes_as_events()`), `test_independent_feeds_stay_separate`
 (non-cluster feeds preserved), `test_cluster_day_does_not_inflate_slot_count`
 (integration test confirming cluster top-ups don't inflate median slot
 count), `test_diagnostics_use_episode_keys` (diagnostics use
@@ -683,7 +683,8 @@ gaps and volumes pollute these features.
    so, implement.
 3. Update `design.md` with cluster relationship and any design changes.
 4. Update `methodology.md` if report-facing description changes.
-5. Update `CHANGELOG.md` if behavior changes.
+5. Update `CHANGELOG.md` with `Problem` / `Research` / `Solution`
+   sections documenting the sub-phase outcome.
 6. Run tests and replay verification.
 
 **Implementation notes:**
@@ -695,20 +696,20 @@ features are cleaner (gaps longer and tighter, volumes higher and
 less noisy) and neighbor retrieval accuracy improved substantially
 in research metrics.
 
-Implemented episode-level history in `model.py` and ran replay.
-**Replay headline dropped** (66.65 vs. 68.22 baseline, -1.57). The
-episode model predicted fewer episodes than the baseline (7 vs. 9
-actual) because episode-level trajectories contain fewer events,
-making the median trajectory length shorter and producing fewer
-forecast points. Count F1 drop (91.16 vs. 100.0) outweighed timing
-improvement (48.73 vs. 46.55).
+Prototyped episode-level history for replay evaluation, then reverted
+it after the replay gate failed. **Replay headline dropped** (66.65
+vs. 68.22 baseline, -1.57). The episode model predicted fewer episodes
+than the baseline (7 vs. 9 actual) because episode-level trajectories
+contain fewer events, making the median trajectory length shorter and
+producing fewer forecast points. Count F1 drop (91.16 vs. 100.0)
+outweighed timing improvement (48.73 vs. 46.55).
 
 **Decision: not shipped.** Model change reverted. Raw feed history
 preserved. The episode-level comparison is kept in `research.py` for
 future reference.
 
-Additionally, extracted `_episodes_as_events()` from Slot Drift's
-model.py to `feedcast/clustering.py` as the shared public function
+Additionally, extracted the private Slot Drift helper to
+`feedcast/clustering.py` as the shared public function
 `episodes_as_events()`. Slot Drift updated to import from the shared
 location.
 
@@ -732,7 +733,8 @@ the growth rate estimate downward.
    (total_volume, inter-episode_gap) pairs. If so, implement.
 3. Update `design.md` with cluster relationship and any design changes.
 4. Update `methodology.md` if report-facing description changes.
-5. Update `CHANGELOG.md` if behavior changes.
+5. Update `CHANGELOG.md` with `Problem` / `Research` / `Solution`
+   sections documenting the sub-phase outcome.
 6. Run tests and replay verification.
 
 #### Sub-phase 5e: Survival Hazard
@@ -747,7 +749,8 @@ reflect real hunger dynamics.
    implement.
 3. Update `design.md` with cluster relationship and any design changes.
 4. Update `methodology.md` if report-facing description changes.
-5. Update `CHANGELOG.md` if behavior changes.
+5. Update `CHANGELOG.md` with `Problem` / `Research` / `Solution`
+   sections documenting the sub-phase outcome.
 6. Run tests and replay verification.
 
 #### Sub-phase 5f: Consensus Blend revisit
