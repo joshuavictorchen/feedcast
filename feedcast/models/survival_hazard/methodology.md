@@ -1,23 +1,28 @@
 # Survival Hazard
 
-Probabilistic model that frames each feeding as a survival event whose
-likelihood increases with elapsed time. Uses a Weibull hazard function
-with separate shapes for overnight and daytime periods to capture the
-structurally different feeding regimes.
+Probabilistic model that frames each feeding episode as a survival
+event whose likelihood increases with elapsed time. Uses a Weibull
+hazard function with a configured overnight/daytime split to capture
+the structurally different feeding regimes.
 
-Overnight feeds (20:00–08:00) follow a high-shape Weibull: very
-regular timing with tight clustering around the median gap. Daytime
-feeds (08:00–20:00) follow a lower-shape Weibull: more variable timing
-with a broader distribution. The scale parameter for each period is
-estimated at runtime from recent same-period gaps, allowing the model
-to track the baby's changing pace.
+Raw bottle feeds are collapsed into feeding episodes, removing
+cluster-internal gaps that would otherwise contaminate the gap
+distribution. All model computation — scale estimation, conditional
+survival, simulation — operates on episode-level data.
+
+Overnight episodes follow a higher-shape Weibull: more regular timing
+with tighter clustering around the median. Daytime episodes follow a
+lower-shape Weibull: more variable timing with a broader spread. The
+scale parameter for each period is estimated at runtime from recent
+same-period episode gaps, allowing the model to track the baby's
+changing pace.
 
 The forecast uses the median of the Weibull survival function as the
 point prediction — the time at which there is a 50% probability the
 next feed has occurred. The first predicted feed accounts for the time
-already elapsed since the last observed feed using the conditional
+already elapsed since the last observed episode using the conditional
 survival function.
 
-Uses bottle-only events (no breastfeed merge). Volume was tested as a
-covariate but was not statistically significant and did not improve
-walk-forward accuracy beyond the day-part split.
+This methodology intentionally stays at the level of mechanism. Current
+fitted values, empirical comparisons, and replay evidence live in
+`research_results.txt`. Current production constants live in `model.py`.

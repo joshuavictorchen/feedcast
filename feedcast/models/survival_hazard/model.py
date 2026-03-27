@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
+from feedcast.clustering import episodes_as_events
 from feedcast.data import (
     Activity,
     FeedEvent,
@@ -34,11 +35,13 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 
 # --- Tuning parameters (model-specific) ---
 
-# Weibull shape parameters by day-part, from research.
+# Weibull shape parameters by day-part, fitted on episode-level data.
 # Higher shape = more regular (tighter distribution around the median).
 # Overnight feeds are very regular; daytime feeds are more variable.
-OVERNIGHT_SHAPE = 7.31
-DAYTIME_SHAPE = 2.33
+# Episode-level fit removes cluster-internal gap contamination that
+# previously depressed these values. See research.py Section 9.
+OVERNIGHT_SHAPE = 6.54
+DAYTIME_SHAPE = 3.04
 
 # Day-part boundaries (hour of day).
 # Overnight: 20:00 to 08:00. Daytime: 08:00 to 20:00.
@@ -56,7 +59,10 @@ MIN_DAYPART_GAPS = 3
 MIN_FIT_GAPS = 5
 
 # Recency half-life for weighting gaps in scale estimation.
-RECENCY_HALF_LIFE_HOURS = 72
+# Set to LOOKBACK_DAYS × 24 so the oldest events in the window get ~50%
+# weight. Broad averaging works because episode-level history is clean —
+# all gaps are real inter-episode gaps, not cluster-internal noise.
+RECENCY_HALF_LIFE_HOURS = 168
 
 # Volume floor for forecast points.
 MIN_VOLUME_OZ = 0.5
@@ -229,11 +235,14 @@ def forecast_survival_hazard(
     Raises:
         ForecastUnavailable: If there are too few recent events.
     """
-    # Build bottle-only events and filter to cutoff.
-    events = [
+    # Build bottle-only events, filter to cutoff, then collapse into episodes.
+    # Episode-level history removes cluster-internal gaps that contaminate
+    # Weibull scale estimation and conditional survival elapsed time.
+    raw_events = [
         e for e in build_feed_events(activities, merge_window_minutes=None)
         if e.time <= cutoff
     ]
+    events = episodes_as_events(raw_events)
     if len(events) < MIN_FIT_GAPS + 1:
         raise ForecastUnavailable(
             f"Need at least {MIN_FIT_GAPS + 1} events, have {len(events)}"
@@ -346,7 +355,7 @@ def _build_diagnostics(
         "sim_volume_oz": round(
             float(np.median([e.volume_oz for e in recent_events])), 2
         ),
-        "total_fit_gaps": len(fit_details),
+        "total_fit_episode_gaps": len(fit_details),
         "lookback_days": LOOKBACK_DAYS,
         "recency_half_life_hours": RECENCY_HALF_LIFE_HOURS,
         "uncertainty_25_75_overnight": {

@@ -5,8 +5,9 @@ Run from the repo root:
     .venv/bin/python -m feedcast.models.survival_hazard.research
 
 This script reproduces the data analysis that informs the Survival / Hazard
-model design. It uses the same export selection, data parsing, and
-breastfeed merge heuristic as the model will.
+model design. It uses the same export selection and data parsing as the model,
+with bottle-only events as the production default. Episode-level analysis
+re-derives key findings on cluster-collapsed data.
 
 Update this script and re-run when new exports are available or when
 revisiting model assumptions.
@@ -22,6 +23,7 @@ from pathlib import Path
 import numpy as np
 from scipy.optimize import minimize
 
+from feedcast.clustering import episodes_as_events
 from feedcast.data import (
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     build_feed_events,
@@ -358,25 +360,26 @@ def main() -> None:
     snapshot = load_export_snapshot()
     cutoff = snapshot.latest_activity_time
 
-    # Start with bottle-only; switch to merged if volume covariate wins.
+    # Production uses bottle-only events. Breastfeed-merged is a labeled
+    # secondary comparison for the volume covariate section only.
+    events_bottle = build_feed_events(
+        snapshot.activities, merge_window_minutes=None,
+    )
     events_merged = build_feed_events(
         snapshot.activities,
         merge_window_minutes=DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
-    )
-    events_bottle = build_feed_events(
-        snapshot.activities, merge_window_minutes=None,
     )
 
     log(f"Export: {snapshot.export_path}")
     log(f"Dataset: {snapshot.dataset_id}")
     log(f"Cutoff: {cutoff}")
     log(f"Run: {datetime.now().isoformat(timespec='seconds')}")
-    log(f"Events (with BF merge): {len(events_merged)}")
     log(f"Events (bottle only):   {len(events_bottle)}")
+    log(f"Events (with BF merge): {len(events_merged)}")
     log()
 
-    # Use merged events for analysis (may switch based on results).
-    events = events_merged
+    # Default: bottle-only (matches production input policy).
+    events = events_bottle
 
     # ================================================================
     # SECTION 1: Gap distribution
@@ -921,27 +924,460 @@ def main() -> None:
     log()
 
     # ================================================================
-    # SECTION 9: Summary
+    # SECTION 9: Episode-level analysis
+    # ================================================================
+    log("=== EPISODE-LEVEL ANALYSIS ===")
+    log()
+    log("Cluster-internal gaps (50-70 min) contaminate the raw gap distribution.")
+    log("Episode grouping collapses close-together feeds into single episodes,")
+    log("removing these artifacts. This section re-derives all key findings on")
+    log("episode-level data for comparison with the raw baseline above.")
+    log()
+
+    # Convert bottle-only events to episodes.
+    episode_events = episodes_as_events(events)
+    log(f"Raw events: {len(events)}")
+    log(f"Episode events: {len(episode_events)}")
+    log(f"Collapsed: {len(events) - len(episode_events)} feeds absorbed into clusters")
+    log()
+
+    # Episode-level gaps and per-daypart counts.
+    ep_gaps = []
+    ep_volumes = []
+    ep_hours = []
+    for i in range(len(episode_events) - 1):
+        gap = (episode_events[i + 1].time - episode_events[i].time).total_seconds() / 3600
+        ep_gaps.append(gap)
+        ep_volumes.append(episode_events[i].volume_oz)
+        ep_hours.append(hour_of_day(episode_events[i].time))
+
+    ep_gaps_np = np.array(ep_gaps)
+    ep_volumes_np = np.array(ep_volumes)
+    ep_hours_np = np.array(ep_hours)
+
+    ep_night_mask = (ep_hours_np >= 20) | (ep_hours_np < 8)
+    ep_day_mask = ~ep_night_mask
+
+    log(f"Episode gap distribution:")
+    log(f"  Total gaps: {len(ep_gaps_np)}")
+    log(f"  Mean: {ep_gaps_np.mean():.3f}h  Std: {ep_gaps_np.std():.3f}h")
+    log(f"  Min: {ep_gaps_np.min():.3f}h  Max: {ep_gaps_np.max():.3f}h")
+    log(f"  Median: {float(np.median(ep_gaps_np)):.3f}h")
+    log(f"  Overnight gaps: {ep_night_mask.sum()}")
+    log(f"  Daytime gaps: {ep_day_mask.sum()}")
+    log()
+
+    # Compare raw vs episode gap histograms.
+    log("Episode gap histogram (0.5h bins):")
+    for lo in np.arange(0, 5.5, 0.5):
+        hi = lo + 0.5
+        count = np.sum((ep_gaps_np >= lo) & (ep_gaps_np < hi))
+        bar = "#" * int(count)
+        log(f"  [{lo:.1f}, {hi:.1f}): {count:>3} {bar}")
+    overflow = np.sum(ep_gaps_np >= 5.5)
+    log(f"  [5.5+):   {overflow:>3} {'#' * int(overflow)}")
+    log()
+
+    # Fit Weibull shapes per daypart on episode-level data.
+    ep_rec_weights = np.array([
+        math.exp(-decay * (cutoff - episode_events[i].time).total_seconds() / 3600)
+        for i in range(len(ep_gaps_np))
+    ])
+
+    log("Episode-level Weibull fits by day-part:")
+    ep_fit_results = {}
+    for label, mask, dp_name in [
+        ("Overnight (20-08)", ep_night_mask, "overnight"),
+        ("Daytime (08-20)", ep_day_mask, "daytime"),
+    ]:
+        if mask.sum() >= MIN_FIT_GAPS:
+            fit_dp = _fit_weibull(ep_gaps_np[mask], ep_rec_weights[mask])
+            ep_fit_results[dp_name] = fit_dp
+            log(f"  {label} (n={mask.sum()}):")
+            log(f"    shape={fit_dp['shape']:.4f}  scale={fit_dp['scale']:.4f}  "
+                f"median={_weibull_median(fit_dp['shape'], fit_dp['scale']):.3f}h")
+        else:
+            log(f"  {label}: too few gaps ({mask.sum()}) for fit")
+    log()
+
+    # Compare raw vs episode shapes.
+    log("Raw vs episode shape comparison:")
+    log(f"  {'Daypart':<15} {'Raw shape':>10} {'Ep shape':>10} {'Delta':>8}")
+    if "overnight" in ep_fit_results:
+        raw_k = k_night
+        ep_k = ep_fit_results["overnight"]["shape"]
+        log(f"  {'Overnight':<15} {raw_k:>10.3f} {ep_k:>10.3f} {ep_k - raw_k:>+8.3f}")
+    if "daytime" in ep_fit_results:
+        raw_k = k_day
+        ep_k = ep_fit_results["daytime"]["shape"]
+        log(f"  {'Daytime':<15} {raw_k:>10.3f} {ep_k:>10.3f} {ep_k - raw_k:>+8.3f}")
+    log()
+
+    # Episode-level walk-forward with day-part split.
+    ep_k_night = ep_fit_results.get("overnight", {}).get("shape", k_night)
+    ep_k_day = ep_fit_results.get("daytime", {}).get("shape", k_day)
+
+    log("Episode-level day-part walk-forward:")
+
+    # Sweep half-lives on episode data.
+    for half_life in [48, 72, 120, 168]:
+        ep_decay_hl = math.log(2) / half_life
+        ep_dp_errors, ep_dp_weights_wf = [], []
+        ep_dp_fc_errors, ep_dp_fc_weights = [], []
+
+        for i in range(MIN_FIT_GAPS + 1, len(episode_events) - 1):
+            event = episode_events[i]
+            h = hour_of_day(event.time)
+            is_night = h >= 20 or h < 8
+            shape_i = ep_k_night if is_night else ep_k_day
+            lookback_start = event.time - timedelta(days=LOOKBACK_DAYS)
+
+            # Gather same-daypart episode gaps for scale estimation.
+            fit_g, fit_w = [], []
+            for j in range(i):
+                if episode_events[j].time < lookback_start:
+                    continue
+                if j + 1 > i:
+                    break
+                hj = hour_of_day(episode_events[j].time)
+                j_night = hj >= 20 or hj < 8
+                if j_night != is_night:
+                    continue
+                g = (episode_events[j + 1].time - episode_events[j].time).total_seconds() / 3600
+                if g <= 0:
+                    continue
+                age = (event.time - episode_events[j].time).total_seconds() / 3600
+                fit_w.append(math.exp(-ep_decay_hl * max(age, 0)))
+                fit_g.append(g)
+
+            if len(fit_g) < 3:
+                # Fall back to all episode gaps.
+                fit_g, fit_w = [], []
+                for j in range(i):
+                    if episode_events[j].time < lookback_start:
+                        continue
+                    if j + 1 > i:
+                        break
+                    g = (episode_events[j + 1].time - episode_events[j].time).total_seconds() / 3600
+                    if g <= 0:
+                        continue
+                    age = (event.time - episode_events[j].time).total_seconds() / 3600
+                    fit_w.append(math.exp(-ep_decay_hl * max(age, 0)))
+                    fit_g.append(g)
+
+            if len(fit_g) < MIN_FIT_GAPS:
+                continue
+
+            scale_i = _estimate_scale_closed_form(
+                np.array(fit_g), np.array(fit_w), shape_i,
+            )
+            predicted = _weibull_median(shape_i, scale_i)
+            actual = (episode_events[i + 1].time - event.time).total_seconds() / 3600
+            age_from_cutoff = (cutoff - event.time).total_seconds() / 3600
+            w = math.exp(-ep_decay_hl * max(age_from_cutoff, 0))
+
+            ep_dp_errors.append(abs(predicted - actual))
+            ep_dp_weights_wf.append(w)
+
+            # Estimate both daypart scales for feed count simulation.
+            night_g, night_w, day_g, day_w = [], [], [], []
+            for j in range(i):
+                if episode_events[j].time < lookback_start or j + 1 > i:
+                    continue
+                g = (episode_events[j + 1].time - episode_events[j].time).total_seconds() / 3600
+                if g <= 0:
+                    continue
+                age = (event.time - episode_events[j].time).total_seconds() / 3600
+                wt = math.exp(-ep_decay_hl * max(age, 0))
+                hj = hour_of_day(episode_events[j].time)
+                if hj >= 20 or hj < 8:
+                    night_g.append(g)
+                    night_w.append(wt)
+                else:
+                    day_g.append(g)
+                    day_w.append(wt)
+
+            all_ep_g = np.array(night_g + day_g) if night_g or day_g else np.array(fit_g)
+            all_ep_w = np.array(night_w + day_w) if night_w or day_w else np.array(fit_w)
+            night_scale = (
+                _estimate_scale(np.array(night_g), np.array(night_w), ep_k_night)
+                if len(night_g) >= 3
+                else _estimate_scale(all_ep_g, all_ep_w, ep_k_night)
+            )
+            day_scale = (
+                _estimate_scale(np.array(day_g), np.array(day_w), ep_k_day)
+                if len(day_g) >= 3
+                else _estimate_scale(all_ep_g, all_ep_w, ep_k_day)
+            )
+
+            # 24h episode count simulation.
+            sim_t = 0.0
+            sim_count = 0
+            while sim_t < 24.0:
+                sh = (h + sim_t) % 24.0
+                sn = sh >= 20 or sh < 8
+                s_shape = ep_k_night if sn else ep_k_day
+                s_scale = night_scale if sn else day_scale
+                gap = _weibull_median(s_shape, s_scale)
+                sim_t += gap
+                if sim_t < 24.0:
+                    sim_count += 1
+            actual_count = sum(
+                1 for e in episode_events[i + 1:]
+                if e.time <= event.time + timedelta(hours=24)
+            )
+            ep_dp_fc_errors.append(abs(sim_count - actual_count))
+            ep_dp_fc_weights.append(w)
+
+        ep_g1 = float(np.average(ep_dp_errors, weights=ep_dp_weights_wf)) if ep_dp_errors else float("nan")
+        ep_fc = float(np.average(ep_dp_fc_errors, weights=ep_dp_fc_weights)) if ep_dp_fc_errors else float("nan")
+        marker = " <-- current" if half_life == RECENCY_HALF_LIFE_HOURS else ""
+        log(f"  half_life={half_life:>3}h: gap1_MAE={ep_g1:.3f}h  "
+            f"fcount_MAE={ep_fc:.2f}  (n={len(ep_dp_errors)}){marker}")
+
+    log()
+
+    # Episode-level volume covariate: LR significance test.
+    log("Episode-level volume covariate — significance test:")
+    ep_fit_base = _fit_weibull(ep_gaps_np, ep_rec_weights)
+    ep_fit_vol = _fit_weibull(ep_gaps_np, ep_rec_weights, ep_volumes_np, with_volume=True)
+    ep_lr_stat = 2 * (ep_fit_base["neg_loglik"] - ep_fit_vol["neg_loglik"])
+    ep_mle_beta = ep_fit_vol["beta"]
+    log(f"  Baseline: shape={ep_fit_base['shape']:.4f}  scale={ep_fit_base['scale']:.4f}")
+    log(f"  +Volume:  shape={ep_fit_vol['shape']:.4f}  scale={ep_fit_vol['scale']:.4f}  "
+        f"beta={ep_mle_beta:.4f}")
+    log(f"  LR statistic: {ep_lr_stat:.3f} (>3.84 for p<0.05)")
+    log(f"  Volume {'significant' if ep_lr_stat > 3.84 else 'not significant'} at p<0.05")
+    log()
+
+    # Episode-level volume covariate: walk-forward with day-part split.
+    # Sweep beta values at the best half-life (168h) to test the current
+    # scalar AFT overlay: effective_scale = base_scale * exp(beta * volume_oz).
+    log("Episode-level volume walk-forward (tested AFT overlay, day-part split, half-life=168h):")
+    best_half_life = 168
+    ep_decay_vol = math.log(2) / best_half_life
+
+    for beta_test in [0.0, 0.03, 0.06, ep_mle_beta, 0.12, 0.15]:
+        vol_g1_errors, vol_g1_weights = [], []
+        vol_fc_errors, vol_fc_weights = [], []
+
+        for i in range(MIN_FIT_GAPS + 1, len(episode_events) - 1):
+            event = episode_events[i]
+            h = hour_of_day(event.time)
+            is_night = h >= 20 or h < 8
+            shape_i = ep_k_night if is_night else ep_k_day
+            lookback_start = event.time - timedelta(days=LOOKBACK_DAYS)
+
+            # Same-daypart scale estimation (no volume in scale fit).
+            fit_g, fit_w = [], []
+            for j in range(i):
+                if episode_events[j].time < lookback_start:
+                    continue
+                if j + 1 > i:
+                    break
+                hj = hour_of_day(episode_events[j].time)
+                j_night = hj >= 20 or hj < 8
+                if j_night != is_night:
+                    continue
+                g = (episode_events[j + 1].time - episode_events[j].time).total_seconds() / 3600
+                if g <= 0:
+                    continue
+                age = (event.time - episode_events[j].time).total_seconds() / 3600
+                fit_w.append(math.exp(-ep_decay_vol * max(age, 0)))
+                fit_g.append(g)
+
+            if len(fit_g) < 3:
+                fit_g, fit_w = [], []
+                for j in range(i):
+                    if episode_events[j].time < lookback_start:
+                        continue
+                    if j + 1 > i:
+                        break
+                    g = (episode_events[j + 1].time - episode_events[j].time).total_seconds() / 3600
+                    if g <= 0:
+                        continue
+                    age = (event.time - episode_events[j].time).total_seconds() / 3600
+                    fit_w.append(math.exp(-ep_decay_vol * max(age, 0)))
+                    fit_g.append(g)
+
+            if len(fit_g) < MIN_FIT_GAPS:
+                continue
+
+            base_scale = _estimate_scale_closed_form(
+                np.array(fit_g), np.array(fit_w), shape_i,
+            )
+            # AFT volume adjustment on the current episode's volume.
+            effective_scale = base_scale * math.exp(beta_test * event.volume_oz)
+            predicted = _weibull_median(shape_i, effective_scale)
+            actual = (episode_events[i + 1].time - event.time).total_seconds() / 3600
+            age_from_cutoff = (cutoff - event.time).total_seconds() / 3600
+            w = math.exp(-ep_decay_vol * max(age_from_cutoff, 0))
+
+            vol_g1_errors.append(abs(predicted - actual))
+            vol_g1_weights.append(w)
+
+            # Both daypart scales for feed count sim.
+            night_g, night_w, day_g, day_w = [], [], [], []
+            for j in range(i):
+                if episode_events[j].time < lookback_start or j + 1 > i:
+                    continue
+                g = (episode_events[j + 1].time - episode_events[j].time).total_seconds() / 3600
+                if g <= 0:
+                    continue
+                age = (event.time - episode_events[j].time).total_seconds() / 3600
+                wt = math.exp(-ep_decay_vol * max(age, 0))
+                hj = hour_of_day(episode_events[j].time)
+                if hj >= 20 or hj < 8:
+                    night_g.append(g)
+                    night_w.append(wt)
+                else:
+                    day_g.append(g)
+                    day_w.append(wt)
+
+            all_g_v = np.array(night_g + day_g) if night_g or day_g else np.array(fit_g)
+            all_w_v = np.array(night_w + day_w) if night_w or day_w else np.array(fit_w)
+            n_scale = (
+                _estimate_scale(np.array(night_g), np.array(night_w), ep_k_night)
+                if len(night_g) >= 3
+                else _estimate_scale(all_g_v, all_w_v, ep_k_night)
+            )
+            d_scale = (
+                _estimate_scale(np.array(day_g), np.array(day_w), ep_k_day)
+                if len(day_g) >= 3
+                else _estimate_scale(all_g_v, all_w_v, ep_k_day)
+            )
+
+            sim_vol = float(np.median([e.volume_oz for e in episode_events[max(0, i - 10):i + 1]]))
+            sim_t = 0.0
+            sim_count = 0
+            while sim_t < 24.0:
+                sh = (h + sim_t) % 24.0
+                sn = sh >= 20 or sh < 8
+                s_shape = ep_k_night if sn else ep_k_day
+                s_base = n_scale if sn else d_scale
+                s_eff = s_base * math.exp(beta_test * sim_vol)
+                gap = _weibull_median(s_shape, s_eff)
+                sim_t += gap
+                if sim_t < 24.0:
+                    sim_count += 1
+            actual_count = sum(
+                1 for e in episode_events[i + 1:]
+                if e.time <= event.time + timedelta(hours=24)
+            )
+            vol_fc_errors.append(abs(sim_count - actual_count))
+            vol_fc_weights.append(w)
+
+        vol_g1 = float(np.average(vol_g1_errors, weights=vol_g1_weights)) if vol_g1_errors else float("nan")
+        vol_fc = float(np.average(vol_fc_errors, weights=vol_fc_weights)) if vol_fc_errors else float("nan")
+        mle_marker = " <-- MLE" if abs(beta_test - ep_mle_beta) < 0.001 else ""
+        base_marker = " <-- no-volume baseline" if beta_test == 0.0 else ""
+        log(f"  beta={beta_test:.3f}: gap1_MAE={vol_g1:.3f}h  "
+            f"fcount_MAE={vol_fc:.2f}  (n={len(vol_g1_errors)})"
+            f"{mle_marker}{base_marker}")
+    log()
+    log("Conclusion: the tested scalar AFT volume overlay is not shipped.")
+    log("The LR signal is real, but this formulation worsens walk-forward")
+    log("accuracy at every positive beta. This rejects the current overlay,")
+    log("not every possible future use of volume.")
+    log()
+
+    # ================================================================
+    # SECTION 10: Breastfeed merge policy comparison
+    # ================================================================
+    log("=== BREASTFEED MERGE POLICY COMPARISON ===")
+    log()
+    log("The clustering rule's 80-minute extension arm checks the later")
+    log("feed's volume_oz. Breastfeed merge increases a bottle event's")
+    log("volume, which could change episode boundaries. This section")
+    log("compares bottle-only vs breastfeed-merged episode structures.")
+    log()
+
+    merged_episode_events = episodes_as_events(events_merged)
+    log(f"Bottle-only episodes: {len(episode_events)}")
+    log(f"Merged episodes:      {len(merged_episode_events)}")
+    log(f"Episode count differs: {'YES' if len(episode_events) != len(merged_episode_events) else 'no'}")
+    log()
+
+    # Compare episode boundaries.
+    boundary_diffs = 0
+    volume_diffs = 0
+    min_len = min(len(episode_events), len(merged_episode_events))
+    for idx in range(min_len):
+        bo = episode_events[idx]
+        mg = merged_episode_events[idx]
+        if bo.time != mg.time:
+            boundary_diffs += 1
+            if boundary_diffs <= 5:
+                log(f"  Boundary diff at idx {idx}: "
+                    f"bottle={bo.time.strftime('%m/%d %H:%M')} "
+                    f"merged={mg.time.strftime('%m/%d %H:%M')}")
+        if abs(bo.volume_oz - mg.volume_oz) > 0.01:
+            volume_diffs += 1
+
+    log(f"Boundary differences: {boundary_diffs}")
+    log(f"Volume differences: {volume_diffs} (out of {min_len} episodes)")
+    log()
+
+    if boundary_diffs > 0 or len(episode_events) != len(merged_episode_events):
+        # Episode structures differ — run full comparison.
+        mg_gaps = []
+        mg_hours = []
+        for i in range(len(merged_episode_events) - 1):
+            gap = (merged_episode_events[i + 1].time - merged_episode_events[i].time).total_seconds() / 3600
+            mg_gaps.append(gap)
+            mg_hours.append(hour_of_day(merged_episode_events[i].time))
+
+        mg_gaps_np = np.array(mg_gaps)
+        mg_hours_np = np.array(mg_hours)
+        mg_night = (mg_hours_np >= 20) | (mg_hours_np < 8)
+        mg_day = ~mg_night
+        mg_rec_w = np.array([
+            math.exp(-decay * (cutoff - merged_episode_events[i].time).total_seconds() / 3600)
+            for i in range(len(mg_gaps_np))
+        ])
+
+        log("Merged-input episode Weibull fits by day-part:")
+        for label, mask in [("Overnight", mg_night), ("Daytime", mg_day)]:
+            if mask.sum() >= MIN_FIT_GAPS:
+                fit_dp = _fit_weibull(mg_gaps_np[mask], mg_rec_w[mask])
+                log(f"  {label} (n={mask.sum()}): shape={fit_dp['shape']:.4f}  "
+                    f"scale={fit_dp['scale']:.4f}  "
+                    f"median={_weibull_median(fit_dp['shape'], fit_dp['scale']):.3f}h")
+        log()
+    else:
+        log("Episode boundaries are identical. Merge policy does not affect")
+        log("episode structure on this dataset. Only episode volumes differ,")
+        log("and this model is volume-free, so merge policy has no effect on")
+        log("Survival Hazard predictions.")
+    log()
+
+    # ================================================================
+    # SECTION 11: Summary
     # ================================================================
     log("=== FINAL SUMMARY ===")
     log()
-    log(f"Weibull shape (recency-weighted): {k_rec:.4f}")
-    log(f"Weibull scale (recency-weighted): {lam_rec:.4f}")
-    log(f"Volume beta: {beta_v:.4f}")
-    log(f"Volume significant: {'yes' if lr_stat > 3.84 else 'no'} (LR={lr_stat:.3f})")
+    log("--- Raw pre-episode baseline ---")
+    log(f"  Overnight shape: {k_night:.4f}  Daytime shape: {k_day:.4f}")
+    log(f"  Day-part walk-forward gap1_MAE: {daypart_g1:.3f}h")
+    log(f"  Volume significant: {'yes' if lr_stat > 3.84 else 'no'} (LR={lr_stat:.3f})")
     log()
-    log(f"Best walk-forward gap1_MAE:")
-    log(f"  Weibull baseline:   {best_wb['gap1_mae']:.3f}h")
-    log(f"  Weibull + volume:   {best_wb_vol['gap1_mae']:.3f}h")
-    log(f"  Discrete hazard:    {disc_mae:.3f}h")
-    log(f"  Day-part split:     {daypart_g1:.3f}h")
+    log("--- Episode-level (research-best) ---")
+    if "overnight" in ep_fit_results and "daytime" in ep_fit_results:
+        log(f"  Overnight shape: {ep_fit_results['overnight']['shape']:.4f}  "
+            f"Daytime shape: {ep_fit_results['daytime']['shape']:.4f}")
+    log(f"  Volume significant: {'yes' if ep_lr_stat > 3.84 else 'no'} "
+        f"(LR={ep_lr_stat:.3f})")
     log()
-    log("Model implementation will use:")
-    log(f"  Day-part split Weibull (overnight shape={k_night:.3f}, daytime shape={k_day:.3f})")
-    log(f"  Scale estimated at runtime from same-daypart recent gaps")
+    log("Model implementation uses:")
+    log(f"  Episode-level history via episodes_as_events()")
+    log(f"  Day-part split Weibull")
+    log(f"    Adopted shapes: overnight={OVERNIGHT_SHAPE}, daytime={DAYTIME_SHAPE}")
+    log(f"    (replay-selected; research-best MLE differs — see design.md)")
+    log(f"  Scale estimated at runtime from same-daypart episode gaps")
+    log(f"  Recency half-life: {RECENCY_HALF_LIFE_HOURS}h")
     log(f"  Median survival time for point predictions")
     log(f"  Conditional survival for first predicted feed")
-    log(f"  Breastfeed merge: follows volume covariate decision")
+    log(f"  Bottle-only events (no breastfeed merge)")
 
     # Save results.
     results_path = OUTPUT_DIR / "research_results.txt"

@@ -914,161 +914,102 @@ baselines unchanged: Survival Hazard 80.029, Consensus Blend 78.338.
 
 #### Sub-phase 5e: Survival Hazard
 
-**Status: IN PROGRESS (decision points pending user verdict)**
+**Status: DONE**
 
 Survival Hazard fits Weibull distributions to inter-feed gaps per
 day-part. Cluster-internal gaps (50–70 min) create a bimodal artifact
 in a distribution where real inter-episode gaps are 2–3+ hours. This
-biases scale estimates downward and may distort shape estimates.
+biases scale estimates downward and distorts shape estimates.
 
-**Replay baseline (20260325 export, 03/24→03/25 window):**
+**Resolved decisions:**
 
-| Metric | Value |
-|--------|-------|
-| Headline | 80.029 |
-| Count F1 | 95.41 |
-| Timing | 67.128 |
-| Episodes | 10/9/9 (pred/actual/matched) |
+- **DP1: (a)** Episode-level everywhere — scale estimation, conditional
+  survival, volume median, diagnostics. Consistent with 5b/5d pattern.
+- **DP2: (a)** Re-fit both shapes from episode-level data.
+- **DP3: (a)** Bottle-only production default. Research script fixed to
+  match (was breastfeed-merged, now bottle-only). Breastfeed-merged
+  remains a labeled secondary comparison.
+- **DP4: (b)** Shapes + half-life. Day-part boundaries kept fixed
+  (circadian-grounded).
+- **DP5: (a)** Volume covariate fully investigated. LR test is
+  significant on episode data (LR=6.65, beta=0.091), but walk-forward
+  with day-part split shows the tested scalar AFT overlay degrades
+  predictions at every positive beta. No-volume baseline (0.636h)
+  beats MLE beta (1.243h). The day-part split already captures the
+  volume-gap correlation. Not shipped in 5e.
+- **DP6: (a)** Broader exploration authorized. Not needed — first
+  attempt cleared replay with headroom.
 
-**Current architectural issue: shared input shaping leak.** Before 5e
-proper begins, `5e-pre` removes `ModelSpec.merge_window_minutes` so the
-model, not the orchestrator, owns its input policy. After that cutover,
-Survival Hazard must explicitly choose and document its own local input
-policy.
+**Implementation notes:**
 
-**Decision points (pending user verdict):**
+Fixed the research/production input mismatch: `research.py` now
+defaults to bottle-only events (was breastfeed-merged). Added
+episode-level analysis as Section 9: episode gap distribution,
+per-daypart Weibull fits, walk-forward with half-life sweep, and
+volume covariate re-test. All results compared to the raw baseline.
 
-- **DP1: Scope of episode-level conversion.**
-  - (a) Everywhere in the model: scale estimation, conditional
-    survival elapsed time, volume median, diagnostics.
-  - (b) Scale estimation only; keep raw events for conditional
-    survival and volume.
-  - Recommendation: **(a).** Mixing raw and episode-level inputs
-    creates a model with two ontologies. Consistent with the 5b and
-    5d pattern of converting at function entry.
+Updated `model.py` with `episodes_as_events()` at function entry.
+Raw bottle-only events are collapsed into episodes before any model
+computation. Re-tuned three parameters:
 
-- **DP2: Shape re-fitting.**
-  - (a) Re-fit `OVERNIGHT_SHAPE` and `DAYTIME_SHAPE` from
-    episode-level data.
-  - (b) Keep current shapes; only switch runtime scale estimation to
-    episode-level gaps.
-  - Recommendation: **(a).** The current shapes were fitted from raw
-    gaps that include cluster-internal contamination. An "intentional
-    revisit of the algorithm" demands re-deriving them from clean
-    episode-level inputs.
+- **OVERNIGHT_SHAPE 7.31 → 6.54** — episode-level fit (initial run
+  under 72h recency weighting). The research-best under the shipped
+  168h half-life is 6.74, but 6.54 scores better in replay (81.458
+  vs 80.584). The shape and half-life interact: see evidence
+  separation below.
+- **DAYTIME_SHAPE 2.33 → 3.04** — episode-level fit. Research-best
+  under 168h is 3.20; same interaction applies.
+- **RECENCY_HALF_LIFE_HOURS 72 → 168** — walk-forward sweep on
+  episode data: 48h=0.686, 72h=0.663, 120h=0.644, 168h=0.636 (best).
+  Same pattern as Latent Hunger: broader averaging works with clean
+  episode-level gaps. 168h = LOOKBACK_DAYS × 24, giving 50% weight
+  at the lookback boundary.
 
-- **DP3: Survival Hazard input policy after the cutover.**
-  Once `5e-pre` lands, Survival Hazard must choose its own local input
-  shaping rather than inheriting it from `ModelSpec`.
-  - (a) Bottle-only by default. Research and production both build
-    bottle-only events locally. Breastfeed-merged remains a labeled
-    secondary comparison only.
-  - (b) Breastfeed-merged by default. Research and production both
-    merge estimated breastfeed volume into bottle events locally.
-  - (c) Compare both locally and ship whichever clears replay.
-  - Recommendation: **(a).** Keep the baseline simple and aligned with
-    current production behavior. If DP5 suggests volume matters after
-    episode cleanup, compare merged volume explicitly as a secondary
-    candidate rather than making it the default silently.
+Diagnostics key renamed: `total_fit_gaps` → `total_fit_episode_gaps`.
 
-- **DP4: Parameter re-tuning scope beyond shapes.**
-  - (a) Shapes only.
-  - (b) Shapes + `RECENCY_HALF_LIFE_HOURS`.
-  - (c) Shapes + half-life + day-part boundaries (20:00/08:00).
-  - Recommendation: **(b).** In 5d, `RECENCY_HALF_LIFE_HOURS`
-    interacted with episode-level data (shifted from 48h to 168h).
-    Survival Hazard has the same parameter at 72h — worth sweeping.
-    Day-part boundaries are circadian-grounded and should stay fixed
-    unless research clearly shows a problem.
+**Evidence separation:** The adopted shapes (6.54/3.04) differ from
+the research-best MLE fit under the shipped 168h half-life
+(6.74/3.20). The adopted shapes were fitted during the initial
+research run under 72h recency weighting; after changing the half-life
+to 168h, a fresh MLE produces different values. Replay confirmed
+the adopted shapes score better: 81.458 vs 80.584 for research-best.
+The shape and half-life parameters interact — the combination that
+wins replay is not the one where both are independently optimized.
+Both are valid episode-level fits; the gap is documented here and in
+`design.md`.
 
-- **DP5: Volume covariate re-test.**
-  - (a) Re-test on episode-level bottle-only data and report the
-    result.
-  - (b) Skip.
-  - Recommendation: **(a).** Low cost — the research script already
-    has the section. Episode-level data removes the contamination
-    that may have masked a real effect. Only ship if the likelihood
-    ratio test is significant AND replay improves. If still not
-    significant, document and move on.
+**Sample size verification:** Episode grouping produced 79 episode
+gaps (35 overnight, 44 daytime). Both dayparts well above
+`MIN_DAYPART_GAPS = 3`.
 
-- **DP6: Retune policy on replay failure.**
-  - (a) Explore as far as reasonable: sweep shapes, half-life, and
-    any other parameters that the research suggests are sensitive.
-    Stop when further exploration shows diminishing returns or the
-    search space is exhausted.
-  - (b) Allow one bounded retune pass, then stop.
-  - (c) Stop immediately and mark "not shipped."
-  - Recommendation: **(a).** This is an intentional algorithm revisit,
-    not a minor tweak. The research-derived shapes are a starting
-    point; replay sweeps may reveal that nearby configurations score
-    better due to dataset recency effects. Document each sweep
-    iteration and its results so the exploration trail is auditable.
+**Volume covariate finding:** LR=6.65 (p<0.05, beta=0.091) —
+statistically significant but prediction-degrading for the tested
+scalar AFT overlay. Walk-forward with day-part split shows every
+positive beta hurts gap1 MAE (0.636h at beta=0 vs 1.243h at MLE
+beta=0.091). The day-part split already captures the volume-gap
+correlation; per-episode volume adjustment overfits on top of runtime
+scale estimation. This closes the current overlay for 5e without
+ruling out every future use of volume.
 
-**Assumptions:**
+**Replay gate (20260325 export, 03/24→03/25 window):**
 
-- **Anchor-to-anchor gap consistency.** With `episodes_as_events()`,
-  inter-event gaps become anchor-to-anchor (first constituent to
-  first constituent). This overestimates the true inter-hunger gap by
-  the cluster-internal duration (up to ~80 min). But the same
-  overestimation applies to both training (scale estimation) and
-  prediction (conditional survival elapsed time), so the model is
-  self-consistent. Same trade-off as Latent Hunger's "episode volume
-  arriving at anchor timestamp." Accepted; document in `design.md`.
-- **Sample size.** The current dataset has 80 raw gaps (34 overnight,
-  46 daytime). Episode-level grouping will reduce these. If overnight
-  episode gaps fall below `MIN_DAYPART_GAPS = 3`, the model's
-  existing fallback logic handles it. The research script should
-  report the per-daypart episode gap count so we can verify.
-- **Research and production alignment.** `5e-pre` lands first so
-  Survival Hazard owns its own input policy. Then DP3 is resolved
-  before shape fitting — the chosen local input path is the single
-  source for new shapes. Any alternative input path stays as labeled
-  secondary analysis only.
-- **Evidence separation.** If replay-selected production constants
-  differ from the research-best episode-level fit, the artifacts and
-  docs must record both explicitly: research conclusion vs adopted
-  production constants. Do not repeat the 5d mismatch where the
-  generated artifact implied one answer and the shipped model used
-  another.
-- **Tests.** 4 new tests targeting episode-level behavior, consistent
-  with the 5b/5d pattern.
-- **Walk-forward comparison.** The research script's existing
-  walk-forward evaluation is extended with an episode-level variant.
-  Both raw and episode results are preserved for comparison.
-- **Baseline comparison is mandatory.** Every research output and
-  replay run must be compared against the current raw-input baseline
-  (shapes 7.31/2.33, half-life 72h, headline 80.029). Changes are
-  accepted on evidence, not expectation. The research artifacts must
-  document: (1) raw baseline metrics, (2) episode-level metrics with
-  research-best parameters, (3) episode-level metrics with adopted
-  production parameters (if different from research-best), and (4)
-  the rationale for any gap between research-best and adopted.
+| Metric | Baseline (raw) | Episode-level | Delta |
+|--------|----------------|---------------|-------|
+| Headline | 80.029 | 81.458 | +1.429 |
+| Count F1 | 95.41 | 100.0 | +4.59 |
+| Timing | 67.128 | 66.354 | -0.774 |
+| Episodes | 10/9/9 | 9/9/9 | perfect |
 
-**Implementation steps (after decisions are resolved):**
+**Consensus blend impact:** 78.338 → 78.536 (+0.198). No disruption.
 
-1. Complete `5e-pre` so Survival Hazard owns its input shaping.
-2. Implement the chosen local input policy from DP3 in both
-   `model.py` and `research.py`. Preserve any alternative as a labeled
-   secondary comparison only.
-3. Add episode-level analysis to `research.py`: convert the chosen
-   local-input events to episodes via `episodes_as_events()`, re-fit
-   shapes per day-part, run walk-forward evaluation, compare to raw
-   results. Report per-daypart episode gap counts.
-4. If DP5(a): re-test volume covariate on episode-level data. If it
-   becomes significant and clears the replay gate, decide whether to
-   ship it in this sub-phase; otherwise document the result and keep
-   the model volume-free.
-5. Decide on new shapes, half-life, and any volume-covariate change
-   based on research output and replay. Update constants in `model.py`.
-6. Implement episode-level conversion in `model.py` using
-   `episodes_as_events()` at function entry. Update diagnostics keys
-   to episode-level naming.
-7. Run replay gate against baseline (headline 80.029). If headline
-   degrades: sweep shapes, half-life, and other sensitive parameters
-   as far as reasonable. Document each iteration. Stop when returns
-   diminish or search space is exhausted.
-8. Update `design.md`, `methodology.md`, `CHANGELOG.md`.
-9. Add 4 tests to `tests/test_survival_hazard.py`.
+**Tests:** 4 new tests in `tests/test_survival_hazard.py`:
+`test_cluster_gaps_excluded_from_scale_estimation` (cluster-internal
+gaps absent from fit details after episode conversion),
+`test_episode_volume_used_for_sim_volume` (episode summed volume
+used for simulation), `test_diagnostics_use_episode_keys`
+(diagnostics use episode naming), `test_shapes_are_episode_tuned`
+(shape constants are 6.54/3.04). Full suite: 67 tests pass (4 new +
+63 existing). `design.md`, `methodology.md`, `CHANGELOG.md` updated.
 
 #### Sub-phase 5f: Consensus Blend revisit
 
