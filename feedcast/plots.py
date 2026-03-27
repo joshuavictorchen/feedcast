@@ -165,7 +165,8 @@ def write_spaghetti_plot(
                     linespacing=1.3,
                 )
         else:
-            # Other models: muted pastel with halo
+            # Other models: muted pastel with halo, with the same
+            # volume-to-area mapping as the featured series.
             color = _spaghetti_color(forecast.slug)
             for point in forecast.points:
                 size = _volume_to_marker_size(point.volume_oz)
@@ -176,7 +177,7 @@ def write_spaghetti_plot(
                 )
                 axis.scatter(
                     point.time, y_pos,
-                    s=size * 0.85, c=color, alpha=0.7,
+                    s=size, c=color, alpha=0.7,
                     edgecolors="white", linewidths=0.6, zorder=4,
                 )
 
