@@ -1,19 +1,22 @@
 # Slot Drift Design Decisions
 
+## Episode-level history
+
+The model collapses raw feed history into episodes before building
+the daily template. This removes cluster-internal feeds (top-ups and
+continuations) that would otherwise inflate the daily count and create
+spurious template slots. The episode rule is defined in
+`feedcast/clustering.py` (see `feedcast/research/feed_clustering/`
+for derivation). Episode-level history gives a more stable slot count
+(median 8 vs. 9 with raw feeds on the 20260325 export) and slightly
+better headline replay score (+0.28) due to improved timing accuracy.
+
 ## Slot count
 
-The canonical slot count is the median daily feed count across recent
-complete days in the lookback window (default 7 days). It is not fixed:
-it is recomputed from recent history on each run, so it adapts as the
-baby's pattern evolves.
-
-The initial research (see research.py) showed that once the early
-chaotic days (March 15-16) drop out of the lookback window, the
-median converges to 8. While those days are still in-window, the
-median is 9 due to March 16's inflated count (13 feeds, many
-snack-sized). This is expected and correct behavior: the model uses
-whatever data is in the window. The slot count will naturally settle
-as the window moves forward.
+The canonical slot count is the median daily episode count across
+recent complete days in the lookback window (default 7 days). It is
+not fixed: it is recomputed from recent history on each run, so it
+adapts as the baby's pattern evolves.
 
 ## Absolute clock time
 
@@ -24,12 +27,10 @@ tracking per slot position.
 ## Hungarian matching with cost threshold
 
 The Hungarian algorithm (scipy.optimize.linear_sum_assignment) finds
-the globally optimal assignment of feeds to slots, minimizing total
+the globally optimal assignment of episodes to slots, minimizing total
 time-of-day distance. The 2-hour cost threshold rejects assignments
-where a feed is too far from any slot. In the research, this naturally
-left cluster feeds unmatched (e.g., March 21's four feeds in 3.4
-hours produced two unmatched extras) while correctly assigning all
-regular feeds.
+where an episode is too far from any slot. Episodes that exceed the
+threshold are left unmatched.
 
 ## Circular time-of-day distance
 

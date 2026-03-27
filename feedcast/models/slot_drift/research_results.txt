@@ -1,44 +1,89 @@
-Export: exports/export_narababy_silas_20260323.csv
-Dataset: sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0
-Cutoff: 2026-03-23 11:41:13
+Export: exports/export_narababy_silas_20260325.csv
+Dataset: sha256:eb791b625b6982da5b4e0d7d53e2b8ee4570b8b7db100ae3e063795cc54c5784
+Cutoff: 2026-03-25 00:34:39
 Lookback: 7 days
-Run: 2026-03-23T23:32:36
+Run: 2026-03-26T23:09:28
 
 === DAILY FEED COUNTS ===
 
 Date         Total  Full Snack  Feed times
-2026-03-16     13     8     5  01:49  05:14  08:42  10:50  11:18  11:52  14:02  14:58  15:19  16:53  17:34  20:19  21:13
-2026-03-17      8     7     1  00:40  04:52  08:17  10:43  12:30  15:58  18:01  21:05
 2026-03-18      8     8     0  00:30  04:02  07:20  09:51  14:23  17:52  20:25  22:51
 2026-03-19      9     9     0  01:25  04:02  07:00  10:14  12:18  15:27  17:02  19:35  21:28
 2026-03-20      8     8     0  00:13  03:15  06:40  09:40  12:37  15:38  18:31  21:10
 2026-03-21     10     9     1  00:27  03:17  06:21  09:39  12:02  13:18  14:48  15:28  19:02  22:36
 2026-03-22      9     7     2  02:22  05:30  08:53  11:54  13:06  16:36  17:53  19:28  23:27
+2026-03-23      9     9     0  02:30  05:13  08:48  10:26  11:41  14:32  17:40  19:26  20:38
+2026-03-24     11     9     2  00:38  03:44  06:10  10:05  12:30  14:45  15:35  18:02  20:16  21:25  22:15
 
-Total counts:     [13, 8, 8, 9, 8, 10, 9]
-  mean=9.3  median=9
-Full-feed counts: [8, 7, 8, 9, 8, 9, 7]
-  mean=8.0  median=8
+Total counts:     [8, 9, 8, 10, 9, 9, 11]
+  mean=9.1  median=9
+Full-feed counts: [8, 9, 8, 9, 7, 9, 9]
+  mean=8.4  median=9
 
 === TEMPLATE (slot_count=9) ===
 
-Days used for template: [datetime.date(2026, 3, 19), datetime.date(2026, 3, 22)]
-  Slot 1: 01:53 (1.90h)
-  Slot 2: 04:46 (4.77h)
-  Slot 3: 07:57 (7.96h)
-  Slot 4: 11:04 (11.08h)
-  Slot 5: 12:42 (12.71h)
-  Slot 6: 16:01 (16.03h)
-  Slot 7: 17:28 (17.47h)
-  Slot 8: 19:31 (19.53h)
-  Slot 9: 22:28 (22.47h)
+Days used for template: [datetime.date(2026, 3, 19), datetime.date(2026, 3, 22), datetime.date(2026, 3, 23)]
+  Slot 1: 02:22 (2.38h)
+  Slot 2: 05:13 (5.22h)
+  Slot 3: 08:48 (8.80h)
+  Slot 4: 10:26 (10.44h)
+  Slot 5: 12:18 (12.30h)
+  Slot 6: 15:27 (15.45h)
+  Slot 7: 17:40 (17.67h)
+  Slot 8: 19:28 (19.47h)
+  Slot 9: 21:28 (21.48h)
 
 === TRIAL ALIGNMENT (threshold=2.0h) ===
 
-2026-03-16 (13 feeds): 9 matched, 4 unmatched, max_cost=1.25h
-2026-03-17 (8 feeds): 8 matched, 0 unmatched, max_cost=1.38h
-2026-03-18 (8 feeds): 8 matched, 0 unmatched, max_cost=1.64h
-2026-03-19 (9 feeds): 9 matched, 0 unmatched, max_cost=0.99h
-2026-03-20 (8 feeds): 8 matched, 0 unmatched, max_cost=1.67h
+2026-03-18 (8 feeds): 8 matched, 0 unmatched, max_cost=1.87h
+2026-03-19 (9 feeds): 9 matched, 0 unmatched, max_cost=1.79h
+2026-03-20 (8 feeds): 6 matched, 2 unmatched, max_cost=1.96h
 2026-03-21 (10 feeds): 8 matched, 2 unmatched, max_cost=1.59h
-2026-03-22 (9 feeds): 9 matched, 0 unmatched, max_cost=0.99h
+2026-03-22 (9 feeds): 9 matched, 0 unmatched, max_cost=1.98h
+2026-03-23 (9 feeds): 9 matched, 0 unmatched, max_cost=0.91h
+2026-03-24 (11 feeds): 8 matched, 3 unmatched, max_cost=1.74h
+
+
+============================================================
+EPISODE-LEVEL ANALYSIS
+============================================================
+
+=== DAILY EPISODE COUNTS ===
+
+Date           Raw Episodes  Episode times (feed counts)
+2026-03-18      8        8  00:30  04:02  07:20  09:51  14:23  17:52  20:25  22:51
+2026-03-19      9        9  01:25  04:02  07:00  10:14  12:18  15:27  17:02  19:35  21:28
+2026-03-20      8        8  00:13  03:15  06:40  09:40  12:37  15:38  18:31  21:10
+2026-03-21     10        9  00:27  03:17  06:21  09:39  12:02  13:18  14:48(2)  19:02  22:36
+2026-03-22      9        7  02:22  05:30  08:53  11:54(2)  16:36(2)  19:28  23:27
+2026-03-23      9        8  02:30  05:13  08:48  10:26  11:41  14:32  17:40  19:26(2)
+2026-03-24     11        8  00:38  03:44  06:10  10:05  12:30  14:45(2)  18:02  20:16(3)
+
+Raw counts:     [8, 9, 8, 10, 9, 9, 11]
+  mean=9.1  median=9
+Episode counts: [8, 9, 8, 9, 7, 8, 8]
+  mean=8.1  median=8
+
+=== EPISODE TEMPLATE (slot_count=8) ===
+
+Days used for episode template: [datetime.date(2026, 3, 18), datetime.date(2026, 3, 20), datetime.date(2026, 3, 23), datetime.date(2026, 3, 24)]
+  Slot 1: 00:34 (0.57h)
+  Slot 2: 03:53 (3.89h)
+  Slot 3: 07:00 (7.01h)
+  Slot 4: 09:58 (9.98h)
+  Slot 5: 12:33 (12.57h)
+  Slot 6: 15:11 (15.19h)
+  Slot 7: 18:17 (18.29h)
+  Slot 8: 20:43 (20.73h)
+
+=== EPISODE TRIAL ALIGNMENT (threshold=2.0h) ===
+
+2026-03-18 (8 episodes): 5 matched, 3 unmatched, max_cost=1.82h
+2026-03-19 (9 episodes): 8 matched, 1 unmatched, max_cost=1.25h
+2026-03-20 (8 episodes): 8 matched, 0 unmatched, max_cost=0.63h
+2026-03-21 (9 episodes): 8 matched, 1 unmatched, max_cost=1.87h
+2026-03-22 (7 episodes): 7 matched, 0 unmatched, max_cost=1.51h
+2026-03-23 (8 episodes): 8 matched, 0 unmatched, max_cost=1.93h
+2026-03-24 (8 episodes): 8 matched, 0 unmatched, max_cost=0.83h
+
+Slot counts differ: raw=9, episode=8. Direct template comparison not possible.

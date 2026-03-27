@@ -14,6 +14,7 @@ from datetime import date, datetime, timedelta
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from feedcast.clustering import group_into_episodes
 from feedcast.data import (
     FeedEvent,
     Forecast,
@@ -61,8 +62,13 @@ def forecast_slot_drift(
     Returns:
         A Forecast with projected feed times and volumes.
     """
-    # Group history into calendar days, identify recent complete days.
-    daily_feeds = _group_by_day(history, cutoff)
+    # Collapse raw feeds into episodes for template building.
+    # Episode-level history gives a cleaner slot count and template,
+    # avoiding inflation from cluster-internal feeds (top-ups, etc.).
+    episode_history = _episodes_as_events(history)
+
+    # Group episode-level history into calendar days.
+    daily_feeds = _group_by_day(episode_history, cutoff)
     complete_days = _recent_complete_days(daily_feeds, cutoff)
     if len(complete_days) < MIN_COMPLETE_DAYS:
         raise ForecastUnavailable(
@@ -85,10 +91,10 @@ def forecast_slot_drift(
     projections = _project_slots(day_matches, template, reference_date)
 
     # Identify which of today's slots are already filled, matching
-    # against projected positions (not raw template) so drift doesn't
-    # cause misclassification.
+    # episode-level events against projected positions (not raw template)
+    # so drift doesn't cause misclassification.
     today_feeds = [
-        event for event in history
+        event for event in episode_history
         if event.time.date() == cutoff.date() and event.time <= cutoff
     ]
     filled_today = _filled_slots_today(today_feeds, projections)
@@ -113,6 +119,27 @@ def forecast_slot_drift(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def _episodes_as_events(history: list[FeedEvent]) -> list[FeedEvent]:
+    """Collapse raw feed history into episode-level synthetic FeedEvents.
+
+    Each episode becomes a single FeedEvent with the episode's canonical
+    timestamp (first constituent) and summed volume. This removes
+    cluster-internal feeds so template building operates on real feeding
+    episodes rather than inflated raw counts.
+    """
+    episodes = group_into_episodes(history)
+    return [
+        FeedEvent(
+            time=episode.time,
+            volume_oz=episode.volume_oz,
+            # All volume is bottle-only (Slot Drift uses no breastfeed merge).
+            bottle_volume_oz=episode.volume_oz,
+            breastfeeding_volume_oz=0.0,
+        )
+        for episode in episodes
+    ]
 
 
 def _group_by_day(
@@ -472,7 +499,7 @@ def _build_diagnostics(
         "template_hours": [round(float(h), 2) for h in template],
         "template_times": [_hour_str(h) for h in template],
         "complete_days_used": len(complete_days),
-        "daily_feed_counts": {
+        "daily_episode_counts": {
             str(day): len(feeds) for day, feeds in complete_days
         },
         "per_slot": [
@@ -488,7 +515,7 @@ def _build_diagnostics(
         ],
         "per_day_match_quality": {
             str(day): {
-                "total_feeds": len(matched) + len(unmatched),
+                "total_episodes": len(matched) + len(unmatched),
                 "matched": len(matched),
                 "unmatched": len(unmatched),
             }

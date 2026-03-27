@@ -34,6 +34,17 @@ the effect is modest and should be treated as one signal among several.
 The models try to find whatever structure the data actually supports in
 a small, shifting dataset.
 
+### Feeds vs. Episodes
+
+Not every recorded feed is an independent hunger event. Consecutive
+bottle feeds that occur close together — a large feed followed by a
+small top-up, for example — often form a single **feeding episode**.
+Feedcast uses a deterministic rule to group raw feeds into episodes
+(see [`feedcast/research/feed_clustering/`](feedcast/research/feed_clustering/)).
+Evaluation scores at the episode level: both predictions and actuals
+are collapsed into episodes before matching. Models receive raw feed
+events and decide independently how to handle episodes in their logic.
+
 ## Forecast Sources
 
 **Scripted models** run deterministically from the event history:
@@ -75,15 +86,17 @@ never auto-featured.
 ## Evaluation
 
 When a new export arrives, Feedcast scores the previous run's predicted
-bottle feeds against the bottle feeds now visible in that export. Those
-retrospective results are stored in `tracker.json` and aggregated into a
-historical accuracy table in the report.
+feeding episodes against the episodes now visible in that export. Both
+predictions and actuals are collapsed into episodes before scoring (see
+[Feeds vs. Episodes](#feeds-vs-episodes) above). Retrospective results
+are stored in `tracker.json` and aggregated into a historical accuracy
+table in the report.
 
 The headline score is the geometric mean of a weighted count F1 (did you
-predict the right number of feeds?) and a weighted timing score (how close
-were the timestamps?). Both components weight earlier feeds more heavily.
-Partial horizons are scored on the observed window only and reported with
-explicit coverage. Full methodology:
+predict the right number of episodes?) and a weighted timing score (how
+close were the timestamps?). Both components weight earlier episodes more
+heavily. Partial horizons are scored on the observed window only and
+reported with explicit coverage. Full methodology:
 [`feedcast/evaluation/methodology.md`](feedcast/evaluation/methodology.md).
 
 ## Quick Start

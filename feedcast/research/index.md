@@ -18,6 +18,7 @@ changed.
 | Concept | Summary conclusion | Where |
 | ------- | ------------------ | ----- |
 | Feed volume vs. subsequent gap | Supported on the current dataset: larger feeds are usually followed by longer gaps, but the effect is modest and should be treated as one signal among several. | [`volume_gap_relationship/findings.md`](volume_gap_relationship/findings.md) |
+| Feed clustering (episodes) | Consecutive bottle feeds within 73 minutes (or 80 minutes if the later feed is ≤ 1.50 oz) belong to the same feeding episode. Derived from hand-labeled boundary data with zero errors on 96 boundaries. The shared rule lives in `feedcast/clustering.py`. | [`feed_clustering/findings.md`](feed_clustering/findings.md) |
 
 ## Working Framing
 
@@ -54,7 +55,9 @@ the data richer than it is.
 
 ## Current Hypotheses
 
-- Daily feed count may stay fairly stable even as timing shifts.
+- Daily episode count may stay fairly stable even as timing shifts.
+  (Raw feed count and episode count are distinct — a single episode can
+  contain multiple close-together feeds. See `feed_clustering/`.)
 - The schedule may drift gradually over time rather than jump between unrelated
   states.
 - Breastfeeding volume may be too noisy to help timing-first models unless
@@ -64,8 +67,11 @@ the data richer than it is.
 
 ## Cross-Cutting Considerations
 
-- Cluster feeding should usually be handled inside model logic rather than in
-  shared preprocessing.
+- The episode (cluster) definition is shared: a deterministic rule in
+  `feedcast/clustering.py`, derived from labeled data (see
+  `feed_clustering/`). Evaluation and consensus blend collapse feeds into
+  episodes using this rule. Models receive raw events and decide
+  independently how to handle episodes in their own logic.
 - Outlier handling is model-specific: the same event can be noise for one model
   and signal for another.
 - Promote repeated, evidence-backed observations into research articles instead
@@ -73,7 +79,7 @@ the data richer than it is.
 
 ## Open Questions
 
-- How stable is daily feed count once more complete days accumulate?
+- How stable is daily episode count once more complete days accumulate?
 - Does recent trend direction or acceleration improve forecasts more than raw
   recent cadence?
 - Are time-of-day features capturing real structure or fitting noise given the
@@ -84,3 +90,5 @@ the data richer than it is.
   research rather than model-local sensitivity checks?
 - Should the day/night regime split be promoted from model research into a
   standalone cross-cutting article?
+- Does the volume-gap relationship change when measured at the episode level
+  (summed volume, inter-episode gap) rather than at the raw feed level?

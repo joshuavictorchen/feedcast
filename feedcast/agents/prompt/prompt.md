@@ -13,6 +13,21 @@ Breastfeeding may appear in the export, usually right before a bottle. It is
 not a separate prediction target and should not dominate your approach unless
 you find it genuinely useful.
 
+## Feeding Episodes
+
+Not every recorded feed is an independent hunger event. Consecutive bottle
+feeds that occur close together often form a single feeding episode — for
+example, a large feed followed by a small top-up 50 minutes later. A
+deterministic rule defines episode boundaries; see
+`feedcast/clustering.py` for the implementation and
+`feedcast/research/feed_clustering/` for the derivation and evidence.
+
+Evaluation collapses both your predictions and the actuals into episodes
+before scoring. Optimize your forecast for feeding episodes: predict when
+the baby will eat, not every possible partial feed. Predicting cluster
+internal structure (e.g., both a main feed and a top-up) is allowed but
+optional — it will be collapsed before scoring.
+
 ## Freedom
 
 You may use whatever approach you think will produce the best forecast.

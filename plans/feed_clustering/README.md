@@ -499,16 +499,231 @@ single-episode predictions), and
 locking in the lowered 75-minute conflict window). Full suite: 53 tests
 pass (3 new + 50 existing).
 
-### Phase 5: Model and agent awareness
+### Phase 5: Model and agent cluster awareness
 
-1. Update research index (`feedcast/research/index.md`):
+**Status: PLANNING**
+
+Phase 5 makes every model and agent cluster-aware. This includes
+implementation changes to models — not just documentation. Each model
+gets its own sub-phase covering research, design, methodology, and
+implementation. Shared context updates come first.
+
+**Resolved decisions:**
+
+- **Research index scope.** Research index gets the table entry, reversed
+  cross-cutting bullet, and updated hypotheses. The feed-vs-episode
+  distinction must be clear to fresh agents in three places: research
+  index, top-level README, and agent prompt. Evaluation methodology
+  already covers this (Phase 3 added an "Episode collapsing" section)
+  and does not need further changes in 5a.
+- **Model scope.** Phase 5 is NOT documentation-only. Each of the four
+  non-consensus models gets a full update cycle: research, design,
+  methodology, implementation. Consensus gets a revisit sub-phase at the
+  end.
+- **Agent prompt.** The prompt gets an episode-first recommendation and
+  points to the source files for the rule (`feedcast/clustering.py`,
+  `feedcast/research/feed_clustering/`), rather than hardcoding threshold
+  values that could go stale.
+
+**Resolved assumptions:**
+
+- Each model sub-phase is self-contained: run research, decide on
+  changes, implement, update docs. Decision points within a model
+  sub-phase are resolved during implementation based on research data.
+- `CHANGELOG.md` gets an entry when model behavior changes. If a model's
+  research shows no beneficial change, it gets a `design.md` note and
+  nothing else.
+- `methodology.md` is updated when the model's report-facing
+  description changes.
+- Consensus blend was already updated in Phase 4. Sub-phase 5f revisits
+  it to check whether upstream model changes affect consensus behavior —
+  not to redo Phase 4 work.
+
+**Ship/no-ship guardrail:** Model-local research scripts have different
+metrics (template analysis for Slot Drift, trajectory MAE for Analog,
+gap-based proxies for Latent Hunger and Survival Hazard). These generate
+hypotheses about whether episode-level inputs help. Runtime changes only
+ship if replay scoring (`scripts/run_replay.py <slug>`) shows the
+headline score improves or holds. If replay degrades, document the
+finding in `design.md` and do not ship the implementation change.
+
+**Sub-phase ordering:** The four model sub-phases (5b–5e) are
+independent and can be tackled in any order. Listed order is not
+binding. Expected cluster impact by model, highest first:
+
+1. **Latent Hunger** — growth rate fitted directly from contaminated
+   (volume, gap) pairs.
+2. **Survival Hazard** — Weibull distributions fitted to contaminated
+   inter-feed gaps.
+3. **Analog Trajectory** — core neighbor-search features (`last_gap`,
+   `mean_gap`, `last_volume`, `mean_volume`) include cluster noise.
+4. **Slot Drift** — most resilient (timing-only, Hungarian matching
+   tolerates extras), but raw cluster feeds still inflate daily count
+   and can affect template construction.
+
+#### Sub-phase 5a: Shared context
+
+**Status: DONE**
+
+Note: `feedcast/evaluation/methodology.md` already documents episode
+collapsing (added in Phase 3). No further evaluation doc changes needed.
+
+1. Update `feedcast/research/index.md`:
    - Add table entry for the feed clustering article.
-   - Reverse the "cluster feeding should usually be handled inside model
-     logic" guidance. New framing: the cluster DEFINITION is shared
-     (research + evaluation), cluster HANDLING remains model-local.
-2. Update each model's `design.md` to document how the model relates to
-   clusters (even if the answer is "no changes needed").
-3. Update agent prompt with a concise cluster rule description.
+   - Reverse the cross-cutting bullet: cluster DEFINITION is shared
+     (research + evaluation + consensus blend), cluster HANDLING is
+     model-local.
+   - Update "Current Hypotheses" bullet on daily feed count stability
+     to distinguish episode count from raw feed count.
+   - Add open question: does episode-level analysis change the
+     volume-gap relationship findings?
+2. Update top-level `README.md`:
+   - Add a clear definition of feeds vs. episodes early in the document.
+   - Note that evaluation scores at the episode level.
+3. Update `feedcast/agents/prompt/prompt.md`:
+   - Add a section on feeding episodes and the cluster rule.
+   - Point to `feedcast/clustering.py` and
+     `feedcast/research/feed_clustering/` for the rule definition.
+   - Recommend episode-level forecasting: "Optimize for feeding
+     episodes; cluster internal structure is optional and will be
+     collapsed before scoring."
+
+**Implementation notes:**
+
+Updated three files:
+
+- `feedcast/research/index.md`: Added feed clustering table entry with
+  summary conclusion and link to findings. Reversed cross-cutting bullet
+  from "should be model-local" to "definition is shared, handling is
+  model-local." Updated hypothesis and open question from "feed count"
+  to "episode count." Added new open question about episode-level
+  volume-gap relationship.
+- `README.md`: Added "Feeds vs. Episodes" subsection under "The
+  Forecasting Challenge" defining episodes, pointing to the research,
+  and noting evaluation collapses both sides. Updated "Evaluation"
+  section language from "feeds" to "episodes."
+- `feedcast/agents/prompt/prompt.md`: Added "Feeding Episodes" section
+  between the intro and "Freedom." Points to `clustering.py` and
+  research for the rule (no hardcoded thresholds). Recommends
+  episode-level forecasting; cluster internal structure is optional.
+
+All 53 tests pass. No Python runtime changes. The agent prompt update
+steers agents toward episode-level forecasting, which is a behavioral
+change for LLM agents but not for scripted models or the pipeline.
+
+#### Sub-phase 5b: Slot Drift
+
+**Status: DONE**
+
+Slot Drift builds a daily template from raw feed times. Cluster feeds
+can inflate the daily count and create spurious template slots.
+
+1. Run `research.py` with episode-level history. Compare template slot
+   count and positions to raw-input results.
+2. Decide whether to group history into episodes before template
+   construction. If so, implement.
+3. Update `design.md` with cluster relationship and any design changes.
+4. Update `methodology.md` if report-facing description changes.
+5. Update `CHANGELOG.md` if behavior changes.
+6. Run tests and replay verification.
+
+**Implementation notes:**
+
+Updated `research.py` to add an episode-level analysis section that
+compares raw vs. episode daily counts, template positions, and trial
+alignment. Key finding: median slot count drops from 9 to 8 with
+episode-level history.
+
+Implemented episode-level template building in `model.py`. Added
+`_episodes_as_events()` helper that collapses raw history via
+`group_into_episodes()` and converts episodes to synthetic FeedEvents.
+The episode-level history is used for template building, matching,
+drift estimation, and today's filled-slot identification. Raw history
+is still passed to `_build_forecast_points()` for last-known-feed-time
+gap computation.
+
+**Replay gate (20260325 export, 03/24→03/25 window):**
+
+| Metric | Baseline (raw) | Episode-level | Delta |
+|--------|----------------|---------------|-------|
+| Headline | 53.46 | 53.74 | +0.28 |
+| Count F1 | 91.77 | 80.98 | -10.79 |
+| Timing | 31.14 | 35.67 | +4.52 |
+| Matched | 8/9 | 7/9 | -1 |
+
+Headline improved. Trade-off: one fewer matched episode, but the
+matched episodes have better timing. The episode-level template (8
+slots) is a more accurate representation of the daily feeding
+pattern.
+
+Diagnostics keys renamed: `daily_feed_counts` → `daily_episode_counts`,
+`total_feeds` → `total_episodes` to match the new episode-level
+semantics and avoid ontology drift.
+
+**Tests:** 4 new tests in `tests/test_slot_drift.py`:
+`test_cluster_feeds_collapse_into_one_event` (unit test for
+`_episodes_as_events`), `test_independent_feeds_stay_separate`
+(non-cluster feeds preserved), `test_cluster_day_does_not_inflate_slot_count`
+(integration test confirming cluster top-ups don't inflate median slot
+count), `test_diagnostics_use_episode_keys` (diagnostics use
+episode-level naming). Full suite: 57 tests pass (4 new + 53
+existing). `design.md`, `methodology.md`, `CHANGELOG.md` updated.
+
+#### Sub-phase 5c: Analog Trajectory
+
+Analog Trajectory uses `last_gap`, `mean_gap`, `last_volume`, and
+`mean_volume` as core features for neighbor search. Cluster-internal
+gaps and volumes pollute these features.
+
+1. Run `research.py` with episode-level history. Compare feature
+   distributions and neighbor quality to raw-input results.
+2. Decide whether to compute features from episode-level history. If
+   so, implement.
+3. Update `design.md` with cluster relationship and any design changes.
+4. Update `methodology.md` if report-facing description changes.
+5. Update `CHANGELOG.md` if behavior changes.
+6. Run tests and replay verification.
+
+#### Sub-phase 5d: Latent Hunger
+
+Latent Hunger fits a hunger growth rate from (volume, gap) pairs.
+Cluster-internal pairs are noise: a short gap after any volume biases
+the growth rate estimate downward.
+
+1. Run `research.py` with episode-level history. Compare growth rate
+   estimates and forecast quality to raw-input results.
+2. Decide whether to fit growth rate from episode-level
+   (total_volume, inter-episode_gap) pairs. If so, implement.
+3. Update `design.md` with cluster relationship and any design changes.
+4. Update `methodology.md` if report-facing description changes.
+5. Update `CHANGELOG.md` if behavior changes.
+6. Run tests and replay verification.
+
+#### Sub-phase 5e: Survival Hazard
+
+Survival Hazard fits Weibull distributions to inter-feed gaps per
+day-part. Cluster-internal gaps create a bimodal artifact that doesn't
+reflect real hunger dynamics.
+
+1. Run `research.py` with episode-level history. Compare Weibull
+   shape/scale estimates to raw-input results.
+2. Decide whether to fit distributions to inter-episode gaps. If so,
+   implement.
+3. Update `design.md` with cluster relationship and any design changes.
+4. Update `methodology.md` if report-facing description changes.
+5. Update `CHANGELOG.md` if behavior changes.
+6. Run tests and replay verification.
+
+#### Sub-phase 5f: Consensus Blend revisit
+
+Consensus already collapses predictions into episodes before voting
+(Phase 4). This sub-phase checks whether upstream model changes from
+5b–5e affect consensus behavior.
+
+1. Run consensus research sweep with updated model outputs.
+2. Compare results to Phase 4 baseline.
+3. If parameters need adjustment, update and document.
+4. If no changes needed, note in this plan section and move on.
 
 ### Phase 6: Reports
 
@@ -519,7 +734,8 @@ pass (3 new + 50 existing).
 
 ### Phase 7: Documentation and cleanup
 
-1. Update README.
+1. Final README cleanup (feed-vs-episode framing added in 5a; this is
+   residual polish only).
 2. Final update to this plan file with completion notes.
 
 ## Plans Directory Convention
