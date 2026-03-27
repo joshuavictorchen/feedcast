@@ -6,8 +6,8 @@ import unittest
 from datetime import datetime, timedelta
 
 from feedcast.data import FeedEvent
+from feedcast.clustering import episodes_as_events
 from feedcast.models.slot_drift.model import (
-    _episodes_as_events,
     _determine_slot_count,
     _group_by_day,
     _recent_complete_days,
@@ -48,7 +48,7 @@ class EpisodesAsEventsTests(unittest.TestCase):
         """A main feed + top-up within 73 minutes becomes one episode event."""
         main_feed = _feed(datetime(2026, 3, 24, 14, 45), 3.0)
         topup = _feed(datetime(2026, 3, 24, 15, 35), 1.0)
-        result = _episodes_as_events([main_feed, topup])
+        result = episodes_as_events([main_feed, topup])
         self.assertEqual(len(result), 1)
         # Episode uses the first feed's timestamp.
         self.assertEqual(result[0].time, main_feed.time)
@@ -59,7 +59,7 @@ class EpisodesAsEventsTests(unittest.TestCase):
         """Feeds separated by more than 80 minutes remain independent."""
         feed_a = _feed(datetime(2026, 3, 24, 10, 0), 3.0)
         feed_b = _feed(datetime(2026, 3, 24, 12, 0), 3.5)
-        result = _episodes_as_events([feed_a, feed_b])
+        result = episodes_as_events([feed_a, feed_b])
         self.assertEqual(len(result), 2)
 
 
@@ -93,7 +93,7 @@ class SlotCountFromEpisodesTests(unittest.TestCase):
             history.extend(_build_day_feeds(day, hours))
 
         # With episode collapse, all days should have 8 episodes.
-        episode_history = _episodes_as_events(history)
+        episode_history = episodes_as_events(history)
         daily = _group_by_day(episode_history, cutoff)
         complete_days = _recent_complete_days(daily, cutoff)
         slot_count = _determine_slot_count(complete_days)

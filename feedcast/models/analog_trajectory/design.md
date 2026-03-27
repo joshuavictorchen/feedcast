@@ -54,6 +54,28 @@ The forecast uses the median trajectory length across neighbors. Median
 (0.748h) slightly outperforms mean (0.753h) and guards against outlier
 trajectories with unusual event counts.
 
+## Cluster relationship
+
+The model currently uses raw feed history, including cluster-internal
+feeds. Research (Phase 5c) showed episode-level history substantially
+improves feature quality and neighbor retrieval accuracy, but the
+episode model under-predicts because episode-level trajectories are
+shorter. The median trajectory length (which controls how many
+predictions to emit) drops when trajectories contain fewer events.
+The replay headline degraded and the change was not shipped.
+
+The model tolerates cluster noise reasonably well because
+time-of-day features (the dominant similarity signal) are unaffected
+by clustering, and the gap/volume features, while noisier with raw
+feeds, still produce acceptable neighbor matches. Evaluation
+collapses both predictions and actuals into episodes before scoring
+(Phase 3), so the model is not penalized for predicting cluster
+internal structure.
+
+A future path: decouple the trajectory length decision from
+per-neighbor event count to avoid under-prediction with episode
+inputs.
+
 ## Bottle-only events
 
 Uses bottle-only events (merge_window_minutes=None). Breastfeeding

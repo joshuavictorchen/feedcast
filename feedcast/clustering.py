@@ -105,6 +105,30 @@ def group_into_episodes(
     return episodes
 
 
+def episodes_as_events(history: list[FeedEvent]) -> list[FeedEvent]:
+    """Collapse raw feed history into episode-level synthetic FeedEvents.
+
+    Each episode becomes a single FeedEvent with the episode's canonical
+    timestamp (first constituent) and summed volume. This removes
+    cluster-internal feeds so downstream consumers operate on real feeding
+    episodes rather than inflated raw counts.
+
+    The synthetic events use bottle_volume_oz = volume_oz and
+    breastfeeding_volume_oz = 0.0. No model uses the breastfeed split
+    field for forecast logic; the total volume_oz is correct regardless.
+    """
+    episodes = group_into_episodes(history)
+    return [
+        FeedEvent(
+            time=episode.time,
+            volume_oz=episode.volume_oz,
+            bottle_volume_oz=episode.volume_oz,
+            breastfeeding_volume_oz=0.0,
+        )
+        for episode in episodes
+    ]
+
+
 def _is_same_episode(gap_minutes: float, second_feed_volume_oz: float) -> bool:
     """Return True if a boundary continues the current episode."""
     if gap_minutes <= BASE_GAP_MINUTES:

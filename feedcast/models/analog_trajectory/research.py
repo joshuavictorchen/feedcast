@@ -28,6 +28,7 @@ from pathlib import Path
 
 import numpy as np
 
+from feedcast.clustering import episodes_as_events
 from feedcast.data import (
     build_feed_events,
     load_export_snapshot,
@@ -301,6 +302,79 @@ def main() -> None:
             log(f"  Abs errors:  {[f'{e:.2f}' for e in err]}")
             log(f"  Neighbors: {[f'd={nd:.2f}' for _, nd in nearest]}")
             log()
+
+    # --- Episode-level comparison ---
+    # Compare raw vs. episode state library and feature distributions.
+    log(f"\n{'=' * 60}")
+    log("EPISODE-LEVEL COMPARISON")
+    log(f"{'=' * 60}")
+    log()
+
+    episode_events = episodes_as_events(events)
+    log(f"Raw bottle events:   {len(events)}")
+    log(f"Episode events:      {len(episode_events)}")
+    log(f"Events collapsed:    {len(events) - len(episode_events)}")
+    log()
+
+    # Build episode state library for comparison.
+    ep_states: list[dict] = []
+    ep_incomplete = 0
+    for index in range(MIN_PRIOR_EVENTS, len(episode_events)):
+        event = episode_events[index]
+        if event.time > cutoff:
+            break
+        future_end = event.time + timedelta(hours=24)
+        future_events = [
+            e for e in episode_events[index + 1:] if e.time <= future_end
+        ]
+        has_late = any(
+            e.time >= event.time + timedelta(hours=TRAJECTORY_COMPLETENESS_HOURS)
+            for e in episode_events[index + 1:]
+        )
+        if has_late and len(future_events) >= 3:
+            ep_states.append({
+                "index": index,
+                "time": event.time,
+                "future_events": future_events,
+                "future_count": len(future_events),
+            })
+        else:
+            ep_incomplete += 1
+
+    log(f"Raw complete states:     {len(raw_states)}")
+    log(f"Episode complete states:  {len(ep_states)}")
+    log()
+
+    # Feature statistics comparison for best lookback.
+    best_lookback = best["lookback"]
+    ep_feat_matrix = np.array(
+        [_state_features(episode_events, s["index"], best_lookback)
+         for s in ep_states]
+    )
+    raw_feat_matrix = feature_matrices[best_lookback]
+
+    log(f"=== FEATURE COMPARISON ({best_lookback}h lookback, best config) ===")
+    log()
+    log(f"{'Feature':<15} {'Raw Mean':>10} {'Ep Mean':>10} {'Raw Std':>10} {'Ep Std':>10}")
+    for i, name in enumerate(feature_names):
+        raw_col = raw_feat_matrix[:, i]
+        ep_col = ep_feat_matrix[:, i]
+        log(
+            f"{name:<15} {raw_col.mean():>10.3f} {ep_col.mean():>10.3f} "
+            f"{raw_col.std():>10.3f} {ep_col.std():>10.3f}"
+        )
+    log()
+
+    # Quick evaluation with best config on episode data.
+    ep_gap1, ep_traj3, ep_n = _evaluate_neighbors(
+        ep_states, ep_feat_matrix, best["weights"], best["k"],
+        recency_half_life=best["half_life"],
+    )
+    log(f"Episode-level evaluation (best config, fold-causal):")
+    log(f"  gap1 MAE  = {ep_gap1:.3f}h  (raw: {gap1_mae:.3f}h)")
+    log(f"  traj3 MAE = {ep_traj3:.3f}h  (raw: {traj3_mae:.3f}h)")
+    log(f"  n = {ep_n}  (raw: {n})")
+    log()
 
     # Save results alongside the script.
     results_path = OUTPUT_DIR / "research_results.txt"

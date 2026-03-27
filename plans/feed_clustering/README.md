@@ -671,6 +671,8 @@ existing). `design.md`, `methodology.md`, `CHANGELOG.md` updated.
 
 #### Sub-phase 5c: Analog Trajectory
 
+**Status: DONE (no runtime change)**
+
 Analog Trajectory uses `last_gap`, `mean_gap`, `last_volume`, and
 `mean_volume` as core features for neighbor search. Cluster-internal
 gaps and volumes pollute these features.
@@ -683,6 +685,40 @@ gaps and volumes pollute these features.
 4. Update `methodology.md` if report-facing description changes.
 5. Update `CHANGELOG.md` if behavior changes.
 6. Run tests and replay verification.
+
+**Implementation notes:**
+
+Updated `research.py` with an episode-level comparison section that
+builds an episode state library, compares feature distributions, and
+runs fold-causal evaluation alongside the raw sweep. Episode-level
+features are cleaner (gaps longer and tighter, volumes higher and
+less noisy) and neighbor retrieval accuracy improved substantially
+in research metrics.
+
+Implemented episode-level history in `model.py` and ran replay.
+**Replay headline dropped** (66.65 vs. 68.22 baseline, -1.57). The
+episode model predicted fewer episodes than the baseline (7 vs. 9
+actual) because episode-level trajectories contain fewer events,
+making the median trajectory length shorter and producing fewer
+forecast points. Count F1 drop (91.16 vs. 100.0) outweighed timing
+improvement (48.73 vs. 46.55).
+
+**Decision: not shipped.** Model change reverted. Raw feed history
+preserved. The episode-level comparison is kept in `research.py` for
+future reference.
+
+Additionally, extracted `_episodes_as_events()` from Slot Drift's
+model.py to `feedcast/clustering.py` as the shared public function
+`episodes_as_events()`. Slot Drift updated to import from the shared
+location.
+
+`design.md` updated with "Cluster relationship" section documenting
+the research finding and explaining why the model tolerates cluster
+noise. `CHANGELOG.md` updated with research findings and the
+not-shipped decision. No `methodology.md` change needed (no runtime
+behavior change).
+
+57 tests pass (no new tests needed — no runtime change shipped).
 
 #### Sub-phase 5d: Latent Hunger
 
