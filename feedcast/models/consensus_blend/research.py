@@ -28,7 +28,7 @@ from feedcast.data import (
     load_export_snapshot,
 )
 from feedcast.evaluation.scoring import score_forecast
-from feedcast.models import build_event_cache, run_all_models_from_cache
+from feedcast.models import run_all_models
 from feedcast.models.consensus_blend.model import (
     ANCHOR_RADIUS_MINUTES,
     MAX_CANDIDATE_SPREAD_MINUTES,
@@ -63,7 +63,6 @@ def main() -> None:
         snapshot.activities,
         merge_window_minutes=DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     )
-    event_cache = build_event_cache(snapshot.activities)
     cutoffs = _pick_retrospective_cutoffs(events, cutoff)
 
     log(f"Export: {snapshot.export_path}")
@@ -73,9 +72,9 @@ def main() -> None:
     log()
 
     _analyze_interfeed_gaps(events, cutoff, log)
-    _analyze_model_agreement(events, event_cache, cutoffs, log)
-    _report_production_scores(events, event_cache, cutoffs, log)
-    _sweep_selector_parameters(events, event_cache, cutoffs, log)
+    _analyze_model_agreement(events, snapshot.activities, cutoffs, log)
+    _report_production_scores(events, snapshot.activities, cutoffs, log)
+    _sweep_selector_parameters(events, snapshot.activities, cutoffs, log)
 
     results_path = OUTPUT_DIR / "research_results.txt"
     results_path.write_text(output_capture.getvalue())
@@ -185,7 +184,7 @@ def _match_predictions_to_actuals(
 
 def _analyze_model_agreement(
     events: list[FeedEvent],
-    event_cache: dict,
+    activities: list,
     cutoffs: list[datetime],
     log,
 ) -> None:
@@ -200,7 +199,7 @@ def _analyze_model_agreement(
         if not actuals:
             continue
 
-        forecasts = run_all_models_from_cache(event_cache, cutoff, HORIZON_HOURS)
+        forecasts = run_all_models(activities, cutoff, HORIZON_HOURS)
         actual_to_predictions: dict[int, list[datetime]] = defaultdict(list)
         for forecast in forecasts:
             if not forecast.available or not forecast.points:
@@ -236,7 +235,7 @@ def _analyze_model_agreement(
 
 def _report_production_scores(
     events: list[FeedEvent],
-    event_cache: dict,
+    activities: list,
     cutoffs: list[datetime],
     log,
 ) -> None:
@@ -262,7 +261,7 @@ def _report_production_scores(
 
         observed_until = min(horizon_end, max(event.time for event in events))
         history_at_cutoff = [event for event in events if event.time <= cutoff]
-        base_forecasts = run_all_models_from_cache(event_cache, cutoff, HORIZON_HOURS)
+        base_forecasts = run_all_models(activities, cutoff, HORIZON_HOURS)
         available = {
             forecast.slug: forecast
             for forecast in base_forecasts
@@ -324,7 +323,7 @@ def _report_production_scores(
 
 def _sweep_selector_parameters(
     events: list[FeedEvent],
-    event_cache: dict,
+    activities: list,
     cutoffs: list[datetime],
     log,
 ) -> None:
@@ -348,7 +347,7 @@ def _sweep_selector_parameters(
             continue
         observed_until = min(horizon_end, max(event.time for event in events))
         history_at_cutoff = [event for event in events if event.time <= cutoff]
-        base_forecasts = run_all_models_from_cache(event_cache, cutoff, HORIZON_HOURS)
+        base_forecasts = run_all_models(activities, cutoff, HORIZON_HOURS)
         available = {
             forecast.slug: forecast
             for forecast in base_forecasts

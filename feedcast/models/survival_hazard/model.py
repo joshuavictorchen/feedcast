@@ -15,9 +15,11 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from feedcast.data import (
+    Activity,
     FeedEvent,
     Forecast,
     ForecastPoint,
+    build_feed_events,
     hour_of_day,
 )
 from feedcast.models.shared import (
@@ -210,14 +212,14 @@ def _estimate_daypart_scales(
 
 
 def forecast_survival_hazard(
-    history: list[FeedEvent],
+    activities: list[Activity],
     cutoff: datetime,
     horizon_hours: int,
 ) -> Forecast:
     """Predict feeds using a day-part Weibull survival model.
 
     Args:
-        history: Bottle-centered feed events up to the cutoff.
+        activities: Raw feeding activities from the export.
         cutoff: The latest observed activity time.
         horizon_hours: How many hours ahead to forecast.
 
@@ -227,7 +229,11 @@ def forecast_survival_hazard(
     Raises:
         ForecastUnavailable: If there are too few recent events.
     """
-    events = [e for e in history if e.time <= cutoff]
+    # Build bottle-only events and filter to cutoff.
+    events = [
+        e for e in build_feed_events(activities, merge_window_minutes=None)
+        if e.time <= cutoff
+    ]
     if len(events) < MIN_FIT_GAPS + 1:
         raise ForecastUnavailable(
             f"Need at least {MIN_FIT_GAPS + 1} events, have {len(events)}"

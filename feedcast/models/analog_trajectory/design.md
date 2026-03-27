@@ -78,7 +78,7 @@ inputs.
 
 ## Bottle-only events
 
-Uses bottle-only events (merge_window_minutes=None). Breastfeeding
+Builds bottle-only events locally (no breastfeed merge). Breastfeeding
 volume estimation is noisy and the model uses volume as a similarity
 feature, not a causal input. Adding noise to similarity computation
 would degrade neighbor quality. Revisit if the bottle/breast mix

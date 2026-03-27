@@ -17,11 +17,11 @@ from feedcast.data import (
     HORIZON_HOURS,
     ExportSnapshot,
     Forecast,
+    build_feed_events,
     load_export_snapshot,
 )
 from feedcast.models import (
-    build_event_cache,
-    run_all_models_from_cache,
+    run_all_models,
     run_consensus_blend,
     select_featured_forecast,
 )
@@ -58,11 +58,17 @@ def main() -> None:
     cutoff = snapshot.latest_activity_time
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    event_cache = build_event_cache(snapshot.activities)
-    base_forecasts = run_all_models_from_cache(event_cache, cutoff, HORIZON_HOURS)
+    base_forecasts = run_all_models(snapshot.activities, cutoff, HORIZON_HOURS)
+
+    # Pipeline-level events for consensus blend and reporting. This is a
+    # pipeline concern, not a model concern — models build their own events.
+    pipeline_events = build_feed_events(
+        snapshot.activities,
+        merge_window_minutes=DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
+    )
     consensus_forecast = run_consensus_blend(
         base_forecasts,
-        event_cache[DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES],
+        pipeline_events,
         cutoff,
         HORIZON_HOURS,
     )
@@ -97,7 +103,7 @@ def main() -> None:
         snapshot=snapshot,
         all_forecasts=all_forecasts,
         featured_slug=featured_slug,
-        events=event_cache[DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES],
+        events=pipeline_events,
         cutoff=cutoff,
         run_id=run_id,
         retrospective=retrospective,

@@ -12,9 +12,11 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from feedcast.data import (
+    Activity,
     FeedEvent,
     Forecast,
     ForecastPoint,
+    build_feed_events,
     hour_of_day,
 )
 from feedcast.models.shared import (
@@ -71,20 +73,26 @@ TRAJECTORY_COMPLETENESS_HOURS = 20
 
 
 def forecast_analog_trajectory(
-    history: list[FeedEvent],
+    activities: list[Activity],
     cutoff: datetime,
     horizon_hours: int,
 ) -> Forecast:
     """Predict feeds by retrieving and averaging similar historical trajectories.
 
     Args:
-        history: Bottle-centered feed events up to the cutoff.
+        activities: Raw feeding activities from the export.
         cutoff: The latest observed activity time.
         horizon_hours: How many hours ahead to forecast.
 
     Returns:
         A Forecast with projected feed times and volumes.
     """
+    # Build bottle-only events and filter to cutoff.
+    history = [
+        e for e in build_feed_events(activities, merge_window_minutes=None)
+        if e.time <= cutoff
+    ]
+
     # Build the library of historical states and their future trajectories.
     states = _build_state_library(history, cutoff, horizon_hours)
     complete_states = [s for s in states if s["complete"]]

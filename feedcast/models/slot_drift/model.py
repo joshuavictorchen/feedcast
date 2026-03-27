@@ -16,9 +16,11 @@ from scipy.optimize import linear_sum_assignment
 
 from feedcast.clustering import episodes_as_events
 from feedcast.data import (
+    Activity,
     FeedEvent,
     Forecast,
     ForecastPoint,
+    build_feed_events,
     hour_of_day,
 )
 from feedcast.models.shared import (
@@ -48,20 +50,26 @@ DRIFT_WEIGHT_HALF_LIFE_DAYS = 3.0
 
 
 def forecast_slot_drift(
-    history: list[FeedEvent],
+    activities: list[Activity],
     cutoff: datetime,
     horizon_hours: int,
 ) -> Forecast:
     """Predict feeds by identifying daily slots and extrapolating drift.
 
     Args:
-        history: Bottle-centered feed events up to the cutoff.
+        activities: Raw feeding activities from the export.
         cutoff: The latest observed activity time.
         horizon_hours: How many hours ahead to forecast.
 
     Returns:
         A Forecast with projected feed times and volumes.
     """
+    # Build bottle-only events and filter to cutoff.
+    history = [
+        e for e in build_feed_events(activities, merge_window_minutes=None)
+        if e.time <= cutoff
+    ]
+
     # Collapse raw feeds into episodes for template building.
     # Episode-level history gives a cleaner slot count and template,
     # avoiding inflation from cluster-internal feeds (top-ups, etc.).

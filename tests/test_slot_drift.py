@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timedelta
 
-from feedcast.data import FeedEvent
+from feedcast.data import Activity, FeedEvent
 from feedcast.clustering import episodes_as_events
 from feedcast.models.slot_drift.model import (
     _determine_slot_count,
@@ -23,6 +23,13 @@ def _feed(time: datetime, volume_oz: float = 3.0) -> FeedEvent:
         volume_oz=volume_oz,
         bottle_volume_oz=volume_oz,
         breastfeeding_volume_oz=0.0,
+    )
+
+
+def _bottle_activity(time: datetime, volume_oz: float = 3.0) -> Activity:
+    """Build a bottle activity for passing to forecast functions."""
+    return Activity(
+        kind="bottle", start=time, end=time, volume_oz=volume_oz, raw_fields={},
     )
 
 
@@ -110,13 +117,17 @@ class SlotDriftDiagnosticsTests(unittest.TestCase):
             (1.0, 3.0), (4.0, 3.0), (7.0, 3.0), (10.0, 3.0),
             (13.0, 3.0), (16.0, 3.0), (19.0, 3.0), (22.0, 3.0),
         ]
-        # Build 5 days of clean 8-feed data.
-        history: list[FeedEvent] = []
+        # Build 5 days of clean 8-feed data as activities.
+        activities: list[Activity] = []
         for day_offset in range(5):
             day = datetime(2026, 3, 20 + day_offset)
-            history.extend(_build_day_feeds(day, regular_hours))
+            for hour, volume in regular_hours:
+                activities.append(_bottle_activity(
+                    datetime(day.year, day.month, day.day) + timedelta(hours=hour),
+                    volume_oz=volume,
+                ))
 
-        result = forecast_slot_drift(history, cutoff, horizon_hours=24)
+        result = forecast_slot_drift(activities, cutoff, horizon_hours=24)
         diag = result.diagnostics
         # Episode-level keys should exist, raw-level keys should not.
         self.assertIn("daily_episode_counts", diag)

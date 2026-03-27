@@ -258,7 +258,7 @@ under `feedcast/models/` with a standard set of files:
 
 | File | Purpose |
 | ---- | ------- |
-| `model.py` | Implementation. Exports `MODEL_NAME`, `MODEL_SLUG`, `MODEL_METHODOLOGY`, and a forecast function with signature `(history, cutoff, horizon_hours) -> Forecast`. Tuning constants live here, not in `shared.py`. |
+| `model.py` | Implementation. Exports `MODEL_NAME`, `MODEL_SLUG`, `MODEL_METHODOLOGY`, and a forecast function with signature `(activities, cutoff, horizon_hours) -> Forecast`. Each model receives raw `list[Activity]` and builds its own events locally (breastfeed merge policy, episode collapsing, cutoff filtering). Tuning constants live here, not in `shared.py`. |
 | `CHANGELOG.md` | Reverse-chronological behavior log. Update it whenever the model's behavior, assumptions, or tuning changes. Use a one-line summary with `Problem` and `Solution` sections. |
 | `methodology.md` | Report-facing text. Content before the first `##` heading is loaded by `load_methodology()` and rendered into the forecast report. |
 | `design.md` | Design decisions and rationale. Documents why the model works the way it does. |

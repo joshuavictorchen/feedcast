@@ -18,18 +18,20 @@ from typing import Any, Iterator, Mapping
 import numpy as np
 
 from feedcast.data import (
+    Activity,
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
+    FeedEvent,
     HORIZON_HOURS,
     ExportSnapshot,
     Forecast,
+    build_feed_events,
     load_export_snapshot,
 )
 from feedcast.evaluation.scoring import score_forecast
 from feedcast.models import (
     CONSENSUS_BLEND_SLUG,
-    build_event_cache,
     get_model_spec,
-    run_all_models_from_cache,
+    run_all_models,
     run_consensus_blend,
 )
 from feedcast.models.shared import ForecastUnavailable
@@ -100,7 +102,8 @@ def score_model(
 
     snapshot = load_export_snapshot(export_path=export_path)
     window = _latest_replay_window(snapshot)
-    event_cache = build_event_cache(snapshot.activities)
+    # Bottle-only events for scoring actuals — built once, reused.
+    scoring_events = build_feed_events(snapshot.activities, merge_window_minutes=None)
 
     context = (
         override_constants(f"feedcast.models.{model_slug}.model", overrides)
@@ -110,7 +113,8 @@ def score_model(
     with context:
         evaluation = _evaluate_model(
             model_slug=model_slug,
-            event_cache=event_cache,
+            activities=snapshot.activities,
+            scoring_events=scoring_events,
             replay_cutoff=window["cutoff"],
             observed_until=window["observed_until"],
         )
@@ -188,14 +192,14 @@ def tune_model(
             _coerce_param(name, value, baseline_params[name]) for value in values
         ]
 
-    # Build the event cache once — it depends only on the export activities
-    # and model merge windows, neither of which change between candidates.
-    event_cache = build_event_cache(snapshot.activities)
+    # Bottle-only events for scoring actuals — built once, reused across candidates.
+    scoring_events = build_feed_events(snapshot.activities, merge_window_minutes=None)
 
     # Evaluate baseline with current constants
     baseline = _evaluate_model(
         model_slug=model_slug,
-        event_cache=event_cache,
+        activities=snapshot.activities,
+        scoring_events=scoring_events,
         replay_cutoff=window["cutoff"],
         observed_until=window["observed_until"],
     )
@@ -218,7 +222,8 @@ def tune_model(
             with override_constants(module_name, params):
                 evaluation = _evaluate_model(
                     model_slug=model_slug,
-                    event_cache=event_cache,
+                    activities=snapshot.activities,
+                    scoring_events=scoring_events,
                     replay_cutoff=window["cutoff"],
                     observed_until=window["observed_until"],
                 )
@@ -334,12 +339,13 @@ def _latest_replay_window(snapshot: ExportSnapshot) -> dict[str, datetime]:
 def _evaluate_model(
     *,
     model_slug: str,
-    event_cache: dict[int | None, list[Any]],
+    activities: list[Activity],
+    scoring_events: list[FeedEvent],
     replay_cutoff: datetime,
     observed_until: datetime,
 ) -> dict[str, Any]:
     """Replay one model and score against the known last-24h actuals."""
-    forecast = _run_forecast(model_slug, event_cache, replay_cutoff)
+    forecast = _run_forecast(model_slug, activities, replay_cutoff)
 
     if not forecast.available:
         return {
@@ -353,10 +359,10 @@ def _evaluate_model(
             "diagnostics": forecast.diagnostics,
         }
 
-    # Score against bottle events (no breastfeed merge) in the observed window
+    # Score against bottle-only events in the observed window.
     forecast_score = score_forecast(
         predicted_points=forecast.points,
-        actual_events=event_cache[None],
+        actual_events=scoring_events,
         prediction_time=replay_cutoff,
         observed_until=observed_until,
     )
@@ -383,19 +389,14 @@ def _evaluate_model(
 
 def _run_forecast(
     model_slug: str,
-    event_cache: dict[int | None, list[Any]],
+    activities: list[Activity],
     replay_cutoff: datetime,
 ) -> Forecast:
     """Run one replayable forecaster at the replay cutoff."""
     spec = get_model_spec(model_slug)
     if spec is not None:
-        history = [
-            event
-            for event in event_cache[spec.merge_window_minutes]
-            if event.time <= replay_cutoff
-        ]
         try:
-            return spec.forecast_fn(history, replay_cutoff, HORIZON_HOURS)
+            return spec.forecast_fn(activities, replay_cutoff, HORIZON_HOURS)
         except ForecastUnavailable as error:
             return Forecast(
                 name=spec.name,
@@ -408,12 +409,14 @@ def _run_forecast(
             )
 
     if model_slug == CONSENSUS_BLEND_SLUG:
-        base_forecasts = run_all_models_from_cache(
-            event_cache, replay_cutoff, HORIZON_HOURS
+        base_forecasts = run_all_models(activities, replay_cutoff, HORIZON_HOURS)
+        pipeline_events = build_feed_events(
+            activities,
+            merge_window_minutes=DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
         )
         return run_consensus_blend(
             base_forecasts,
-            event_cache[DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES],
+            pipeline_events,
             replay_cutoff,
             HORIZON_HOURS,
         )

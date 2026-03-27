@@ -7,7 +7,7 @@ import unittest
 from datetime import datetime, timedelta
 
 from feedcast.clustering import episodes_as_events
-from feedcast.data import FeedEvent
+from feedcast.data import Activity, FeedEvent
 from feedcast.models.latent_hunger.model import (
     SATIETY_RATE,
     _estimate_growth_rate,
@@ -23,6 +23,13 @@ def _feed(time: datetime, volume_oz: float = 3.0) -> FeedEvent:
         volume_oz=volume_oz,
         bottle_volume_oz=volume_oz,
         breastfeeding_volume_oz=0.0,
+    )
+
+
+def _bottle_activity(time: datetime, volume_oz: float = 3.0) -> Activity:
+    """Build a bottle activity for passing to forecast functions."""
+    return Activity(
+        kind="bottle", start=time, end=time, volume_oz=volume_oz, raw_fields={},
     )
 
 
@@ -84,10 +91,13 @@ class DiagnosticsTests(unittest.TestCase):
     def test_diagnostics_use_episode_keys(self) -> None:
         """Forecast diagnostics should use 'episode' naming, not 'event'."""
         base = datetime(2026, 3, 18, 0, 0)
-        events = [_feed(base + timedelta(hours=3 * i), 3.5) for i in range(30)]
-        cutoff = events[-1].time
+        activities = [
+            _bottle_activity(base + timedelta(hours=3 * i), 3.5)
+            for i in range(30)
+        ]
+        cutoff = activities[-1].start
 
-        forecast = forecast_latent_hunger(events, cutoff, horizon_hours=24)
+        forecast = forecast_latent_hunger(activities, cutoff, horizon_hours=24)
         diag = forecast.diagnostics
 
         self.assertIn("recent_episodes_in_window", diag)

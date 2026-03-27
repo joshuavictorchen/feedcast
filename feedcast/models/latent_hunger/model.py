@@ -15,9 +15,12 @@ import numpy as np
 
 from feedcast.clustering import episodes_as_events
 from feedcast.data import (
+    Activity,
+    DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     FeedEvent,
     Forecast,
     ForecastPoint,
+    build_feed_events,
     hour_of_day,
 )
 from feedcast.models.shared import (
@@ -236,14 +239,14 @@ def _estimate_growth_rate(
 
 
 def forecast_latent_hunger(
-    history: list[FeedEvent],
+    activities: list[Activity],
     cutoff: datetime,
     horizon_hours: int,
 ) -> Forecast:
     """Predict feeds by simulating a latent hunger state forward.
 
     Args:
-        history: Bottle-centered feed events up to the cutoff.
+        activities: Raw feeding activities from the export.
         cutoff: The latest observed activity time.
         horizon_hours: How many hours ahead to forecast.
 
@@ -253,11 +256,15 @@ def forecast_latent_hunger(
     Raises:
         ForecastUnavailable: If there are too few recent events.
     """
-    # Collapse raw feeds into episodes so growth-rate estimation, sim
-    # volume, and current hunger state all use inter-episode signals.
-    # Cluster-internal pairs (short gaps after top-ups) bias the growth
-    # rate upward and the sim volume downward.
-    raw_events = [e for e in history if e.time <= cutoff]
+    # Build breastfeed-merged events. Latent Hunger uses volume directly
+    # in timing logic, so breastfeed volume attribution matters here.
+    raw_events = [
+        e for e in build_feed_events(
+            activities,
+            merge_window_minutes=DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
+        )
+        if e.time <= cutoff
+    ]
     events = episodes_as_events(raw_events)
     if len(events) < MIN_FIT_GAPS + 1:
         raise ForecastUnavailable(

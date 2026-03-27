@@ -61,6 +61,6 @@ forecast for the remainder of today.
 
 ## Breastfeed handling
 
-Uses bottle-only events (merge_window_minutes=None). Breastfeeding
+Builds bottle-only events locally (no breastfeed merge). Breastfeeding
 volume is estimated and noisy. Slot Drift is a timing model; adding
 uncertain breastfeed volume would not improve slot alignment.

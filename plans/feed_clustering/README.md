@@ -548,6 +548,15 @@ ship if replay scoring (`scripts/run_replay.py <slug>`) shows the
 headline score improves or holds. If replay degrades, document the
 finding in `design.md` and do not ship the implementation change.
 
+**Prerequisite: model-owned input shaping.** This is now formalized as
+sub-phase `5e-pre` below. The current scripted-model pipeline still lets
+`feedcast/models/__init__.py` choose a model's event history via
+`ModelSpec.merge_window_minutes`, which is really a breastfeed-volume
+merge policy rather than a general input-shaping interface. That shared
+orchestration choice conflicts with the intended architecture: each
+model should receive the same raw ingredients and decide locally how to
+attribute breastfeeds, build feed events, or collapse episodes.
+
 **Sub-phase ordering:** The four model sub-phases (5b–5e) are
 independent and can be tackled in any order. Listed order is not
 binding. Expected cluster impact by model, highest first:
@@ -787,21 +796,279 @@ produces deeper reset), `test_diagnostics_use_episode_keys`
 (SATIETY_RATE is 0.257). Full suite: 61 tests pass (4 new + 57
 existing). `design.md`, `methodology.md`, `CHANGELOG.md` updated.
 
+#### Sub-phase 5e-pre: Model-owned input shaping cutover
+
+**Status: DONE**
+
+This exists because the current scripted-model seam is architecturally
+backward. The shared orchestrator decides whether a model sees
+breastfeed-merged or bottle-only `FeedEvent`s via
+`ModelSpec.merge_window_minutes` in `feedcast/models/__init__.py`.
+That field sounds broader than it is: in practice it only controls
+whether estimated breastfeed volume is added to the next bottle event's
+`volume_oz`. The result is still a model-local decision being made in
+shared infrastructure.
+
+The intended architecture is simpler and cleaner:
+
+- Every scripted model receives the same raw `list[Activity]`.
+- Each model decides locally whether to call `build_feed_events()`,
+  whether to merge breastfeed volume, and whether to collapse episodes.
+- Shared orchestration runs models; it does not pre-shape their inputs.
+
+This cutover is now the main focus because 5e should not be implemented
+against an interface the user rejects. It also clarifies ownership for
+the already-shipped models: 5b–5d may need interface-only updates here,
+but their forecast behavior should be preserved unless a later sub-phase
+changes it deliberately.
+
+**Hard-cutover target:**
+
+- Remove `ModelSpec.merge_window_minutes` and the per-merge-policy event
+  cache from `feedcast/models/__init__.py`.
+- Change the scripted model boundary so each `forecast_*` function
+  receives raw `list[Activity]`, plus `cutoff` and `horizon_hours`.
+- Move all event construction into the model implementations:
+  - Slot Drift: bottle-only event building locally, then local episode
+    collapse as already shipped.
+  - Analog Trajectory: bottle-only event building locally.
+  - Latent Hunger: local breastfeed merge, then local episode collapse
+    as already shipped.
+  - Survival Hazard: local bottle-only event building for the baseline;
+    any later episode conversion stays local to 5e.
+- Keep replay and production aligned on the same raw-activities seam.
+
+**Implementation steps:**
+
+1. Update `ModelFn` / `ModelSpec` so scripted models accept raw
+   `list[Activity]` instead of prebuilt `list[FeedEvent]`. Remove
+   `merge_window_minutes`.
+2. Remove the shared per-merge-policy event cache and replace it with a
+   simpler raw-activities pass-through.
+3. Update the scripted pipeline, replay path, and any direct callers to
+   pass raw activities into model forecast functions.
+4. Move `build_feed_events(..., merge_window_minutes=...)` calls into
+   the individual model implementations.
+5. Verify that no shared orchestration code path chooses model-specific
+   breastfeed merge behavior anymore.
+6. Add interface-level tests that lock in the new ownership boundary.
+7. Only after this lands, continue with 5e's Survival Hazard-specific
+   research and implementation.
+
+**Implementation notes:**
+
+Removed `ModelSpec.merge_window_minutes` and the shared
+`build_event_cache()` / `run_all_models_from_cache()` functions from
+`feedcast/models/__init__.py`. Replaced with `run_all_models()` that
+passes raw `list[Activity]` to each model.
+
+**Model boundary (after cutover):**
+- `ModelFn = Callable[[list[Activity], datetime, int], Forecast]`
+- Each model's `forecast_*` function receives raw activities, calls
+  `build_feed_events()` with its own merge policy, and filters by
+  cutoff internally.
+- Slot Drift, Analog Trajectory, Survival Hazard: bottle-only
+  (`merge_window_minutes=None`).
+- Latent Hunger: breastfeed-merged
+  (`merge_window_minutes=DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES`),
+  because it uses volume directly in timing logic.
+
+**Pipeline-level events:** The pipeline and replay runner build their
+own events for non-model consumers (consensus blend, report
+generation, scoring). These are pipeline concerns, not model concerns:
+- Consensus blend and reporting:
+  `build_feed_events(activities, DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES)`,
+  preserving the prior behavior.
+- Scoring actuals: `build_feed_events(activities, None)` (bottle-only),
+  built once and reused across tuning candidates.
+
+**Files changed (11):**
+- `feedcast/models/__init__.py` — removed `merge_window_minutes` from
+  `ModelSpec`, removed `build_event_cache()` and
+  `run_all_models_from_cache()`, added `run_all_models()`.
+- `feedcast/models/slot_drift/model.py` — parameter changed from
+  `history: list[FeedEvent]` to `activities: list[Activity]`, added
+  local `build_feed_events()` call with bottle-only events.
+- `feedcast/models/analog_trajectory/model.py` — same pattern.
+- `feedcast/models/latent_hunger/model.py` — same pattern, uses
+  `DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES` for breastfeed merge.
+- `feedcast/models/survival_hazard/model.py` — same pattern, bottle-only.
+- `feedcast/pipeline.py` — replaced `build_event_cache` +
+  `run_all_models_from_cache` with `run_all_models`, builds pipeline
+  events once for consensus and reporting.
+- `feedcast/replay/runner.py` — replaced `build_event_cache` with
+  direct `build_feed_events` calls, passes activities to models,
+  builds scoring events once and reuses across candidates.
+- `feedcast/models/consensus_blend/research.py` — replaced
+  `build_event_cache` + `run_all_models_from_cache` with
+  `run_all_models`, passes `snapshot.activities` to helpers.
+- `tests/test_slot_drift.py` — diagnostics test now passes
+  `list[Activity]` to `forecast_slot_drift`.
+- `tests/test_latent_hunger.py` — diagnostics test now passes
+  `list[Activity]` to `forecast_latent_hunger`.
+- `tests/test_model_interface.py` — new file, one test verifying
+  `ModelSpec` has no `merge_window_minutes` field.
+
+**Verification:** 62 tests pass (1 new + 61 existing). Replay
+baselines unchanged: Survival Hazard 80.029, Consensus Blend 78.338.
+
 #### Sub-phase 5e: Survival Hazard
 
-Survival Hazard fits Weibull distributions to inter-feed gaps per
-day-part. Cluster-internal gaps create a bimodal artifact that doesn't
-reflect real hunger dynamics.
+**Status: IN PROGRESS (decision points pending user verdict)**
 
-1. Run `research.py` with episode-level history. Compare Weibull
-   shape/scale estimates to raw-input results.
-2. Decide whether to fit distributions to inter-episode gaps. If so,
-   implement.
-3. Update `design.md` with cluster relationship and any design changes.
-4. Update `methodology.md` if report-facing description changes.
-5. Update `CHANGELOG.md` with `Problem` / `Research` / `Solution`
-   sections documenting the sub-phase outcome.
-6. Run tests and replay verification.
+Survival Hazard fits Weibull distributions to inter-feed gaps per
+day-part. Cluster-internal gaps (50–70 min) create a bimodal artifact
+in a distribution where real inter-episode gaps are 2–3+ hours. This
+biases scale estimates downward and may distort shape estimates.
+
+**Replay baseline (20260325 export, 03/24→03/25 window):**
+
+| Metric | Value |
+|--------|-------|
+| Headline | 80.029 |
+| Count F1 | 95.41 |
+| Timing | 67.128 |
+| Episodes | 10/9/9 (pred/actual/matched) |
+
+**Current architectural issue: shared input shaping leak.** Before 5e
+proper begins, `5e-pre` removes `ModelSpec.merge_window_minutes` so the
+model, not the orchestrator, owns its input policy. After that cutover,
+Survival Hazard must explicitly choose and document its own local input
+policy.
+
+**Decision points (pending user verdict):**
+
+- **DP1: Scope of episode-level conversion.**
+  - (a) Everywhere in the model: scale estimation, conditional
+    survival elapsed time, volume median, diagnostics.
+  - (b) Scale estimation only; keep raw events for conditional
+    survival and volume.
+  - Recommendation: **(a).** Mixing raw and episode-level inputs
+    creates a model with two ontologies. Consistent with the 5b and
+    5d pattern of converting at function entry.
+
+- **DP2: Shape re-fitting.**
+  - (a) Re-fit `OVERNIGHT_SHAPE` and `DAYTIME_SHAPE` from
+    episode-level data.
+  - (b) Keep current shapes; only switch runtime scale estimation to
+    episode-level gaps.
+  - Recommendation: **(a).** The current shapes were fitted from raw
+    gaps that include cluster-internal contamination. An "intentional
+    revisit of the algorithm" demands re-deriving them from clean
+    episode-level inputs.
+
+- **DP3: Survival Hazard input policy after the cutover.**
+  Once `5e-pre` lands, Survival Hazard must choose its own local input
+  shaping rather than inheriting it from `ModelSpec`.
+  - (a) Bottle-only by default. Research and production both build
+    bottle-only events locally. Breastfeed-merged remains a labeled
+    secondary comparison only.
+  - (b) Breastfeed-merged by default. Research and production both
+    merge estimated breastfeed volume into bottle events locally.
+  - (c) Compare both locally and ship whichever clears replay.
+  - Recommendation: **(a).** Keep the baseline simple and aligned with
+    current production behavior. If DP5 suggests volume matters after
+    episode cleanup, compare merged volume explicitly as a secondary
+    candidate rather than making it the default silently.
+
+- **DP4: Parameter re-tuning scope beyond shapes.**
+  - (a) Shapes only.
+  - (b) Shapes + `RECENCY_HALF_LIFE_HOURS`.
+  - (c) Shapes + half-life + day-part boundaries (20:00/08:00).
+  - Recommendation: **(b).** In 5d, `RECENCY_HALF_LIFE_HOURS`
+    interacted with episode-level data (shifted from 48h to 168h).
+    Survival Hazard has the same parameter at 72h — worth sweeping.
+    Day-part boundaries are circadian-grounded and should stay fixed
+    unless research clearly shows a problem.
+
+- **DP5: Volume covariate re-test.**
+  - (a) Re-test on episode-level bottle-only data and report the
+    result.
+  - (b) Skip.
+  - Recommendation: **(a).** Low cost — the research script already
+    has the section. Episode-level data removes the contamination
+    that may have masked a real effect. Only ship if the likelihood
+    ratio test is significant AND replay improves. If still not
+    significant, document and move on.
+
+- **DP6: Retune policy on replay failure.**
+  - (a) Explore as far as reasonable: sweep shapes, half-life, and
+    any other parameters that the research suggests are sensitive.
+    Stop when further exploration shows diminishing returns or the
+    search space is exhausted.
+  - (b) Allow one bounded retune pass, then stop.
+  - (c) Stop immediately and mark "not shipped."
+  - Recommendation: **(a).** This is an intentional algorithm revisit,
+    not a minor tweak. The research-derived shapes are a starting
+    point; replay sweeps may reveal that nearby configurations score
+    better due to dataset recency effects. Document each sweep
+    iteration and its results so the exploration trail is auditable.
+
+**Assumptions:**
+
+- **Anchor-to-anchor gap consistency.** With `episodes_as_events()`,
+  inter-event gaps become anchor-to-anchor (first constituent to
+  first constituent). This overestimates the true inter-hunger gap by
+  the cluster-internal duration (up to ~80 min). But the same
+  overestimation applies to both training (scale estimation) and
+  prediction (conditional survival elapsed time), so the model is
+  self-consistent. Same trade-off as Latent Hunger's "episode volume
+  arriving at anchor timestamp." Accepted; document in `design.md`.
+- **Sample size.** The current dataset has 80 raw gaps (34 overnight,
+  46 daytime). Episode-level grouping will reduce these. If overnight
+  episode gaps fall below `MIN_DAYPART_GAPS = 3`, the model's
+  existing fallback logic handles it. The research script should
+  report the per-daypart episode gap count so we can verify.
+- **Research and production alignment.** `5e-pre` lands first so
+  Survival Hazard owns its own input policy. Then DP3 is resolved
+  before shape fitting — the chosen local input path is the single
+  source for new shapes. Any alternative input path stays as labeled
+  secondary analysis only.
+- **Evidence separation.** If replay-selected production constants
+  differ from the research-best episode-level fit, the artifacts and
+  docs must record both explicitly: research conclusion vs adopted
+  production constants. Do not repeat the 5d mismatch where the
+  generated artifact implied one answer and the shipped model used
+  another.
+- **Tests.** 4 new tests targeting episode-level behavior, consistent
+  with the 5b/5d pattern.
+- **Walk-forward comparison.** The research script's existing
+  walk-forward evaluation is extended with an episode-level variant.
+  Both raw and episode results are preserved for comparison.
+- **Baseline comparison is mandatory.** Every research output and
+  replay run must be compared against the current raw-input baseline
+  (shapes 7.31/2.33, half-life 72h, headline 80.029). Changes are
+  accepted on evidence, not expectation. The research artifacts must
+  document: (1) raw baseline metrics, (2) episode-level metrics with
+  research-best parameters, (3) episode-level metrics with adopted
+  production parameters (if different from research-best), and (4)
+  the rationale for any gap between research-best and adopted.
+
+**Implementation steps (after decisions are resolved):**
+
+1. Complete `5e-pre` so Survival Hazard owns its input shaping.
+2. Implement the chosen local input policy from DP3 in both
+   `model.py` and `research.py`. Preserve any alternative as a labeled
+   secondary comparison only.
+3. Add episode-level analysis to `research.py`: convert the chosen
+   local-input events to episodes via `episodes_as_events()`, re-fit
+   shapes per day-part, run walk-forward evaluation, compare to raw
+   results. Report per-daypart episode gap counts.
+4. If DP5(a): re-test volume covariate on episode-level data. If it
+   becomes significant and clears the replay gate, decide whether to
+   ship it in this sub-phase; otherwise document the result and keep
+   the model volume-free.
+5. Decide on new shapes, half-life, and any volume-covariate change
+   based on research output and replay. Update constants in `model.py`.
+6. Implement episode-level conversion in `model.py` using
+   `episodes_as_events()` at function entry. Update diagnostics keys
+   to episode-level naming.
+7. Run replay gate against baseline (headline 80.029). If headline
+   degrades: sweep shapes, half-life, and other sensitive parameters
+   as far as reasonable. Document each iteration. Stop when returns
+   diminish or search space is exhausted.
+8. Update `design.md`, `methodology.md`, `CHANGELOG.md`.
+9. Add 4 tests to `tests/test_survival_hazard.py`.
 
 #### Sub-phase 5f: Consensus Blend revisit
 
