@@ -11,14 +11,24 @@ that inflate the daily count and create spurious template slots.
 
 ### Research
 
-Updated `research.py` with an episode-level analysis section comparing
-raw vs. episode template construction. Episode grouping removes
-cluster-internal feeds, producing lower and more stable daily counts.
-The median slot count dropped by one, and days with the most cluster
-activity saw the largest reductions (up to 3 fewer). Episode-level
-trial alignment was clean for most days, though one cluster-free day
-with an unusually late feed lost a match because the smaller template
-had no slot covering that time-of-day.
+Updated `research.py` to compare raw vs. episode template construction.
+The question: does grouping raw feeds into episodes before building
+the daily template produce a slot count closer to the true number of
+independent feeding episodes?
+
+| Metric | Raw | Episode | Better? |
+|--------|-----|---------|---------|
+| Median daily count | 9 | 8 | Episode — 8 matches the true daily episode count from labeled data |
+| Daily count std | 1.07 | 0.69 | Episode — more stable across days |
+| Trial alignment (unmatched/day) | 0–4 | 0–3 | Comparable; one cluster-free day with an unusually late feed lost a match in the smaller template |
+
+Replay (ship gate, 20260325 export, 03/24→03/25 window):
+
+| Metric | Raw | Episode | Better? |
+|--------|-----|---------|---------|
+| Headline | 53.46 | 53.74 | Episode (+0.28) |
+| Count F1 | 91.77 | 80.98 | Raw (one fewer matched episode) |
+| Timing | 31.14 | 35.67 | Episode (matched episodes positioned more accurately) |
 
 ### Solution
 

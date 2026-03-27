@@ -12,15 +12,29 @@ with short gaps and low volumes that pollute neighbor retrieval features
 
 ### Research
 
-Updated `research.py` with an episode-level comparison section.
-Episode grouping removed roughly one-sixth of raw events. The state
-library shrank accordingly (fewer complete states). Feature
-distributions improved: mean gaps rose and tightened (short
-cluster-internal gaps removed), mean volumes rose and tightened
-(episode sums replace individual feed volumes), and time-of-day
-features were nearly unchanged. Fold-causal leave-one-out evaluation
-showed substantial improvement in both first-gap and three-step
-trajectory accuracy (~15% and ~12% lower MAE, respectively).
+Updated `research.py` to compare raw vs. episode state libraries and
+feature quality. The question: does grouping raw feeds into episodes
+before building states produce cleaner similarity features and better
+neighbor retrieval?
+
+| Metric | Raw | Episode | Better? |
+|--------|-----|---------|---------|
+| Events | 97 | 80 | Episode — 17 cluster-internal feeds removed |
+| Complete states | 84 | 70 | Raw has more, but episode states are cleaner |
+| Mean gap (last_gap) | 2.50h | 2.99h | Episode — no artificial sub-hour cluster gaps |
+| Gap std | 1.01 | 0.78 | Episode — tighter, less noisy |
+| Mean volume (last_volume) | 2.87oz | 3.44oz | Episode — sums reflect real intake |
+| Volume std | 1.10 | 0.78 | Episode — tighter |
+| gap1 MAE (fold-causal) | 0.770h | 0.656h | Episode — 15% more accurate |
+| traj3 MAE (fold-causal) | 0.764h | 0.670h | Episode — 12% more accurate |
+
+Replay (ship gate, 20260325 export, 03/24→03/25 window):
+
+| Metric | Raw | Episode | Better? |
+|--------|-----|---------|---------|
+| Headline | 68.22 | 66.65 | Raw (-1.57) |
+| Count F1 | 100.0 | 91.16 | Raw (episode predicted 7, actual was 9) |
+| Timing | 46.55 | 48.73 | Episode (matched episodes more accurate) |
 
 ### Solution
 
