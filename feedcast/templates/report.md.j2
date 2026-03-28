@@ -4,28 +4,11 @@
 
 ## Next Feeds
 
-**{{ featured_name }}** predicts **{{ featured_points | length }} feeds**
-over the next 24 hours, totaling **{{ featured_total_oz }} oz**.
-
-| Feed | Time | Gap | Volume |
-| ---- | ---- | --- | ------ |
-{% for point in featured_points -%}
-| {{ loop.index }} | **{{ point.time_display }}** | {{ point.gap_display }} | {{ point.volume_display }} |
-{% endfor %}
-
 ![Featured Forecast](schedule.png)
 
 ## Model Trajectories
 
 ![Forecast Trajectories](spaghetti.png)
-
-## Model Comparison
-
-| Model | Status | First Feed | Feed Times |
-| ----- | ------ | ---------- | ---------- |
-{% for row in comparison_rows -%}
-| {{ row.name }} | {{ row.status }} | {{ row.first_feed_display }} | {{ row.feed_times_display }} |
-{% endfor %}
 
 ## Prior Run Retrospective
 

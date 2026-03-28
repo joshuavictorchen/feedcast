@@ -1126,10 +1126,70 @@ fix, diagnostics cleanup, and selector change.
 
 ### Phase 6: Reports
 
-1. Default report tables to collapsed (episode) view.
-2. Raw event counts available as expandable diagnostics.
-3. Include secondary diagnostics: raw predicted count, episode count,
-   number of collapsed attachments (if low complexity).
+**Status: DONE**
+
+The report layer was the last consumer showing raw ForecastPoints
+directly. Phase 6 streamlined the report and made diagnostics
+episode-aware.
+
+**Resolved decisions:**
+
+- **Plots out of scope.** `schedule.png` and `spaghetti.png` are
+  unchanged. The recent plot work is separable and the visual
+  distinction between raw points and episodes is minimal.
+- **Model comparison table removed.** The spaghetti chart covers
+  model trajectory comparison visually with volume labels. The markdown
+  table was redundant.
+- **Featured forecast table and blurb removed.** The schedule chart
+  already shows the featured forecast with times and volumes. The
+  markdown table was redundant with the chart.
+- **Raw diagnostics in `diagnostics.yaml` only.** No `<details>` blocks
+  in the markdown report. The report stays concise; raw-vs-episode
+  counts go into the structured diagnostics file for programmatic
+  access.
+- **Agent forecasts.** Episode collapsing in diagnostics applies to all
+  forecast sources including agents.
+
+**Implementation notes:**
+
+Removed three report sections: the featured forecast text/table from
+"Next Feeds" (chart covers this), the "Model Comparison" table, and
+its supporting code. "Model Trajectories" kept as its own section with
+the spaghetti chart.
+
+**`report.py` changes:**
+- Removed `_prepare_point()`, `_prepare_comparison_row()`, and the
+  featured-points/comparison-rows template context variables.
+- Added `_forecast_diagnostics_entry()` which calls
+  `group_into_episodes()` on each forecast's points and computes
+  `raw_point_count`, `episode_count`, and `collapsed_attachments`.
+- `_render_report()` context simplified: no featured name, points,
+  total oz, or comparison rows.
+
+**`report.md.j2` changes:**
+- "Next Feeds" section: just the schedule chart image.
+- "Model Trajectories" section: just the spaghetti chart image.
+- "Model Comparison" section: deleted entirely.
+- Retrospective, historical accuracy, and methodologies unchanged.
+
+**`diagnostics.yaml` additions:** Each forecast entry now includes
+`raw_point_count`, `episode_count`, and `collapsed_attachments`
+alongside the existing model-specific diagnostics. For the current
+export, all models produce clean episode-level outputs (zero
+attachments) because the episode-aware models (Phase 5) and consensus
+blend (Phase 4) already output at the episode level.
+
+**Tests:** 3 new tests in `tests/test_report.py`:
+`test_cluster_predictions_counted_correctly` (cluster predictions
+produce correct raw/episode/attachment counts),
+`test_no_clusters_zero_attachments` (clean predictions have zero
+attachments), `test_unavailable_forecast_zero_counts` (unavailable
+forecast has zero counts). Full suite: 70 tests pass (3 new + 67
+existing).
+
+**Pipeline run:** Fresh artifacts generated with `--skip-agents`.
+`tracker.json` reset (new run overwrites stale data from the prior
+pipeline run which used the old report format).
 
 ### Phase 7: Documentation and cleanup
 

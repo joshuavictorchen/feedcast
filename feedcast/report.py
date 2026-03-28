@@ -15,6 +15,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader
 import yaml
 
+from feedcast.clustering import group_into_episodes
 from feedcast.data import (
     BIRTH_DATE,
     ExportSnapshot,
@@ -121,19 +122,10 @@ def _render_report(
     )
     template = environment.get_template("report.md.j2")
 
-    featured = _find_forecast(all_forecasts, featured_slug)
-    featured_points = [_prepare_point(point) for point in featured.points]
     context = {
         "date_display": cutoff.strftime("%A, %B %-d, %Y"),
         "age_days": (cutoff.date() - BIRTH_DATE.date()).days,
         "cutoff_display": cutoff.strftime("%-I:%M %p"),
-        "featured_name": featured.name,
-        "featured_points": featured_points,
-        "featured_total_oz": f"{sum(point.volume_oz for point in featured.points):.1f}",
-        "comparison_rows": [
-            _prepare_comparison_row(forecast, featured_slug)
-            for forecast in all_forecasts
-        ],
         "methodologies": [
             _prepare_methodology_row(forecast, featured_slug)
             for forecast in all_forecasts
@@ -158,40 +150,6 @@ def _render_report(
     }
     rendered = template.render(context)
     (output_dir / "report.md").write_text(rendered, encoding="utf-8")
-
-
-def _prepare_point(point: Any) -> dict[str, str]:
-    """Prepare one forecast point for template rendering."""
-    return {
-        "time_display": point.time.strftime("%-I:%M %p"),
-        "gap_display": f"{point.gap_hours:.1f}h",
-        "volume_display": f"{point.volume_oz:.1f} oz",
-    }
-
-
-def _prepare_comparison_row(forecast: Forecast, featured_slug: str) -> dict[str, str]:
-    """Prepare a compact comparison row for one forecast source."""
-    if not forecast.available:
-        return {
-            "name": forecast.name,
-            "status": "Unavailable",
-            "first_feed_display": "n/a",
-            "feed_times_display": forecast.error_message or "Unavailable",
-        }
-
-    feed_times = ", ".join(
-        point.time.strftime("%-I:%M %p") for point in forecast.points
-    )
-    status = "Featured" if forecast.slug == featured_slug else "Available"
-    first_feed_display = (
-        forecast.points[0].time.strftime("%-I:%M %p") if forecast.points else "n/a"
-    )
-    return {
-        "name": forecast.name,
-        "status": status,
-        "first_feed_display": first_feed_display,
-        "feed_times_display": feed_times or "n/a",
-    }
 
 
 def _prepare_methodology_row(forecast: Forecast, featured_slug: str) -> dict[str, str]:
@@ -241,6 +199,22 @@ def _prepare_retrospective(retrospective: Retrospective) -> dict[str, Any]:
     }
 
 
+def _forecast_diagnostics_entry(forecast: Forecast) -> dict[str, Any]:
+    """Build one diagnostics entry for a forecast, including episode counts."""
+    raw_count = len(forecast.points)
+    episode_count = len(group_into_episodes(forecast.points)) if forecast.points else 0
+    return {
+        "name": forecast.name,
+        "slug": forecast.slug,
+        "available": forecast.available,
+        "error_message": forecast.error_message,
+        "raw_point_count": raw_count,
+        "episode_count": episode_count,
+        "collapsed_attachments": raw_count - episode_count,
+        "diagnostics": _clean_value(forecast.diagnostics),
+    }
+
+
 def _write_diagnostics(
     output_path: Path,
     all_forecasts: list[Forecast],
@@ -255,13 +229,7 @@ def _write_diagnostics(
         "cutoff": cutoff.isoformat(timespec="seconds"),
         "featured_slug": featured_slug,
         "forecasts": [
-            {
-                "name": forecast.name,
-                "slug": forecast.slug,
-                "available": forecast.available,
-                "error_message": forecast.error_message,
-                "diagnostics": _clean_value(forecast.diagnostics),
-            }
+            _forecast_diagnostics_entry(forecast)
             for forecast in all_forecasts
         ],
         "retrospective": {
