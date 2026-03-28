@@ -18,7 +18,7 @@ the median of their volumes.
 Many overlapping candidates can describe the same real feed, so the
 blend picks the best non-overlapping set. Two rules prevent double-
 counting: each individual model prediction can only support one
-consensus feed, and two consensus feeds cannot be closer than 75
+consensus feed, and two consensus feeds cannot be closer than 105
 minutes apart. The final schedule is the highest-quality set of
 feeds that satisfies both rules.
 

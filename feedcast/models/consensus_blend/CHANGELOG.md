@@ -2,35 +2,41 @@
 
 Tracks behavior-level changes to the Consensus Blend model. Add newest entries first.
 
-## No selector change after upstream model updates | 2026-03-27
+## Raise conflict window from 75 to 105, fix research method | 2026-03-27
 
 ### Problem
 
-Three of four component models (Slot Drift, Latent Hunger, Survival
-Hazard) switched to episode-level history, changing their forecast
-outputs. Need to verify the consensus selector parameters are still
-appropriate.
+The consensus research sweep had two issues: (1) end-of-day cutoffs
+that systematically excluded the latest complete 24h window, causing
+the sweep to miss model improvements visible in replay; (2) gap
+analysis and model agreement diagnostics used raw feed counts instead
+of episodes, reporting cluster-internal gaps and inflated counts
+inconsistent with the episode-level ontology used by the scorer and
+production blend.
 
 ### Research
 
-Re-ran the consensus research sweep (20260325 export). Production
-headline unchanged. Count component improved (upstream models predict
-the right number of episodes more often); timing slightly degraded;
-the two offset. The parameter sweep's prior full degeneracy partially
-broke: a wider conflict window combined with a much higher spread
-penalty scores marginally better, but this requires both changes —
-neither alone moves the score. The winning combination re-introduces
-suppression of legitimate close episodes and shifts the selector
-from support-primary to tightness-primary. Inter-model spread
-tightened. Replay confirmed no regression.
+Fixed the research script in three ways:
+- Cutoff selection now always includes the replay-equivalent cutoff
+  (latest activity time minus horizon), excluding per-day cutoffs at
+  or after it to prevent weight distortion.
+- Gap analysis uses collapsed episodes (cluster-internal gaps removed,
+  episode counts replace raw feed counts).
+- Model agreement matches collapsed predictions against actual
+  episodes, consistent with what the production blend sees.
+
+With the latest window included, all conflict=105 combos outperform
+all conflict=75/90 combos. The conflict window decides which
+competing candidate slots survive — a wider window forces the
+selector to pick the better-supported candidate, improving timing.
 
 ### Solution
 
-No parameter change. The marginal gain contradicts the episode
-ontology (suppresses real episode pairs that the current conflict
-window was specifically set to preserve). The count improvement comes
-from upstream model changes, not the selector. Production constants
-retained.
+Raised `SELECTION_CONFLICT_WINDOW_MINUTES` from 75 to 105. Replay
+headline improved from 78.5 to 85.5, driven entirely by timing
+(+12.0) with identical episode match counts. Research sweep
+production score improved to 68.9 (recency-weighted, 5-cutoff).
+Spread penalty kept at 0.25 (no selector character change).
 
 ## Lower conflict window from 90 to 75 minutes | 2026-03-26
 

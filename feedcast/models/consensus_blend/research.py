@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from feedcast.clustering import FeedEpisode, group_into_episodes
 from feedcast.data import (
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     HORIZON_HOURS,
@@ -37,6 +38,7 @@ from feedcast.models.consensus_blend.model import (
     CandidateCluster,
     _candidates_to_forecast_points,
     _collapse_forecast_dict,
+    _collapse_to_episode_points,
     _majority_floor,
     generate_candidate_clusters,
     run_consensus_blend,
@@ -71,8 +73,9 @@ def main() -> None:
     log(f"Run: {datetime.now().isoformat(timespec='seconds')}")
     log()
 
-    _analyze_interfeed_gaps(events, cutoff, log)
-    _analyze_model_agreement(events, snapshot.activities, cutoffs, log)
+    episodes = group_into_episodes(events)
+    _analyze_inter_episode_gaps(episodes, cutoff, log)
+    _analyze_model_agreement(episodes, snapshot.activities, cutoffs, log)
     _report_production_scores(events, snapshot.activities, cutoffs, log)
     _sweep_selector_parameters(events, snapshot.activities, cutoffs, log)
 
@@ -86,7 +89,24 @@ def _pick_retrospective_cutoffs(
     latest_cutoff: datetime,
     max_cutoffs: int = 5,
 ) -> list[datetime]:
-    """Pick the last feed time of each recent complete day."""
+    """Pick up to ``max_cutoffs`` retrospective cutoffs.
+
+    Always includes the replay-equivalent cutoff (latest_cutoff minus
+    horizon) so the research sweep evaluates the same window that replay
+    does. Remaining slots (up to ``max_cutoffs - 1``) are filled with
+    the last feed time of each recent complete day that falls before the
+    replay cutoff. Per-day cutoffs at or after the replay cutoff are
+    excluded — they would have insufficient horizon data and would
+    distort recency weighting by anchoring the weight calculation to an
+    unscorable cutoff.
+    """
+    # The replay-equivalent cutoff: latest activity minus one horizon.
+    # This gives a full 24h scoring window matching the replay runner.
+    replay_cutoff = latest_cutoff - timedelta(hours=HORIZON_HOURS)
+
+    # Per-day cutoffs: last feed of each complete day, excluding days
+    # at or after the replay cutoff (insufficient horizon data) and
+    # the day containing latest_cutoff (may be incomplete).
     daily: dict[str, list[FeedEvent]] = defaultdict(list)
     for event in events:
         daily[str(event.time.date())].append(event)
@@ -95,38 +115,44 @@ def _pick_retrospective_cutoffs(
     if sorted_days and sorted_days[-1] == str(latest_cutoff.date()):
         sorted_days = sorted_days[:-1]
 
-    cutoffs: list[datetime] = []
+    day_cutoffs: list[datetime] = []
     for day_str in reversed(sorted_days):
         last_feed = max(daily[day_str], key=lambda event: event.time)
-        cutoffs.append(last_feed.time)
-        if len(cutoffs) >= max_cutoffs:
+        # Skip per-day cutoffs at or after the replay cutoff.
+        if last_feed.time >= replay_cutoff:
+            continue
+        day_cutoffs.append(last_feed.time)
+        if len(day_cutoffs) >= max_cutoffs - 1:
             break
-    cutoffs.reverse()
-    return cutoffs
+
+    # Merge and sort chronologically. The replay cutoff is always the
+    # latest entry, so it gets recency weight 1.0.
+    return sorted(set(day_cutoffs + [replay_cutoff]))
 
 
-def _analyze_interfeed_gaps(
-    events: list[FeedEvent],
+def _analyze_inter_episode_gaps(
+    episodes: list[FeedEpisode],
     cutoff: datetime,
     log,
 ) -> None:
-    """Show inter-feed gaps day-by-day, most recent first."""
-    log("=== INTER-FEED GAP ANALYSIS ===")
+    """Show inter-episode gaps day-by-day, most recent first."""
+    log("=== INTER-EPISODE GAP ANALYSIS ===")
     log()
 
-    daily: dict[str, list[FeedEvent]] = defaultdict(list)
-    for event in events:
-        daily[str(event.time.date())].append(event)
+    daily: dict[str, list[FeedEpisode]] = defaultdict(list)
+    for episode in episodes:
+        daily[str(episode.time.date())].append(episode)
 
     weighted_gaps: list[tuple[float, float]] = []
-    log(f"{'Date':<12} {'Feeds':>5}  {'Gaps (min)':50s}  {'Min':>5}  {'Med':>5}")
+    log(f"{'Date':<12} {'Episodes':>8}  {'Gaps (min)':50s}  {'Min':>5}  {'Med':>5}")
     for day_str in sorted(daily, reverse=True)[:10]:
-        feeds = sorted(daily[day_str], key=lambda event: event.time)
+        day_episodes = sorted(daily[day_str], key=lambda episode: episode.time)
         gaps = [
-            (feeds[index + 1].time - feeds[index].time).total_seconds() / 60.0
-            for index in range(len(feeds) - 1)
+            (day_episodes[index + 1].time - day_episodes[index].time).total_seconds()
+            / 60.0
+            for index in range(len(day_episodes) - 1)
         ]
-        age_days = (cutoff - feeds[-1].time).total_seconds() / 86400.0
+        age_days = (cutoff - day_episodes[-1].time).total_seconds() / 86400.0
         weight = 2.0 ** (-age_days / RECENCY_HALF_LIFE_DAYS)
         weighted_gaps.extend((gap, weight) for gap in gaps)
 
@@ -134,7 +160,7 @@ def _analyze_interfeed_gaps(
         min_gap = f"{min(gaps):.0f}" if gaps else "--"
         median_gap = f"{np.median(gaps):.0f}" if gaps else "--"
         log(
-            f"{day_str:<12} {len(feeds):>5}  "
+            f"{day_str:<12} {len(day_episodes):>8}  "
             f"{gap_text:50s}  {min_gap:>5}  {median_gap:>5}"
         )
 
@@ -158,9 +184,13 @@ def _analyze_interfeed_gaps(
 
 def _match_predictions_to_actuals(
     predictions: list[ForecastPoint],
-    actuals: list[FeedEvent],
+    actuals: list[FeedEvent] | list[FeedEpisode],
 ) -> list[tuple[int, int]]:
-    """Match predicted points to actual feeds using Hungarian assignment."""
+    """Match predicted points to actuals using Hungarian assignment.
+
+    Only ``.time`` is accessed on each actual, so this accepts both
+    FeedEvent and FeedEpisode lists.
+    """
     if not predictions or not actuals:
         return []
 
@@ -183,42 +213,54 @@ def _match_predictions_to_actuals(
 
 
 def _analyze_model_agreement(
-    events: list[FeedEvent],
+    episodes: list[FeedEpisode],
     activities: list,
     cutoffs: list[datetime],
     log,
 ) -> None:
-    """Measure inter-model spread when predicting the same actual feed."""
+    """Measure inter-model prediction spread per actual episode.
+
+    Actuals are episode-level (matching the scorer's ontology). Model
+    predictions are collapsed into episodes before matching, consistent
+    with what the consensus blend sees after its pre-voting collapse.
+    """
     log("=== INTER-MODEL PREDICTION SPREAD ===")
     log()
 
     all_spreads: list[float] = []
     for cutoff in cutoffs:
         horizon_end = cutoff + timedelta(hours=HORIZON_HOURS)
-        actuals = [event for event in events if cutoff < event.time <= horizon_end]
-        if not actuals:
+        actual_episodes = [
+            episode for episode in episodes if cutoff < episode.time <= horizon_end
+        ]
+        if not actual_episodes:
             continue
 
         forecasts = run_all_models(activities, cutoff, HORIZON_HOURS)
-        actual_to_predictions: dict[int, list[datetime]] = defaultdict(list)
+        episode_to_predictions: dict[int, list[datetime]] = defaultdict(list)
         for forecast in forecasts:
             if not forecast.available or not forecast.points:
                 continue
-            matches = _match_predictions_to_actuals(forecast.points, actuals)
+            # Collapse model predictions to episodes, matching production.
+            collapsed_points = _collapse_to_episode_points(forecast.points)
+            matches = _match_predictions_to_actuals(
+                collapsed_points, actual_episodes
+            )
             for predicted_index, actual_index in matches:
-                actual_to_predictions[actual_index].append(
-                    forecast.points[predicted_index].time
+                episode_to_predictions[actual_index].append(
+                    collapsed_points[predicted_index].time
                 )
 
         spreads = [
             (max(times) - min(times)).total_seconds() / 60.0
-            for times in actual_to_predictions.values()
+            for times in episode_to_predictions.values()
             if len(times) >= 2
         ]
         all_spreads.extend(spreads)
         log(
             f"Cutoff {cutoff.date()} {cutoff.strftime('%H:%M')}: "
-            f"{len(actuals)} actuals, {len(spreads)} multi-model matches"
+            f"{len(actual_episodes)} episodes, "
+            f"{len(spreads)} multi-model matches"
         )
 
     if all_spreads:

@@ -51,32 +51,25 @@ set subject to two hard rules:
    consensus feed, it cannot also be counted as evidence for another.
 
 2. **Minimum spacing:** Two consensus feeds cannot be closer than
-   75 minutes. This sits just above the 73-minute base cluster rule
-   and admits episode pairs at 75+ minutes (e.g., the 76-minute pair
-   observed on 03/24) while still suppressing pairs that would be
-   ambiguous with cluster boundaries. One confirmed non-cluster gap
-   at 74.8 minutes is still suppressed — 75 is a conservative floor,
-   not an exact match. Before episode collapsing, this was 90 minutes
-   — a blunt proxy that also suppressed legitimate close episodes.
-   Now that clusters are collapsed before candidate generation, the
-   window only guards against duplicate candidate slots for the same
-   real feed.
+   105 minutes. The conflict window does not decide what counts as a
+   real episode — that is the cluster rule's job (73-minute base in
+   `feedcast/clustering.py`). The conflict window decides which
+   competing candidate slots to keep when multiple slots target the
+   same region. A wider window forces the selector to pick the
+   better-supported candidate rather than fitting both, which
+   produces more accurate timing. See `research_results.txt` for the
+   parameter sweep evidence and `model.py` for the current constant.
 
 ## Why the 2-hour search radius?
 
-Research shows models often disagree by 100+ minutes about the same
-real feed (median spread = 102 min). A narrow radius misses
-legitimate agreement. The wide radius pulls in outlier predictions
-too, but the median timestamp naturally reflects the majority
-position — one outlier barely moves a 3-point or 4-point median.
+Models often disagree by 100+ minutes about the same real episode
+(see the spread percentiles in `research_results.txt`). A narrow
+radius misses legitimate agreement. The wide radius pulls in outlier
+predictions too, but the median timestamp naturally reflects the
+majority position — one outlier barely moves a 3-point or 4-point
+median.
 
 ## Current limitations
-
-**Utility ranking doesn't matter much.** Candidates are scored by
-model support with a small bonus for tighter agreement, but the
-hard constraints (single-use + spacing) are tight enough to
-determine the answer on their own. Parameter sweeps across a wide
-range of scoring weights all produced identical results.
 
 **Outliers are suppressed, not rejected.** A model predicting 4pm
 when three others predict 3pm gets pulled into the candidate (it's
@@ -86,33 +79,23 @@ counted as a contributor. True rejection (excluding the outlier
 entirely) would require a tighter radius, which hurts overall
 accuracy by also excluding legitimate wide agreement.
 
-## Robustness to upstream model changes
+## Research cutoff selection
 
-When component models change their forecasting approach (e.g.,
-switching from raw feed history to episode-level history), the
-consensus selector does not necessarily need retuning. The selector
-operates on episode-collapsed predictions regardless of how the
-upstream model arrived at those predictions — the collapse step
-normalizes the input before candidate generation.
-
-The current selector constants were retained after component models
-adopted episode-level history. A parameter sweep found that widening
-the conflict window and increasing the spread penalty could marginally
-improve headline scores, but the winning combination re-introduces
-suppression of legitimate close episodes and shifts the selector from
-support-primary to tightness-primary. Neither change alone moves the
-score — the gain requires both, which contradicts the episode ontology
-the conflict window was designed to respect. See `research_results.txt`
-for the latest sweep output and `model.py` for the current shipped
-constants.
+The consensus research script evaluates the selector across multiple
+retrospective cutoffs. It always includes the replay-equivalent
+cutoff (latest activity time minus horizon) so the research sweep
+evaluates the same window that the replay runner does. Remaining
+cutoffs come from the last feed time of each recent complete day.
+This ensures the research sweep captures the most recent model
+behavior while also testing stability across older windows.
 
 ## Where to improve next
 
 The constraint structure (single-use + conflict window) is tight
 enough to dominate the selector outcome across a wide range of
-utility weights. Most parameter sweeps produce identical or
-near-identical results, with gains only available from combinations
-that conflict with the episode ontology.
+utility weights. Radius and spread parameters have little effect;
+the conflict window and spread penalty are the levers that
+differentiate. See `research_results.txt` for the latest sweep.
 
 Gains would come from changing how candidates are generated or how
 conflicts are defined — for example, a scoring model where a tight

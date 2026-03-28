@@ -36,17 +36,15 @@ ANCHOR_RADIUS_MINUTES = 120
 MAX_CANDIDATE_SPREAD_MINUTES = 180
 
 # Selected consensus slots closer than this are competing explanations for
-# the same real feed. Set to 75 minutes: just above the 73-minute base
-# cluster rule. This admits episode pairs at 75+ minutes (e.g., the
-# 76-minute pair observed on 03/24) while still suppressing pairs that
-# would be ambiguous with cluster boundaries. A 74.8-minute non-cluster
-# gap in the labeled data is still suppressed — 75 is a conservative
-# floor, not an exact match. Before episode collapsing was added, this
-# was 90 minutes — a blunt proxy that also suppressed legitimate close
-# episodes. Now that clusters are collapsed before candidate generation,
-# the window only needs to guard against duplicate candidate slots, not
-# cluster-internal feeds.
-SELECTION_CONFLICT_WINDOW_MINUTES = 75
+# the same real feed. Set to 105 minutes based on parameter sweep evidence:
+# conflict=105 outperforms conflict=75 and conflict=90 at every spread
+# penalty level when the research sweep includes the latest 24h window.
+# The selector does not decide what counts as a real episode — that is
+# the cluster rule's job (73-minute base). The conflict window decides
+# which competing candidate slots to keep when multiple slots target the
+# same region. A wider window forces the selector to pick the
+# better-supported candidate, which produces more accurate predictions.
+SELECTION_CONFLICT_WINDOW_MINUTES = 105
 
 # Support is the primary signal. Spread breaks ties in favor of tighter slots.
 SPREAD_PENALTY_PER_HOUR = 0.25

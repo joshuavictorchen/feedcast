@@ -1,65 +1,66 @@
 Export: exports/export_narababy_silas_20260325.csv
 Dataset: sha256:eb791b625b6982da5b4e0d7d53e2b8ee4570b8b7db100ae3e063795cc54c5784
 Cutoff: 2026-03-25 00:34:39
-Run: 2026-03-27T19:53:54
+Run: 2026-03-27T20:52:14
 
-=== INTER-FEED GAP ANALYSIS ===
+=== INTER-EPISODE GAP ANALYSIS ===
 
-Date         Feeds  Gaps (min)                                            Min    Med
-2026-03-25       1  --                                                     --     --
-2026-03-24      11  187  146  235  144  135  51  147  134  69  50          50    140
-2026-03-23       9  163  215  98  75  171  188  106  72                    72    135
-2026-03-22       9  188  203  181  72  210  78  94  240                    72    184
-2026-03-21      10  170  184  198  143  76  90  40  214  214               40    170
-2026-03-20       8  182  205  179  178  180  174  159                     159    179
-2026-03-19       9  157  179  194  123  189  96  153  113                  96    155
-2026-03-18       8  211  198  151  272  209  153  146                     146    198
-2026-03-17       8  252  205  146  107  208  123  184                     107    184
-2026-03-16      13  205  208  128  28  34  130  55  21  95  41  165  54     21     75
+Date         Episodes  Gaps (min)                                            Min    Med
+2026-03-25          1  --                                                     --     --
+2026-03-24          8  187  146  235  144  135  198  134                     134    146
+2026-03-23          8  163  215  98  75  171  188  106                        75    163
+2026-03-22          7  188  203  181  281  172  240                          172    196
+2026-03-21          9  170  184  198  143  76  90  254  214                   76    177
+2026-03-20          8  182  205  179  178  180  174  159                     159    179
+2026-03-19          9  157  179  194  123  189  96  153  113                  96    155
+2026-03-18          8  211  198  151  272  209  153  146                     146    198
+2026-03-17          8  252  205  146  107  208  123  184                     107    184
+2026-03-16          7  205  208  128  192  171  206                          128    199
 
-Recency-weighted (half-life 4.0d): P25=96  Median=153  Min=21  Max=272
+Recency-weighted (half-life 4.0d): P25=144  Median=179  Min=75  Max=281
 
 === INTER-MODEL PREDICTION SPREAD ===
 
-Cutoff 2026-03-20 21:10: 9 actuals, 8 multi-model matches
-Cutoff 2026-03-21 22:36: 8 actuals, 8 multi-model matches
-Cutoff 2026-03-22 23:27: 9 actuals, 8 multi-model matches
-Cutoff 2026-03-23 20:38: 9 actuals, 7 multi-model matches
-Cutoff 2026-03-24 22:15: 1 actuals, 1 multi-model matches
+Cutoff 2026-03-20 21:10: 8 episodes, 7 multi-model matches
+Cutoff 2026-03-21 22:36: 6 episodes, 6 multi-model matches
+Cutoff 2026-03-22 23:27: 8 episodes, 7 multi-model matches
+Cutoff 2026-03-23 20:38: 8 episodes, 7 multi-model matches
+Cutoff 2026-03-24 00:34: 9 episodes, 9 multi-model matches
 
-Spread: P50=102  P75=122  P90=132  Max=140
+Spread: P50=88  P75=115  P90=136  Max=175
 
 === PRODUCTION EXACT SELECTOR SCORES ===
 
-Production selector constants: radius=120m  max_spread=180m  conflict=75m  spread_penalty=0.25/h
+Production selector constants: radius=120m  max_spread=180m  conflict=105m  spread_penalty=0.25/h
 
 Cutoff                 Actual  Prod_N Prod_Scr Prod_Cnt Prod_Tim
 2026-03-20 21:10:28         8       8     79.8     89.5     71.2
 2026-03-21 22:36:06         6       8     55.0     87.7     34.5
-2026-03-22 23:27:49         8       9     71.3     95.7     53.1
-2026-03-23 20:38:30         8       9     54.8     81.7     36.7
+2026-03-22 23:27:49         8       9     70.5     84.3     58.9
+2026-03-23 20:38:30         8       8     53.9     86.9     33.4
+2026-03-24 00:34:39         9      10     85.5     94.3     77.6
 
 Recency-weighted means:
-  Production: score=64.0  count=88.3  timing=47.1
+  Production: score=68.9  count=88.7  timing=55.0
 
 === SELECTOR PARAMETER SWEEP ===
 
 Scores the immutable-candidate exact selector directly against the retrospective scorer.
 
 Radius Spread Conflict Penalty     Score    Count   Timing   Pred
-    90    150      105    5.00      65.2     88.1     49.5    8.0
-    90    180      105    5.00      65.2     88.1     49.5    8.0
-   120    150      105    5.00      65.2     88.1     49.5    8.0
-   120    180      105    5.00      65.2     88.1     49.5    8.0
-    90    150       75    0.25      64.0     88.3     47.1    8.6
-    90    150       75    1.00      64.0     88.3     47.1    8.6
-    90    150       75    2.00      64.0     88.3     47.1    8.6
-    90    150       75    5.00      64.0     88.3     47.1    8.6
-    90    150       90    0.25      64.0     88.3     47.1    8.6
-    90    150       90    1.00      64.0     88.3     47.1    8.6
-    90    150       90    2.00      64.0     88.3     47.1    8.6
-    90    150       90    5.00      64.0     88.3     47.1    8.6
-    90    180       75    0.25      64.0     88.3     47.1    8.6
-    90    180       75    1.00      64.0     88.3     47.1    8.6
-    90    180       75    2.00      64.0     88.3     47.1    8.6
+    90    150      105    5.00      70.1     89.6     56.4    8.5
+    90    180      105    5.00      70.1     89.6     56.4    8.5
+   120    150      105    5.00      70.1     89.6     56.4    8.5
+   120    180      105    5.00      70.1     89.6     56.4    8.5
+    90    150      105    0.25      68.9     88.7     55.0    8.7
+    90    150      105    1.00      68.9     88.7     55.0    8.7
+    90    150      105    2.00      68.9     88.7     55.0    8.7
+    90    180      105    0.25      68.9     88.7     55.0    8.7
+    90    180      105    1.00      68.9     88.7     55.0    8.7
+    90    180      105    2.00      68.9     88.7     55.0    8.7
+   120    150      105    0.25      68.9     88.7     55.0    8.7
+   120    150      105    1.00      68.9     88.7     55.0    8.7
+   120    150      105    2.00      68.9     88.7     55.0    8.7
+   120    180      105    0.25      68.9     88.7     55.0    8.7  <- production
+   120    180      105    1.00      68.9     88.7     55.0    8.7
 

@@ -385,18 +385,18 @@ class ConsensusBlendTests(unittest.TestCase):
         ):
             self.assertEqual(cluster_point.time, clean_point.time)
 
-    def test_conflict_window_admits_76_minute_episode_pair(self) -> None:
-        """Two majority-supported feeds 76 minutes apart should both survive.
+    def test_conflict_window_admits_106_minute_episode_pair(self) -> None:
+        """Two majority-supported feeds 106 minutes apart should both survive.
 
-        The 75-minute conflict window admits pairs at 75+ minutes. This
-        locks in the lowered window: at the old 90-minute setting, one of
-        these feeds would be suppressed.
+        The 105-minute conflict window admits pairs at 105+ minutes. Pairs
+        closer than 105 minutes are treated as competing candidates for the
+        same feed, and only the better-supported one survives.
         """
         cutoff = datetime(2026, 3, 24, 12, 0, 0)
         history = [_history_event(cutoff)]
-        # All four models agree on two feeds 76 minutes apart.
+        # All four models agree on two feeds 106 minutes apart.
         early_offset = 3.0
-        late_offset = early_offset + 76 / 60  # 76 minutes later
+        late_offset = early_offset + 106 / 60  # 106 minutes later
         forecast = run_consensus_blend(
             base_forecasts=[
                 _forecast("model_a", [early_offset, late_offset]),
