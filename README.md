@@ -153,11 +153,17 @@ scripts/
 feedcast/
   pipeline.py                  End-to-end orchestration
   data.py                      CSV parsing, domain types, fingerprinting
+  clustering.py                Episode grouping rule and FeedEpisode type
   research/                    Cross-cutting research for models and agents
     index.md                   Research hub and table of contents
     volume_gap_relationship/   Feed volume vs. subsequent gap
       analysis.py              Repeatable data analysis
       findings.md              Concise write-up with methods and conclusions
+      artifacts/               Committed outputs used by the write-up
+    feed_clustering/           Episode boundary rule derivation
+      analysis.py              Repeatable data analysis
+      findings.md              Concise write-up with methods and conclusions
+      labels.yaml              Hand-labeled feed boundaries
       artifacts/               Committed outputs used by the write-up
   models/                      Scripted forecasters and consensus blend
     shared.py                  Shared utilities used across models
@@ -316,6 +322,8 @@ and add a corresponding case to `feedcast/agents/run.sh`.
 
 | Decision | Choice | Rationale |
 | -------- | ------ | --------- |
+| Episode grouping | Shared rule, model-local handling | Deterministic boundary rule in `clustering.py`; evaluation and consensus collapse both sides; models decide independently how to use episodes |
+| Model inputs | Raw activities, model-owned shaping | Each model receives `list[Activity]` and builds its own events (breastfeed merge, episode collapse) locally |
 | Scripted models | Distinct conceptual frames | Template, instance-based ML, mechanistic, and gap-regression approaches for ensemble diversity |
 | Ensemble | Consensus uses scripted models only | Agents excluded until retrospectives demonstrate consistent value |
 | Featured forecast | Consensus > static tiebreaker | Simple default; manually overridable via `FEATURED_DEFAULT` |
