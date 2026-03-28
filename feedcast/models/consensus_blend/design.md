@@ -86,10 +86,35 @@ counted as a contributor. True rejection (excluding the outlier
 entirely) would require a tighter radius, which hurts overall
 accuracy by also excluding legitimate wide agreement.
 
+## Robustness to upstream model changes
+
+When component models change their forecasting approach (e.g.,
+switching from raw feed history to episode-level history), the
+consensus selector does not necessarily need retuning. The selector
+operates on episode-collapsed predictions regardless of how the
+upstream model arrived at those predictions — the collapse step
+normalizes the input before candidate generation.
+
+The current selector constants were retained after component models
+adopted episode-level history. A parameter sweep found that widening
+the conflict window and increasing the spread penalty could marginally
+improve headline scores, but the winning combination re-introduces
+suppression of legitimate close episodes and shifts the selector from
+support-primary to tightness-primary. Neither change alone moves the
+score — the gain requires both, which contradicts the episode ontology
+the conflict window was designed to respect. See `research_results.txt`
+for the latest sweep output and `model.py` for the current shipped
+constants.
+
 ## Where to improve next
 
-The score ceiling for this constraint setup is around 69.8 (on the
-current 5-cutoff retrospective). Gains would come from changing how
-candidates are generated or how conflicts are defined — for example,
-a scoring model where a tight 3-model agreement can beat a wide
-4-model agreement, or conflict windows that vary by time of day.
+The constraint structure (single-use + conflict window) is tight
+enough to dominate the selector outcome across a wide range of
+utility weights. Most parameter sweeps produce identical or
+near-identical results, with gains only available from combinations
+that conflict with the episode ontology.
+
+Gains would come from changing how candidates are generated or how
+conflicts are defined — for example, a scoring model where a tight
+3-model agreement can beat a wide 4-model agreement, or conflict
+windows that vary by time of day.

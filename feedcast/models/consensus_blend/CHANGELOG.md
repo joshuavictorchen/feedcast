@@ -2,6 +2,36 @@
 
 Tracks behavior-level changes to the Consensus Blend model. Add newest entries first.
 
+## No selector change after upstream model updates | 2026-03-27
+
+### Problem
+
+Three of four component models (Slot Drift, Latent Hunger, Survival
+Hazard) switched to episode-level history, changing their forecast
+outputs. Need to verify the consensus selector parameters are still
+appropriate.
+
+### Research
+
+Re-ran the consensus research sweep (20260325 export). Production
+headline unchanged. Count component improved (upstream models predict
+the right number of episodes more often); timing slightly degraded;
+the two offset. The parameter sweep's prior full degeneracy partially
+broke: a wider conflict window combined with a much higher spread
+penalty scores marginally better, but this requires both changes —
+neither alone moves the score. The winning combination re-introduces
+suppression of legitimate close episodes and shifts the selector
+from support-primary to tightness-primary. Inter-model spread
+tightened. Replay confirmed no regression.
+
+### Solution
+
+No parameter change. The marginal gain contradicts the episode
+ontology (suppresses real episode pairs that the current conflict
+window was specifically set to preserve). The count improvement comes
+from upstream model changes, not the selector. Production constants
+retained.
+
 ## Lower conflict window from 90 to 75 minutes | 2026-03-26
 
 ### Problem

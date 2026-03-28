@@ -501,7 +501,7 @@ pass (3 new + 50 existing).
 
 ### Phase 5: Model and agent cluster awareness
 
-**Status: IN PROGRESS**
+**Status: DONE**
 
 Phase 5 makes every model and agent cluster-aware. This includes
 implementation changes to models — not just documentation. Each model
@@ -1013,14 +1013,102 @@ used for simulation), `test_diagnostics_use_episode_keys`
 
 #### Sub-phase 5f: Consensus Blend revisit
 
-Consensus already collapses predictions into episodes before voting
-(Phase 4). This sub-phase checks whether upstream model changes from
-5b–5e affect consensus behavior.
+**Status: DONE (no runtime change)**
 
-1. Run consensus research sweep with updated model outputs.
-2. Compare results to Phase 4 baseline.
-3. If parameters need adjustment, update and document.
-4. If no changes needed, note in this plan section and move on.
+Consensus already collapses predictions into episodes before voting
+(Phase 4). This sub-phase is a narrow evidence check: determine
+whether upstream model changes from 5b–5e justify retuning the
+existing selector. It is not a broader redesign of candidate
+generation, diagnostics, or consensus architecture.
+
+**Resolved decisions:**
+
+- **Export:** Use `20260325` for consistency with 5b–5e.
+- **Ship gate baseline:** Compare against the current post-5e repo
+  state. Phase 4 numbers are historical context, not the acceptance
+  gate.
+- **No-change outcome:** Explicitly acceptable. If the revisit does not
+  produce a convincing win, document that and move on.
+- **"More principled" changes:** If score sweeps remain flat but
+  parameter sets produce different selected times, inspect those
+  differences directly. A change is "more principled" only if it
+  clearly aligns better with the shared episode ontology or removes
+  arbitrary suppression of plausible episode pairs, without widening
+  scope beyond the current selector.
+- **Scope ceiling:** Do not redesign candidate generation, add new
+  consensus abstractions, or rework raw-gap diagnostics in this
+  sub-phase. Those are future-work topics unless 5f uncovers a
+  concrete blocker in the existing selector.
+
+**Implementation steps:**
+
+1. Run the consensus research sweep with updated model outputs.
+2. Compare to both:
+   - the current post-5e consensus baseline (ship gate)
+   - the historical Phase 4 results (context only)
+3. Determine whether the Phase 4 parameter degeneracy has broken:
+   - if different parameter sets now produce different scores,
+     evaluate the best-scoring configuration
+   - if scores remain tied, inspect selected times/candidates per
+     cutoff for qualitative differences
+4. If a selector parameter change is warranted, update constants and
+   document the evidence. Treat replay as the production-aligned check.
+5. If no change is warranted, record that outcome explicitly in this
+   plan section and `CHANGELOG.md`.
+6. Refresh `design.md` only where the current evidence has actually
+   shifted (for example, score ceiling or spread stats). Avoid churn.
+
+**Implementation notes:**
+
+Re-ran the consensus research sweep (20260325 export) with all
+upstream model changes from 5b–5e in place.
+
+**Research sweep results (post-5e vs Phase 4 baseline):**
+
+| Metric | Phase 4 (all combos) | Post-5e production | Post-5e best |
+|--------|---------------------|--------------------|--------------|
+| Score | 64.0 | 64.0 | 65.2 |
+| Count | 85.6 | 88.3 | 88.1 |
+| Timing | 48.0 | 47.1 | 49.5 |
+| Predicted | 9.4 | 8.6 | 8.0 |
+
+Production headline unchanged at 64.0. Count improved +2.7 from
+upstream model changes (episode-level models predict the right number
+of episodes more often). Timing slightly degraded -0.9. The two
+offset to the same headline.
+
+**Degeneracy partially broke.** Phase 4 had all parameter combos
+producing identical scores. Post-5e, conflict=105 with penalty=5.0
+scores 65.2 (+1.2). However, this combo requires BOTH parameters:
+conflict=105 alone (with lower penalties) scores 64.0, and
+penalty=5.0 alone (with conflict=75 or 90) also scores 64.0.
+
+**Not adopted.** The conflict=105/penalty=5.0 combo fails the "more
+principled" test: (1) conflict=105 re-introduces suppression of
+legitimate close episodes — the 76-minute pair Phase 4 specifically
+preserved would be suppressed, contradicting the episode ontology;
+(2) penalty=5.0 (20x current) changes the selector from
+support-primary to tightness-primary, a character change not
+justified by a 1.2-point gain.
+
+**Inter-model spread tightened.** P90: 141→132 min, Max: 161→140 min.
+Episode-level models produce more focused predictions. Multi-model
+matches dropped slightly (Phase 4: 9/8/9/9/1, post-5e: 8/8/8/7/1),
+consistent with fewer total predictions.
+
+**Per-cutoff distribution shifted.** 03/20: 62.3→79.8 (improved),
+03/21: 55.1→55.0 (stable), 03/22: 72.2→71.3 (slight degradation),
+03/23: 64.4→54.8 (degraded). The most-recent cutoff carries the
+highest recency weight, so headline stability masks a shift toward
+better fit on older patterns at the cost of the latest day.
+
+**Replay:** 78.536 headline, confirming the post-5e baseline exactly.
+No regression. 67 tests pass (no new tests — no runtime change).
+
+**Documentation:** `design.md` updated with 5f revisit section and
+refreshed "Where to improve next" with current evidence. `CHANGELOG.md`
+updated with the no-change outcome and supporting evidence.
+`methodology.md` unchanged (already current from Phase 4).
 
 ### Phase 6: Reports
 
