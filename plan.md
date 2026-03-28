@@ -29,26 +29,53 @@ during implementation unless a technical blocker is found.
 ### Multi-window evaluation
 
 - **Window generation:** Each evaluation window is a 24h horizon starting
-  from a cutoff point. Cutoff points are placed at episode boundaries
-  (the start time of each feeding episode) within the lookback range.
-  A fixed-step mode (configurable step size) is available as a fallback
-  if episode-boundary mode is too expensive for sweeps.
+  from a cutoff point. Cutoff points are placed at feeding episode
+  boundaries (the canonical timestamp of each `FeedEpisode`) within the
+  lookback range. Individual feed events within an episode do not generate
+  additional cutoffs — only the episode-level boundary matters. A fixed-step
+  mode (configurable step size) is available as a fallback if episode-
+  boundary mode is too expensive for sweeps.
 
-- **Lookback range:** Default 72 hours. Configurable via `lookback_hours`
-  parameter.
+- **Replay-equivalent cutoff always included:** The most recent cutoff
+  (`latest_activity_time - 24h`) is always injected into the cutoff set,
+  even if no episode boundary falls exactly at that time. This preserves
+  backward compatibility with the prior single-window replay and ensures
+  the most recent complete window is always evaluated.
 
-- **Clamp mode:** Default **soft** (exponential decay handles relevance;
-  `lookback_hours` is a practical search limit, not a weight cutoff).
-  **Hard** mode available (strict zero beyond `lookback_hours`). Controlled
-  via a `hard_clamp: bool = False` parameter.
+- **Lookback range:** Default 96 hours. Configurable via `lookback_hours`.
+  This is the boundary — no cutoffs are generated beyond it. The
+  exponential decay within this range handles relevance weighting; the
+  boundary prevents unbounded computation.
 
 - **Recency weighting:** Exponential decay. Default half-life 36 hours.
   Weight formula: `2^(-age_hours / half_life_hours)` where `age_hours` is
   the distance from a cutoff to the most recent cutoff. The most recent
-  window always has weight 1.0.
+  cutoff always has weight 1.0.
 
-- **Aggregate score:** Weighted mean of per-window headline scores. Per-window
-  breakdowns are preserved in results for diagnostics.
+- **Aggregate score:** Weighted mean of per-window headline scores.
+  Per-window breakdowns are preserved in results for diagnostics.
+
+- **Unavailable windows:** When a model cannot produce a forecast at a
+  given cutoff (e.g., insufficient history), that window is **excluded**
+  from the weighted aggregate — not counted as zero. The result reports
+  both `window_count` (total attempted) and `scored_window_count` (those
+  that produced a score) so availability is visible as a separate concern.
+  Rationale: including unavailable windows as zero would penalize models
+  that need more warmup history, conflating capability with availability.
+  A model that scores well on 15 of 20 windows but cannot forecast from
+  older cutoffs should be judged on those 15 windows, with its 75%
+  availability noted alongside.
+
+- **Episode-boundary frequency bias:** Using episode boundaries as cutoff
+  points means high-frequency feeding periods (e.g., cluster feeds)
+  produce more cutoffs and therefore more aggregate weight than low-
+  frequency periods. This is partially mitigated by using episode-level
+  boundaries (collapsed from raw feeds) rather than individual feed
+  events. The bias is intentional in the sense that periods with more
+  feeding activity generate more evaluation scenarios — but implementers
+  and researchers should be aware it exists. If a model performs poorly
+  during high-frequency periods, that weakness will be amplified in the
+  aggregate relative to a fixed-step evaluation.
 
 ### Tracker stays single-window
 
@@ -63,14 +90,33 @@ explicitly: tracker measures *realized accuracy*, replay/research measure
 Two layers:
 
 1. **Mandatory canonical layer:** Every model's `research.py` must include
-   a canonical evaluation section that scores the model via multi-window
-   `score_forecast()`. This is how models are compared. Parameter selection
-   should be driven by this metric.
+   a canonical evaluation section. For production-constant evaluation and
+   constant-only parameter sweeps, research scripts should call replay's
+   `score_model()` or `tune_model()` rather than reimplementing model
+   execution. This ensures canonical results are produced by the same
+   infrastructure the CLI uses and are directly comparable across models.
+   For variant comparisons that go beyond constant overrides (e.g.,
+   testing different code paths), research scripts may call
+   `evaluate_multi_window()` directly with a custom forecast function.
 
 2. **Optional internal layer:** Models may use whatever internal metrics
    help them understand their own mechanics (gap MAE, walk-forward
    simulation, alignment analysis, etc.). These are diagnostic tools, not
    tuning objectives.
+
+### Analog trajectory: pragmatic exception for sweep cost
+
+The canonical metric is authoritative for parameter selection. However,
+analog_trajectory's 672-config grid search is too expensive to run
+entirely through multi-window canonical scoring (potentially 15,000+
+model runs). The recommended approach is a two-stage approximation:
+use the internal `full_traj_mae` metric for the initial sweep to narrow
+candidates, then validate the top N (e.g., top 10) via multi-window
+canonical scoring. This is a pragmatic concession to compute cost, not
+the ideal policy. If parallelization or fixed-step cutoffs make full
+canonical sweeps tractable, prefer that instead. The plan should not be
+read as endorsing proxy metrics in general — this exception is specific
+to analog_trajectory's grid size.
 
 ### Parallelization
 
@@ -88,7 +134,8 @@ feedcast/evaluation/
     scoring.py          # existing - score_forecast() unchanged
     windows.py          # NEW - multi-window generation, weighting, aggregation
     methodology.md      # existing - update with multi-window rationale
-    README.md           # existing - update as agent-usable methodology guide
+                        # (no separate README.md exists; methodology.md
+                        #  serves as the agent-usable methodology guide)
 
 feedcast/replay/
     runner.py           # MODIFY - adopt multi-window evaluation
@@ -97,6 +144,9 @@ feedcast/replay/
 
 feedcast/models/<each>/
     research.py         # MODIFY - add canonical evaluation section
+
+scripts/
+    run_replay.py       # MODIFY - add CLI flags, update summary printers
 ```
 
 ## Phase 1: Shared Infrastructure
@@ -114,30 +164,43 @@ def weighted_mean(values: Sequence[float], weights: Sequence[float]) -> float:
     """Weighted arithmetic mean."""
 
 def generate_episode_boundary_cutoffs(
-    activities: Sequence[Activity],
+    episodes: Sequence[FeedEpisode],
     latest_activity_time: datetime,
-    lookback_hours: float = 72.0,
-    hard_clamp: bool = False,
+    lookback_hours: float = 96.0,
 ) -> list[datetime]:
     """Generate cutoff points at episode boundaries within the lookback range.
 
-    Each cutoff is the start time of a feeding episode, placed so that
+    Each cutoff is the canonical timestamp of a FeedEpisode, placed so that
     the 24h evaluation window following it falls entirely within observed
-    data. The most recent valid cutoff is latest_activity_time - 24h
-    (the current replay-equivalent window). The oldest valid cutoff is
-    latest_activity_time - lookback_hours.
+    data. Individual feed events within an episode do not produce separate
+    cutoffs.
 
-    Returns cutoffs sorted chronologically (oldest first).
+    The replay-equivalent cutoff (latest_activity_time - 24h) is always
+    included, even if no episode boundary falls at that exact time.
+
+    The oldest valid cutoff is latest_activity_time - lookback_hours. No
+    cutoffs are generated beyond this boundary.
+
+    Args:
+        episodes: Pre-computed feeding episodes (from group_into_episodes).
+        latest_activity_time: Upper bound of observed data.
+        lookback_hours: Maximum lookback from latest_activity_time.
+
+    Returns:
+        Cutoffs sorted chronologically (oldest first).
     """
 
 def generate_fixed_step_cutoffs(
     latest_activity_time: datetime,
     earliest_activity_time: datetime,
-    lookback_hours: float = 72.0,
+    lookback_hours: float = 96.0,
     step_hours: float = 12.0,
-    hard_clamp: bool = False,
 ) -> list[datetime]:
-    """Generate cutoffs at fixed intervals. Fallback for expensive sweeps."""
+    """Generate cutoffs at fixed intervals. Fallback for expensive sweeps.
+
+    The replay-equivalent cutoff (latest_activity_time - 24h) is always
+    included.
+    """
 
 def evaluate_multi_window(
     forecast_fn: Callable[[datetime], Forecast],
@@ -145,6 +208,7 @@ def evaluate_multi_window(
     cutoffs: Sequence[datetime],
     latest_activity_time: datetime,
     half_life_hours: float = 36.0,
+    parallel: bool = False,
 ) -> MultiWindowResult:
     """Evaluate a model across multiple windows and return weighted aggregate.
 
@@ -158,9 +222,12 @@ def evaluate_multi_window(
         cutoffs: Pre-generated cutoff points (from generate_*_cutoffs).
         latest_activity_time: Upper bound of observed data.
         half_life_hours: Recency decay half-life.
+        parallel: If True, evaluate windows concurrently via ThreadPoolExecutor.
 
     Returns:
         MultiWindowResult with aggregate score and per-window breakdowns.
+        Windows where the model is unavailable are excluded from the
+        aggregate but included in per_window with status="unavailable".
     """
 ```
 
@@ -178,11 +245,12 @@ class WindowResult:
 
 @dataclass
 class MultiWindowResult:
-    headline_score: float          # Weighted mean of per-window headlines
-    count_score: float             # Weighted mean of per-window count scores
-    timing_score: float            # Weighted mean of per-window timing scores
-    window_count: int              # Number of windows evaluated
-    scored_window_count: int       # Number that produced a score
+    headline_score: float          # Weighted mean of scored windows' headlines
+    count_score: float             # Weighted mean of scored windows' count scores
+    timing_score: float            # Weighted mean of scored windows' timing scores
+    window_count: int              # Total windows attempted
+    scored_window_count: int       # Windows that produced a score
+    availability_ratio: float      # scored_window_count / window_count
     half_life_hours: float
     per_window: list[WindowResult] # Full per-window breakdown
 ```
@@ -198,7 +266,8 @@ module instead.
 Add `tests/test_windows.py`:
 - Recency weight: known values (age=0 returns 1.0, age=half_life returns 0.5)
 - Window generation: episode boundaries fall within expected range, are sorted,
-  respect lookback and clamp settings
+  respect lookback, always include replay-equivalent cutoff
+- Unavailable windows: excluded from aggregate, counted in window_count
 - Multi-window aggregation: weighted mean matches hand-calculated values
 - Edge case: export with fewer than 24h of data raises clear error
 
@@ -209,10 +278,12 @@ Modify `feedcast/replay/runner.py` to use multi-window evaluation.
 ### Changes to `score_model()`
 
 Replace single-window `_latest_replay_window()` call with:
-1. Generate cutoffs via `generate_episode_boundary_cutoffs()`
-2. Build a `forecast_fn` closure that calls `_run_forecast()` for a given cutoff
-3. Call `evaluate_multi_window()` to get aggregate + per-window results
-4. Include both aggregate and per-window data in the result payload
+1. Build scoring events and episodes from activities
+2. Generate cutoffs via `generate_episode_boundary_cutoffs()`
+3. Build a `forecast_fn` closure that calls `_run_forecast()` for a given
+   cutoff
+4. Call `evaluate_multi_window()` to get aggregate + per-window results
+5. Include both aggregate and per-window data in the result payload
 
 The function signature gains optional parameters with defaults:
 ```python
@@ -222,9 +293,8 @@ def score_model(
     overrides: dict[str, Any] | None = None,
     export_path: Path | None = None,
     output_dir: Path = DEFAULT_RESULTS_DIR,
-    lookback_hours: float = 72.0,
+    lookback_hours: float = 96.0,
     half_life_hours: float = 36.0,
-    hard_clamp: bool = False,
     cutoff_mode: str = "episode",  # "episode" or "fixed"
     step_hours: float = 12.0,      # only used when cutoff_mode="fixed"
     parallel: bool = False,
@@ -242,12 +312,12 @@ The `replay_window` field in result payloads becomes `replay_windows`:
 ```json
 {
     "replay_windows": {
-        "lookback_hours": 72.0,
+        "lookback_hours": 96.0,
         "half_life_hours": 36.0,
-        "hard_clamp": false,
         "cutoff_mode": "episode",
         "window_count": 21,
         "scored_window_count": 21,
+        "availability_ratio": 1.0,
         "aggregate": { "headline": 72.3, "count": 78.1, "timing": 66.9 },
         "per_window": [ ... ]
     }
@@ -263,12 +333,21 @@ Update `results.py` accordingly. The `validation` field changes from
 This function is replaced by the window generation functions in
 `evaluation/windows.py`. Delete it.
 
+### CLI updates (`scripts/run_replay.py`)
+
+- Add CLI flags: `--lookback`, `--half-life`, `--cutoff-mode`,
+  `--step-hours`, `--parallel`. Defaults match the function defaults.
+- Update `_print_score_summary()` (currently at line 226): replace
+  `payload["replay_window"]` reads with `payload["replay_windows"]`.
+  Show aggregate scores and window count summary.
+- Update `_print_tune_summary()` (currently at line 251): same schema
+  change. Show aggregate scores, window count, and availability for
+  baseline and best candidate.
+
 ### Parallelization
 
-Add optional thread-based parallelism to `evaluate_multi_window()` in
-`windows.py`. When `parallel=True`, evaluate windows concurrently using
-`ThreadPoolExecutor`. The `parallel` flag threads through from
-`score_model()` and `tune_model()`.
+The `parallel` flag threads through from `score_model()` / `tune_model()`
+to `evaluate_multi_window()` in `windows.py`.
 
 ### Tests
 
@@ -277,73 +356,68 @@ Update `tests/test_replay.py`:
 - Add test for multi-window result structure
 - Add test for `lookback_hours` and `half_life_hours` parameter passthrough
 
-### CLI
-
-Update `scripts/run_replay.py` to accept optional `--lookback`, `--half-life`,
-`--hard-clamp`, `--cutoff-mode`, `--step-hours`, and `--parallel` flags.
-Defaults match the function defaults.
-
 ## Phase 3: Research Scripts Adopt Canonical Scoring
 
-Every model's `research.py` gains a canonical evaluation section and imports
-from the shared multi-window infrastructure.
+Every model's `research.py` gains a canonical evaluation section.
 
-### All models: add canonical evaluation section
+### All models: canonical evaluation via replay
 
-Each research script adds a section (called from `main()`) that:
-1. Generates multi-window cutoffs via `generate_episode_boundary_cutoffs()`
-2. Runs the model at each cutoff with current production constants
-3. Scores via `evaluate_multi_window()`
-4. Reports the aggregate headline score and per-window breakdown
+Each research script adds a section (called from `main()`) that calls
+replay's `score_model()` with the model's slug and current production
+constants. This ensures the canonical result uses the same infrastructure
+as the CLI and is directly comparable across models.
 
-This section should be clearly labeled (e.g., "CANONICAL MULTI-WINDOW
-EVALUATION") and appear prominently in the output.
+The section should be clearly labeled (e.g., "CANONICAL MULTI-WINDOW
+EVALUATION") and appear prominently in the output, reporting:
+- Aggregate headline, count, and timing scores
+- Window count, scored window count, availability ratio
+- Per-window breakdown (cutoff, score, weight)
 
 ### latent_hunger and survival_hazard: switch tuning metric
 
 These two scripts currently select parameters by minimizing `gap1_mae`.
-Change the parameter selection logic to:
+Change the parameter selection logic to use replay's `tune_model()`:
 
-1. For each candidate parameter set, run `evaluate_multi_window()` using the
-   canonical `score_forecast()` metric (via the shared infrastructure).
-2. Rank candidates by weighted aggregate headline score (maximize, not
-   minimize — this is a score, not an error).
-3. Keep the existing walk-forward / `gap1_mae` analysis as a diagnostic
+1. Define candidate parameter values as they do today, but pass them
+   to `tune_model()` instead of the inline walk-forward evaluator.
+2. `tune_model()` handles multi-window canonical scoring and ranking.
+3. Report the best candidate from canonical scoring alongside the
+   internal diagnostic results for comparison.
+4. Keep the existing walk-forward / `gap1_mae` analysis as a diagnostic
    section that helps explain *why* a parameter set performs well or poorly.
-4. Update findings.md and CHANGELOG.md to document the metric change.
+5. Update findings.md and CHANGELOG.md to document the metric change.
 
 The internal evaluation functions (`_evaluate_multiplicative()`,
 `_evaluate_additive()`, `_walk_forward_weibull()`, etc.) remain in the
 scripts as diagnostic tools. They are not deleted.
 
-### analog_trajectory: add canonical evaluation
+### analog_trajectory: two-stage canonical evaluation
 
-Currently tunes on `full_traj_mae` via a 672-config grid search. This is
-a more defensible internal metric than `gap1_mae` (it considers the full
-trajectory), but it still differs from the canonical metric.
+Currently tunes on `full_traj_mae` via a 672-config grid search. Running
+all 672 configs through multi-window canonical scoring is prohibitively
+expensive. Use a two-stage approach:
 
-Add a canonical evaluation section that scores the current production
-constants and the best grid-search result via `evaluate_multi_window()`.
-Report both metrics side by side so the relationship between `full_traj_mae`
-and headline score is visible. If they consistently agree, the internal
-metric is fine as a fast proxy. If they diverge, flag it.
+1. Run the existing internal grid search using `full_traj_mae` as a fast
+   proxy to rank all 672 configurations.
+2. Take the top 10 candidates and validate each via replay's
+   `score_model()` with appropriate overrides.
+3. Report the canonical ranking of those top 10 as the authoritative
+   result.
 
-The 672-config sweep is too expensive to run entirely through multi-window
-evaluation (~15,000+ model runs with episode-boundary cutoffs). Options:
-- Use the internal metric for the initial sweep, then validate the top N
-  candidates (e.g., top 10) via multi-window canonical scoring.
-- Use `cutoff_mode="fixed"` with a larger step size for the sweep.
-- Accept the cost if parallelization makes it tractable.
+This is a pragmatic concession to compute cost (see "Analog trajectory:
+pragmatic exception for sweep cost" in Design Decisions). The canonical
+metric remains authoritative. If parallelization or fixed-step cutoffs
+make full canonical sweeps tractable, prefer that instead.
 
-Recommend the first option (internal sweep + canonical validation of top N)
-as the default approach.
+Also report the production-constant canonical score via
+`score_model(slug)` (no overrides) so the baseline is comparable.
 
 ### slot_drift: add canonical evaluation
 
 Currently does no predictive evaluation — only alignment analysis. Add a
-canonical evaluation section that scores the model via
-`evaluate_multi_window()` with current production constants. The alignment
-analysis remains as a diagnostic section.
+canonical evaluation section that calls replay's
+`score_model("slot_drift")`. The alignment analysis remains as a diagnostic
+section.
 
 ### consensus_blend: migrate to shared infrastructure
 
@@ -352,24 +426,32 @@ Replace the inline `_recency_weight()`, `_weighted_mean()`, and
 `feedcast/evaluation/windows.py`. The research script's multi-cutoff logic
 becomes a thin wrapper around the shared infrastructure.
 
+For the selector parameter sweep, the research script calls
+`evaluate_multi_window()` directly with a custom forecast function (since
+it needs to vary selector internals, not just module-level constants).
+This is the appropriate layer for variant comparisons that go beyond
+constant overrides.
+
 ### Tests
 
-No new test files needed for research scripts — they are analysis tools,
-not library code. The shared infrastructure is tested in Phase 1. Verify
-each research script runs without error after modification:
+No new test files for research scripts — they are analysis tools, not
+library code. The shared infrastructure is tested in Phase 1. Verify each
+script runs without error after modification:
 ```bash
 python -m feedcast.models.<slug>.research
 ```
 
 ## Phase 4: Documentation
 
-### feedcast/evaluation/README.md
+### feedcast/evaluation/methodology.md
 
-Update to serve as an agent-usable methodology guide. Should cover:
+Update to serve as an agent-usable methodology guide (no separate README.md
+exists in this directory; methodology.md serves that role). Should cover:
 - What `score_forecast()` measures and why (episode matching, horizon
   weighting, geometric mean)
 - Multi-window evaluation: rationale, window generation modes, recency
-  weighting math
+  weighting math, episode-boundary frequency bias
+- Unavailable window handling and availability reporting
 - How to call the API for a canonical evaluation
 - Distinction from tracker (multi-window estimates capability; tracker
   measures realized accuracy)
@@ -380,8 +462,8 @@ Rewrite as an agent-usable guide for conducting research:
 - What replay does (rewind, run, score across windows)
 - How to use it for parameter tuning (score mode, tune mode)
 - Default configuration and what each parameter controls
-- How to interpret results (aggregate vs per-window, what a good score
-  looks like)
+- How to interpret results (aggregate vs per-window, availability,
+  what a good score looks like)
 - Relationship to evaluation (replay uses evaluation, not the other way
   around)
 
@@ -404,9 +486,9 @@ Each model's research output and findings.md should note:
 ### Ordering
 
 Phases are sequential. Phase 1 must complete before Phase 2 (replay depends
-on windows.py). Phase 2 must complete before Phase 3 (research scripts
-should use the replay infrastructure where appropriate). Phase 4 can
-partially overlap with Phase 3.
+on windows.py). Phase 2 must complete before Phase 3 (research scripts call
+replay's `score_model()` / `tune_model()`). Phase 4 can partially overlap
+with Phase 3.
 
 ### What NOT to do
 
@@ -426,3 +508,5 @@ partially overlap with Phase 3.
 `score_model("some_model")` with default parameters should produce a result
 that is directly comparable to the canonical evaluation section in that
 model's `research.py`. Both use the same windows, same weights, same scorer.
+This is guaranteed when research scripts call `score_model()` directly for
+their canonical section.
