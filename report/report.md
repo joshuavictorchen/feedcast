@@ -1,6 +1,6 @@
 # Silas Feeding Forecast
 
-**Wednesday, March 25, 2026** · 26 days old · Cutoff: 12:34 AM
+**Friday, March 27, 2026** · 28 days old · Cutoff: 9:00 PM
 
 ## Next Feeds
 
@@ -12,12 +12,32 @@
 
 ## Prior Run Retrospective
 
-No new actuals since the prior run
-(same dataset: `sha256:eb791b62...`).
+Comparing prior run `20260327-223053` predicted episodes
+against actual feeding episodes observed in the current export
+(observed horizon:
+24.0h,
+coverage: 100%).
+
+| Model | Score | Count | Timing | Episodes (Pred/Actual/Matched) | Status |
+| ----- | ----- | ----- | ------ | ------------------------------ | ------ |
+| Slot Drift | 69.0 | 91.9 | 51.8 | 7/6/6 | Full 24h observed |
+| Analog Trajectory | 60.0 | 81.3 | 44.3 | 9/6/6 | Full 24h observed |
+| Latent Hunger State | 63.3 | 85.7 | 46.8 | 8/6/6 | Full 24h observed |
+| Survival Hazard | 67.0 | 87.0 | 51.5 | 8/6/6 | Full 24h observed |
+| Consensus Blend | 62.4 | 81.3 | 47.9 | 9/6/6 | Full 24h observed |
 
 ## Historical Retrospective Accuracy
 
-No completed retrospective history yet.
+Aggregated from stored prior-run retrospectives. These scores
+reflect the model versions that made those earlier predictions.
+
+| Model | Comparisons | Full 24h Runs | Mean Score | Mean Count | Mean Timing | Avg Coverage |
+| ----- | ----------- | ------------- | ---------- | ---------- | ----------- | ------------ |
+| Slot Drift | 1 | 1 | 69.0 | 91.9 | 51.8 | 100% |
+| Survival Hazard | 1 | 1 | 67.0 | 87.0 | 51.5 | 100% |
+| Latent Hunger State | 1 | 1 | 63.3 | 85.7 | 46.8 | 100% |
+| Consensus Blend | 1 | 1 | 62.4 | 81.3 | 47.9 | 100% |
+| Analog Trajectory | 1 | 1 | 60.0 | 81.3 | 44.3 | 100% |
 
 ## Methodologies
 
@@ -169,6 +189,6 @@ only one or two models support are filtered out.
 
 ---
 
-*Export: `export_narababy_silas_20260325.csv` · Dataset: `sha256:eb791b62...`
-· Commit: `ea466c3 (dirty)`
-· Generated: 2026-03-27 22:30:53*
+*Export: `export_narababy_silas_20260327.csv` · Dataset: `sha256:11840296...`
+· Commit: `eaa7de1`
+· Generated: 2026-03-27 22:50:41*
