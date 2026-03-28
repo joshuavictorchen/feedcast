@@ -72,16 +72,19 @@ def write_spaghetti_plot(
     featured_slug: str,
     events: list[FeedEvent],
     cutoff: datetime,
-    history_tail_hours: float = 12,
+    history_tail_hours: float = 24,
 ) -> None:
     """Render the trajectory comparison chart.
 
     Each model gets a horizontal lane with volume-sized markers at
-    predicted feed times. The featured model uses the same orange style
-    as the schedule chart; other models use muted pastels.
+    predicted feed times. A "Prior 24h" row at the top shows actual
+    feeds shifted +24h so times-of-day align with the forecast axis,
+    enabling direct day-over-day comparison.
     """
     _apply_plot_style()
     from matplotlib.colors import to_rgba
+
+    HISTORY_COLOR = "#8E8E93"
 
     featured = _find_forecast(all_forecasts, featured_slug)
     others = [
@@ -90,36 +93,58 @@ def write_spaghetti_plot(
     ]
     model_list = [featured] + others
     num_models = len(model_list)
+    num_rows = num_models + 1  # history row at top
 
-    figure, axis = plt.subplots(figsize=(16, 2.2 + num_models * 1.1))
+    figure, axis = plt.subplots(figsize=(16, 2.2 + num_rows * 1.1))
 
     # Time range rounded to hour boundaries
     hour_start = cutoff.replace(minute=0, second=0, microsecond=0)
-    horizon_end = cutoff + timedelta(hours=HORIZON_HOURS)
-    hour_end = (horizon_end + timedelta(hours=1)).replace(
+    hour_end = (cutoff + timedelta(hours=HORIZON_HOURS + 1)).replace(
         minute=0, second=0, microsecond=0
     )
 
-    # Lane backgrounds tinted with each model's color
+    # History: prior 24h events, shifted forward by 24h to align with forecasts
+    history_start = cutoff - timedelta(hours=history_tail_hours)
+    recent_events = [e for e in events if history_start <= e.time <= cutoff]
+    shifted_events = [
+        (event, event.time + timedelta(hours=24)) for event in recent_events
+    ]
+
+    earliest_point = min(p.time for f in model_list for p in f.points)
+    x_left = earliest_point - timedelta(minutes=45)
+    x_right = hour_end + timedelta(minutes=15)
+
+    history_y = num_rows
     lane_height = 0.84
+
+    # History lane — gray tint
+    red, green, blue, _ = to_rgba(HISTORY_COLOR)
+    axis.add_patch(Rectangle(
+        (mdates.date2num(x_left), history_y - lane_height / 2),
+        mdates.date2num(x_right) - mdates.date2num(x_left),
+        lane_height,
+        color=(red, green, blue, 0.06), zorder=0, linewidth=0,
+    ))
+
+    # Model lane backgrounds tinted with each model's color
     for index, forecast in enumerate(model_list):
-        y_pos = num_models - index
+        y_pos = num_rows - 1 - index
         base_color = (
             ORANGE if forecast.slug == featured_slug
             else _spaghetti_color(forecast.slug)
         )
         red, green, blue, _ = to_rgba(base_color)
         axis.add_patch(Rectangle(
-            (mdates.date2num(hour_start), y_pos - lane_height / 2),
-            mdates.date2num(hour_end) - mdates.date2num(hour_start),
+            (mdates.date2num(x_left), y_pos - lane_height / 2),
+            mdates.date2num(x_right) - mdates.date2num(x_left),
             lane_height,
             color=(red, green, blue, 0.08), zorder=0, linewidth=0,
         ))
 
     # Lane separators
-    for index in range(num_models + 1):
+    for index in range(num_rows + 1):
         axis.axhline(
-            index + 0.5, color=SEPARATOR, linewidth=0.5, alpha=0.5, zorder=2
+            index + 0.5, color=SEPARATOR, linewidth=0.5, alpha=0.5, zorder=2,
         )
 
     # Dotted vertical gridlines at each hour
@@ -131,73 +156,91 @@ def write_spaghetti_plot(
         )
         current_hour += timedelta(hours=1)
 
-    # Feed markers with halos
-    for index, forecast in enumerate(model_list):
-        y_pos = num_models - index
-        is_featured = forecast.slug == featured_slug
+    # History markers — gray with halo, volume-sized, shifted +24h
+    history_label_color = _darken_color(HISTORY_COLOR)
+    for event, shifted_time in shifted_events:
+        if shifted_time < x_left or shifted_time > x_right:
+            continue
+        size = _volume_to_marker_size(event.volume_oz)
+        axis.scatter(
+            shifted_time, history_y,
+            s=size * 2.5, c=HISTORY_COLOR, alpha=0.1,
+            zorder=3, linewidths=0,
+        )
+        axis.scatter(
+            shifted_time, history_y,
+            s=size, c=HISTORY_COLOR, alpha=0.55,
+            edgecolors="white", linewidths=0.6, zorder=4,
+        )
+        axis.annotate(
+            f"{event.volume_oz:.1f} oz\n"
+            f"{event.time.strftime('%-I:%M %p').lower()}",
+            (shifted_time, history_y),
+            textcoords="offset points",
+            xytext=(0, 14),
+            fontsize=5.5,
+            ha="center",
+            color=history_label_color,
+            fontweight="medium",
+            linespacing=1.3,
+        )
 
-        if is_featured:
-            # Featured model: orange with soft halo (matches schedule chart)
-            for point in forecast.points:
-                size = _volume_to_marker_size(point.volume_oz)
-                axis.scatter(
-                    point.time, y_pos,
-                    s=size * 2.5, c=ORANGE_SOFT, alpha=0.2,
-                    zorder=3, linewidths=0,
-                )
-                axis.scatter(
-                    point.time, y_pos,
-                    s=size, c=ORANGE, alpha=0.85,
-                    edgecolors="white", linewidths=0.8, zorder=5,
-                )
-            label_color = _darken_color(ORANGE)
-            for point in forecast.points:
-                axis.annotate(
-                    f"{point.volume_oz:.1f} oz\n"
-                    f"{point.time.strftime('%-I:%M %p').lower()}",
-                    (point.time, y_pos),
-                    textcoords="offset points",
-                    xytext=(0, 14),
-                    fontsize=6,
-                    ha="center",
-                    color=label_color,
-                    fontweight="medium",
-                    linespacing=1.3,
-                )
-        else:
-            # Other models: muted pastel with halo, with the same
-            # volume-to-area mapping as the featured series.
-            color = _spaghetti_color(forecast.slug)
-            for point in forecast.points:
-                size = _volume_to_marker_size(point.volume_oz)
-                axis.scatter(
-                    point.time, y_pos,
-                    s=size * 2.5, c=color, alpha=0.15,
-                    zorder=3, linewidths=0,
-                )
-                axis.scatter(
-                    point.time, y_pos,
-                    s=size, c=color, alpha=0.7,
-                    edgecolors="white", linewidths=0.6, zorder=4,
-                )
+    # Model markers with halos and volume/time labels
+    for index, forecast in enumerate(model_list):
+        y_pos = num_rows - 1 - index
+        is_featured = forecast.slug == featured_slug
+        color = ORANGE if is_featured else _spaghetti_color(forecast.slug)
+        label_color = _darken_color(color)
+
+        for point in forecast.points:
+            size = _volume_to_marker_size(point.volume_oz)
+            halo_color = ORANGE_SOFT if is_featured else color
+            halo_alpha = 0.2 if is_featured else 0.15
+            axis.scatter(
+                point.time, y_pos,
+                s=size * 2.5, c=halo_color, alpha=halo_alpha,
+                zorder=3, linewidths=0,
+            )
+            axis.scatter(
+                point.time, y_pos,
+                s=size, c=color,
+                alpha=0.85 if is_featured else 0.7,
+                edgecolors="white",
+                linewidths=0.8 if is_featured else 0.6,
+                zorder=5 if is_featured else 4,
+            )
+            axis.annotate(
+                f"{point.volume_oz:.1f} oz\n"
+                f"{point.time.strftime('%-I:%M %p').lower()}",
+                (point.time, y_pos),
+                textcoords="offset points",
+                xytext=(0, 14),
+                fontsize=5.5,
+                ha="center",
+                color=label_color,
+                fontweight="medium",
+                linespacing=1.3,
+            )
 
     # Y-axis: bold model names colored to match
-    axis.set_yticks(range(1, num_models + 1))
-    y_labels = list(reversed([f.name for f in model_list]))
-    y_colors = list(reversed([
-        ORANGE if f.slug == featured_slug else _spaghetti_color(f.slug)
-        for f in model_list
-    ]))
+    axis.set_yticks(range(1, num_rows + 1))
+    y_labels = (
+        list(reversed([f.name for f in model_list]))
+        + ["Prior 24h"]
+    )
+    y_colors = (
+        list(reversed([
+            ORANGE if f.slug == featured_slug else _spaghetti_color(f.slug)
+            for f in model_list
+        ]))
+        + [HISTORY_COLOR]
+    )
     axis.set_yticklabels(y_labels, fontsize=8.5, fontweight="bold")
     for tick_label, color in zip(axis.get_yticklabels(), y_colors):
         tick_label.set_color(_darken_color(color))
 
-    axis.set_ylim(0.3, num_models + 0.7)
-    earliest_point = min(p.time for f in model_list for p in f.points)
-    axis.set_xlim(
-        earliest_point - timedelta(minutes=45),
-        hour_end + timedelta(minutes=15),
-    )
+    axis.set_ylim(0.3, num_rows + 0.7)
+    axis.set_xlim(x_left, x_right)
 
     # X-axis: time with date
     axis.xaxis.set_major_locator(mdates.HourLocator(interval=3))
@@ -216,11 +259,12 @@ def write_spaghetti_plot(
     )
     figure.text(
         0.04, 0.925,
-        f"All models · cutoff {cutoff.strftime('%B %-d, %Y %-I:%M %p')}",
+        f"All models · cutoff {cutoff.strftime('%B %-d, %Y %-I:%M %p')}"
+        " · prior day shifted +24h for comparison",
         fontsize=10.5, color=LABEL_SECONDARY, va="top", ha="left",
     )
 
-    figure.subplots_adjust(top=0.87, bottom=0.08, left=0.12, right=0.96)
+    figure.subplots_adjust(top=0.87, bottom=0.07, left=0.12, right=0.96)
     figure.savefig(
         output_path, dpi=200, bbox_inches="tight",
         facecolor=BG, edgecolor="none", pad_inches=0.4,
