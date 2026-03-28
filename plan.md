@@ -66,6 +66,17 @@ during implementation unless a technical blocker is found.
   older cutoffs should be judged on those 15 windows, with its 75%
   availability noted alongside.
 
+- **Tuning ranking and availability:** For `score_model()`, the raw
+  weighted aggregate headline and `availability_ratio` are reported as-is.
+  For `tune_model()`, candidates are ranked in two stages: first by
+  `scored_window_count` descending (highest availability tier wins), then
+  by weighted aggregate headline within that tier. This prevents a
+  candidate from winning by scoring well on a small subset of windows
+  while being unavailable on harder ones. If a parameter change reduces
+  the model's ability to forecast from diverse cutoffs, that is treated
+  as a disqualifying weakness, not hidden by a high headline on fewer
+  windows.
+
 - **Episode-boundary frequency bias:** Using episode boundaries as cutoff
   points means high-frequency feeding periods (e.g., cluster feeds)
   produce more cutoffs and therefore more aggregate weight than low-
@@ -304,7 +315,9 @@ def score_model(
 ### Changes to `tune_model()`
 
 Same multi-window adoption. Each candidate configuration is evaluated across
-all windows. The ranking uses the weighted aggregate headline score.
+all windows. Candidates are ranked by highest availability tier first
+(most `scored_window_count`), then by weighted aggregate headline within
+that tier. See "Tuning ranking and availability" in Design Decisions.
 
 ### Changes to result schema
 
@@ -364,8 +377,11 @@ Every model's `research.py` gains a canonical evaluation section.
 
 Each research script adds a section (called from `main()`) that calls
 replay's `score_model()` with the model's slug and current production
-constants. This ensures the canonical result uses the same infrastructure
-as the CLI and is directly comparable across models.
+constants. Research scripts must pass `export_path=snapshot.export_path`
+explicitly so the canonical section evaluates the same dataset the script
+already loaded, avoiding a TOCTOU race if a new export arrives mid-run.
+This ensures the canonical result uses the same infrastructure as the CLI
+and is directly comparable across models.
 
 The section should be clearly labeled (e.g., "CANONICAL MULTI-WINDOW
 EVALUATION") and appear prominently in the output, reporting:
@@ -380,7 +396,10 @@ Change the parameter selection logic to use replay's `tune_model()`:
 
 1. Define candidate parameter values as they do today, but pass them
    to `tune_model()` instead of the inline walk-forward evaluator.
-2. `tune_model()` handles multi-window canonical scoring and ranking.
+   Pass `export_path=snapshot.export_path` explicitly (same dataset
+   the script already loaded).
+2. `tune_model()` handles multi-window canonical scoring and ranking
+   (highest availability tier, then headline).
 3. Report the best candidate from canonical scoring alongside the
    internal diagnostic results for comparison.
 4. Keep the existing walk-forward / `gap1_mae` analysis as a diagnostic
@@ -400,7 +419,8 @@ expensive. Use a two-stage approach:
 1. Run the existing internal grid search using `full_traj_mae` as a fast
    proxy to rank all 672 configurations.
 2. Take the top 10 candidates and validate each via replay's
-   `score_model()` with appropriate overrides.
+   `score_model()` with appropriate overrides. Pass
+   `export_path=snapshot.export_path` explicitly.
 3. Report the canonical ranking of those top 10 as the authoritative
    result.
 
@@ -410,13 +430,15 @@ metric remains authoritative. If parallelization or fixed-step cutoffs
 make full canonical sweeps tractable, prefer that instead.
 
 Also report the production-constant canonical score via
-`score_model(slug)` (no overrides) so the baseline is comparable.
+`score_model(slug, export_path=snapshot.export_path)` (no overrides) so
+the baseline is comparable.
 
 ### slot_drift: add canonical evaluation
 
 Currently does no predictive evaluation — only alignment analysis. Add a
 canonical evaluation section that calls replay's
-`score_model("slot_drift")`. The alignment analysis remains as a diagnostic
+`score_model("slot_drift", export_path=snapshot.export_path)`. The
+alignment analysis remains as a diagnostic
 section.
 
 ### consensus_blend: migrate to shared infrastructure
