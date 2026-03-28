@@ -1,21 +1,24 @@
 # Plan: Multi-Window Evaluation and Replay Overhaul
 
-## Context
+## Context and Session Log
 
-This plan was developed through a collaborative session (Claude + Codex +
-user) on 2026-03-28. The full discussion — including motivation, trade-off
-analysis, review feedback, and resolution of design decisions — is preserved
-in the transcript below.
+**Before implementing any phase, read all transcripts below.** The design
+discussion transcript contains motivation and trade-off analysis behind
+every decision in this plan. Implementation transcripts (added as work
+proceeds) capture the reasoning, edge cases, and adjustments discovered
+during each phase. Reading them prevents re-litigating settled decisions
+and surfaces context that the plan text alone does not capture.
 
-| Content | Path |
-|---|---|
-| Design discussion and plan creation | `.transcripts/90469386-fc85-48ef-af2f-ab43f090b68c.jsonl` |
+After completing work on a phase, save your session transcript using the
+`/transcript` skill and add a row to the table below.
 
-The transcript covers: codebase orientation (evaluation/replay/research
-architecture), diagnosis of research script fragmentation, sliding-window
-design (lookback range, decay, cutoff placement), model independence vs
-standardization trade-offs, Codex review (6 findings, all resolved), and
-availability-aware tuning ranking.
+| Phase | Date | Content | Transcript |
+|---|---|---|---|
+| Design | 2026-03-28 | Codebase orientation, fragmentation diagnosis, sliding-window design (lookback, decay, cutoff placement), model independence vs standardization, Codex review (6 findings resolved), availability-aware tuning ranking | `.transcripts/90469386-fc85-48ef-af2f-ab43f090b68c.jsonl` |
+| Phase 1 | | Shared infrastructure (windows.py, weighting, tests) | |
+| Phase 2 | | Replay adopts multi-window | |
+| Phase 3 | | Research scripts adopt canonical scoring | |
+| Phase 4 | | Documentation updates | |
 
 ## Motivation
 
