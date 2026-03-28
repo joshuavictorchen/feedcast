@@ -29,6 +29,7 @@ from feedcast.data import (
     load_export_snapshot,
 )
 from feedcast.evaluation.scoring import score_forecast
+from feedcast.evaluation.windows import recency_weight, weighted_mean
 from feedcast.models import run_all_models
 from feedcast.models.consensus_blend.model import (
     ANCHOR_RADIUS_MINUTES,
@@ -49,6 +50,7 @@ from feedcast.models.shared import normalize_forecast_points
 OUTPUT_DIR = Path(__file__).parent
 MAX_MATCH_GAP_HOURS = 2.0
 RECENCY_HALF_LIFE_DAYS = 4.0
+RECENCY_HALF_LIFE_HOURS = RECENCY_HALF_LIFE_DAYS * 24.0
 
 
 def main() -> None:
@@ -152,8 +154,8 @@ def _analyze_inter_episode_gaps(
             / 60.0
             for index in range(len(day_episodes) - 1)
         ]
-        age_days = (cutoff - day_episodes[-1].time).total_seconds() / 86400.0
-        weight = 2.0 ** (-age_days / RECENCY_HALF_LIFE_DAYS)
+        age_hours = (cutoff - day_episodes[-1].time).total_seconds() / 3600.0
+        weight = recency_weight(age_hours=age_hours, half_life_hours=RECENCY_HALF_LIFE_HOURS)
         weighted_gaps.extend((gap, weight) for gap in gaps)
 
         gap_text = "  ".join(f"{gap:.0f}" for gap in gaps) if gaps else "--"
@@ -243,9 +245,7 @@ def _analyze_model_agreement(
                 continue
             # Collapse model predictions to episodes, matching production.
             collapsed_points = _collapse_to_episode_points(forecast.points)
-            matches = _match_predictions_to_actuals(
-                collapsed_points, actual_episodes
-            )
+            matches = _match_predictions_to_actuals(collapsed_points, actual_episodes)
             for predicted_index, actual_index in matches:
                 episode_to_predictions[actual_index].append(
                     collapsed_points[predicted_index].time
@@ -312,7 +312,10 @@ def _report_production_scores(
         if len(available) < 2:
             continue
 
-        weight = _recency_weight(cutoff, cutoffs[-1])
+        weight = recency_weight(
+            age_hours=(cutoffs[-1] - cutoff).total_seconds() / 3600.0,
+            half_life_hours=RECENCY_HALF_LIFE_HOURS,
+        )
 
         production_forecast = run_consensus_blend(
             base_forecasts,
@@ -356,9 +359,9 @@ def _report_production_scores(
         log("Recency-weighted means:")
         log(
             "  Production: "
-            f"score={_weighted_mean(production_rows, 'score'):.1f}  "
-            f"count={_weighted_mean(production_rows, 'count_score'):.1f}  "
-            f"timing={_weighted_mean(production_rows, 'timing_score'):.1f}"
+            f"score={_weighted_row_mean(production_rows, 'score'):.1f}  "
+            f"count={_weighted_row_mean(production_rows, 'count_score'):.1f}  "
+            f"timing={_weighted_row_mean(production_rows, 'timing_score'):.1f}"
         )
     log()
 
@@ -400,7 +403,10 @@ def _sweep_selector_parameters(
         # Collapse model predictions into episodes before candidate generation,
         # matching production behavior in _blend_by_sequence_selection().
         available = _collapse_forecast_dict(available)
-        weight = _recency_weight(cutoff, cutoffs[-1])
+        weight = recency_weight(
+            age_hours=(cutoffs[-1] - cutoff).total_seconds() / 3600.0,
+            half_life_hours=RECENCY_HALF_LIFE_HOURS,
+        )
         cutoff_data.append(
             (weight, cutoff, actuals, observed_until, history_at_cutoff, available)
         )
@@ -408,7 +414,8 @@ def _sweep_selector_parameters(
     # Pre-generate candidates per cutoff per (radius, spread) pair to avoid
     # redundant candidate generation across spread_penalty variations.
     candidate_cache: dict[
-        tuple[int, int, int], list[tuple[float, list[CandidateCluster], int, list[FeedEvent]]]
+        tuple[int, int, int],
+        list[tuple[float, list[CandidateCluster], int, list[FeedEvent]]],
     ] = {}
     for radius_minutes in [90, 120]:
         for max_spread_minutes in [150, 180]:
@@ -429,8 +436,15 @@ def _sweep_selector_parameters(
                     max_spread_minutes=max_spread_minutes,
                 )
                 entries.append(
-                    (weight, cutoff, actuals, observed_until, history_at_cutoff,
-                     candidates, majority_floor)
+                    (
+                        weight,
+                        cutoff,
+                        actuals,
+                        observed_until,
+                        history_at_cutoff,
+                        candidates,
+                        majority_floor,
+                    )
                 )
             candidate_cache[cache_key] = entries
 
@@ -440,8 +454,13 @@ def _sweep_selector_parameters(
             for spread_penalty in [0.25, 1.0, 2.0, 5.0]:
                 sweep_rows: list[tuple[float, dict[str, float | int]]] = []
                 for (
-                    weight, cutoff, actuals, observed_until, history_at_cutoff,
-                    candidates, majority_floor,
+                    weight,
+                    cutoff,
+                    actuals,
+                    observed_until,
+                    history_at_cutoff,
+                    candidates,
+                    majority_floor,
                 ) in entries:
                     selected = select_candidate_sequence(
                         candidates,
@@ -450,15 +469,11 @@ def _sweep_selector_parameters(
                         spread_penalty_per_hour=spread_penalty,
                     )
                     points = normalize_forecast_points(
-                        _candidates_to_forecast_points(
-                            selected, history_at_cutoff
-                        ),
+                        _candidates_to_forecast_points(selected, history_at_cutoff),
                         cutoff,
                         HORIZON_HOURS,
                     )
-                    score = score_forecast(
-                        points, actuals, cutoff, observed_until
-                    )
+                    score = score_forecast(points, actuals, cutoff, observed_until)
                     sweep_rows.append(
                         (
                             weight,
@@ -477,10 +492,10 @@ def _sweep_selector_parameters(
                         "max_spread_minutes": max_spread_minutes,
                         "conflict_minutes": conflict_minutes,
                         "spread_penalty": spread_penalty,
-                        "score": _weighted_mean(sweep_rows, "score"),
-                        "count_score": _weighted_mean(sweep_rows, "count_score"),
-                        "timing_score": _weighted_mean(sweep_rows, "timing_score"),
-                        "predicted": _weighted_mean(sweep_rows, "predicted"),
+                        "score": _weighted_row_mean(sweep_rows, "score"),
+                        "count_score": _weighted_row_mean(sweep_rows, "count_score"),
+                        "timing_score": _weighted_row_mean(sweep_rows, "timing_score"),
+                        "predicted": _weighted_row_mean(sweep_rows, "predicted"),
                     }
                 )
 
@@ -513,20 +528,15 @@ def _sweep_selector_parameters(
     log()
 
 
-def _recency_weight(cutoff: datetime, latest_cutoff: datetime) -> float:
-    """Return the recency weight for one retrospective cutoff."""
-    age_days = (latest_cutoff - cutoff).total_seconds() / 86400.0
-    return 2.0 ** (-age_days / RECENCY_HALF_LIFE_DAYS)
-
-
-def _weighted_mean(
+def _weighted_row_mean(
     rows: list[tuple[float, dict[str, float | int | str]]],
     key: str,
 ) -> float:
-    """Return the weighted mean for one numeric result field."""
-    weights = np.array([weight for weight, _ in rows], dtype=float)
-    values = np.array([float(result[key]) for _, result in rows], dtype=float)
-    return float(np.average(values, weights=weights))
+    """Return the weighted mean for one numeric result column."""
+    return weighted_mean(
+        [float(row[key]) for _, row in rows],
+        [weight for weight, _ in rows],
+    )
 
 
 if __name__ == "__main__":

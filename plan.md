@@ -12,6 +12,7 @@ and surfaces context that the plan text alone does not capture.
 | Phase | Date | Content | Transcript |
 |---|---|---|---|
 | Design | 2026-03-28 | Codebase orientation, fragmentation diagnosis, sliding-window design (lookback, decay, cutoff placement), model independence vs standardization, Codex review (6 findings resolved), availability-aware tuning ranking | `.transcripts/90469386-fc85-48ef-af2f-ab43f090b68c.jsonl` |
+| Phase 1 Implementation | 2026-03-28 | Shared multi-window evaluation primitives, consensus_blend helper extraction, scorer-context decision (pass full bottle-event list to `score_forecast()`), unavailable-window semantics verification, Claude review convergence, fixed-step cutoff caveat noted for Phase 2 | `.transcripts/rollout-2026-03-28T16-24-48-019d361e-e909-7442-8801-897563198f41.jsonl` |
 
 ## Motivation
 
@@ -294,6 +295,44 @@ Add `tests/test_windows.py`:
 - Unavailable windows: excluded from aggregate, counted in window_count
 - Multi-window aggregation: weighted mean matches hand-calculated values
 - Edge case: export with fewer than 24h of data raises clear error
+
+### Phase 1 implementation notes (2026-03-28)
+
+- `evaluate_multi_window()` passes the full bottle-event list to
+  `score_forecast()` for every cutoff. The scorer owns window filtering and
+  cross-cutoff episode grouping, so callers should not pre-filter actuals per
+  window.
+- Per-window `observed_until` is computed as
+  `min(cutoff + 24h, latest_activity_time)`. Current Phase 1 cutoff generators
+  still yield full 24-hour windows, but keeping the partial-horizon contract in
+  the shared evaluator avoids baking in the wrong assumption for future callers.
+- `generate_episode_boundary_cutoffs()` validates against the earliest episode
+  timestamp, not the earliest raw activity timestamp. That is intentional:
+  `windows.py` operates on precomputed `FeedEpisode` inputs. If replay later
+  needs a raw-activity guard, it belongs in the caller, not in evaluation.
+- Phase 2 should adapt replay by wrapping `_run_forecast()` in the
+  `Callable[[datetime], Forecast]` closure that `evaluate_multi_window()`
+  expects. `_run_forecast()` already catches `ForecastUnavailable` and
+  normalizes it to `Forecast(available=False)`, and the evaluator already maps
+  `available=False` to `status="unavailable"`. Do not add a second
+  `ForecastUnavailable` catch inside `windows.py`.
+- For override-based scoring and tuning, `override_constants(...)` must wrap
+  the entire `evaluate_multi_window()` call for a candidate, not just closure
+  construction. The `forecast_fn` closure ultimately calls `_run_forecast()`,
+  which reads module-level constants at execution time; narrowing the `with`
+  block would silently evaluate some windows under the wrong constants.
+- `generate_fixed_step_cutoffs()` anchors its step grid at
+  `max(earliest_activity_time, latest_activity_time - lookback_hours)`. When
+  the dataset does not span the full lookback range, the fallback fixed-step
+  grid shifts with data availability and can yield fewer windows than a
+  boundary-anchored grid. This is acceptable, but Phase 2 should document it.
+- `feedcast/models/consensus_blend/research.py` now routes all recency-weight
+  calculations through shared `recency_weight()`, including the inter-episode
+  gap analysis. Future weighting changes should stay centralized in
+  `feedcast/evaluation/windows.py`.
+- Focused verification after implementation:
+  `.venv/bin/python -m pytest -q tests/test_windows.py tests/test_scoring.py tests/test_replay.py`
+  → `28 passed`
 
 ## Phase 2: Replay Adopts Multi-Window
 
