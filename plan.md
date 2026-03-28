@@ -1,5 +1,22 @@
 # Plan: Multi-Window Evaluation and Replay Overhaul
 
+## Context
+
+This plan was developed through a collaborative session (Claude + Codex +
+user) on 2026-03-28. The full discussion — including motivation, trade-off
+analysis, review feedback, and resolution of design decisions — is preserved
+in the transcript below.
+
+| Content | Path |
+|---|---|
+| Design discussion and plan creation | `.transcripts/90469386-fc85-48ef-af2f-ab43f090b68c.jsonl` |
+
+The transcript covers: codebase orientation (evaluation/replay/research
+architecture), diagnosis of research script fragmentation, sliding-window
+design (lookback range, decay, cutoff placement), model independence vs
+standardization trade-offs, Codex review (6 findings, all resolved), and
+availability-aware tuning ranking.
+
 ## Motivation
 
 The project predicts the next 24 hours of baby feeds. Evaluation scores
