@@ -9,16 +9,9 @@ proceeds) capture the reasoning, edge cases, and adjustments discovered
 during each phase. Reading them prevents re-litigating settled decisions
 and surfaces context that the plan text alone does not capture.
 
-After completing work on a phase, save your session transcript using the
-`/transcript` skill and add a row to the table below.
-
 | Phase | Date | Content | Transcript |
 |---|---|---|---|
 | Design | 2026-03-28 | Codebase orientation, fragmentation diagnosis, sliding-window design (lookback, decay, cutoff placement), model independence vs standardization, Codex review (6 findings resolved), availability-aware tuning ranking | `.transcripts/90469386-fc85-48ef-af2f-ab43f090b68c.jsonl` |
-| Phase 1 | | Shared infrastructure (windows.py, weighting, tests) | |
-| Phase 2 | | Replay adopts multi-window | |
-| Phase 3 | | Research scripts adopt canonical scoring | |
-| Phase 4 | | Documentation updates | |
 
 ## Motivation
 
