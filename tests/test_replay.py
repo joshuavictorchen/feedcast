@@ -1,4 +1,4 @@
-"""Behavior tests for latest-24h replay scoring and tuning."""
+"""Behavior tests for multi-window replay scoring and tuning."""
 
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ class ReplayScoreTests(unittest.TestCase):
     """Replay score behavior."""
 
     def test_score_consensus_writes_artifact(self) -> None:
-        """Scoring consensus_blend should replay and persist a JSON artifact."""
+        """Scoring consensus_blend should replay across windows and persist a JSON artifact."""
         with tempfile.TemporaryDirectory(prefix="feedcast-replay-test-") as temp_dir:
             temp_path = Path(temp_dir)
             export_path = temp_path / "export_narababy_silas_20260320.csv"
@@ -77,19 +77,26 @@ class ReplayScoreTests(unittest.TestCase):
 
             self.assertEqual(payload["mode"], "score")
             self.assertEqual(
-                payload["validation"], "latest_24h_directional_replay_only"
+                payload["validation"], "multi_window_directional_replay"
             )
-            self.assertEqual(payload["result"]["status"], "scored")
+
+            # Multi-window result structure
+            rw = payload["replay_windows"]
+            self.assertIn("aggregate", rw)
+            self.assertIn("per_window", rw)
+            self.assertGreater(rw["window_count"], 0)
+            self.assertGreater(rw["scored_window_count"], 0)
+            self.assertEqual(rw["cutoff_mode"], "episode")
+
             self.assertTrue(output_dir.exists())
             result_path = Path(payload["results_path"])
             self.assertTrue(result_path.exists())
 
             saved = json.loads(result_path.read_text(encoding="utf-8"))
             self.assertEqual(saved["model"]["slug"], "consensus_blend")
-            self.assertEqual(saved["result"]["score"]["actual_episode_count"], 8)
 
     def test_score_with_overrides_includes_overrides(self) -> None:
-        """Scoring with overrides should record them in the result."""
+        """Scoring with overrides should record them at the top level."""
         with tempfile.TemporaryDirectory(prefix="feedcast-replay-test-") as temp_dir:
             temp_path = Path(temp_dir)
             export_path = temp_path / "export_narababy_silas_20260320.csv"
@@ -103,8 +110,10 @@ class ReplayScoreTests(unittest.TestCase):
                 output_dir=output_dir,
             )
 
-            self.assertEqual(payload["result"]["status"], "scored")
-            self.assertEqual(payload["result"]["overrides"], {"LOOKBACK_DAYS": 5})
+            self.assertGreater(
+                payload["replay_windows"]["scored_window_count"], 0
+            )
+            self.assertEqual(payload["overrides"], {"LOOKBACK_DAYS": 5})
 
     def test_score_overrides_on_consensus_raises(self) -> None:
         """Overrides should be rejected for non-scripted models."""
@@ -120,6 +129,65 @@ class ReplayScoreTests(unittest.TestCase):
                     export_path=export_path,
                     output_dir=temp_path / ".replay-results",
                 )
+
+    def test_multi_window_result_structure(self) -> None:
+        """Score result should contain the complete multi-window schema."""
+        with tempfile.TemporaryDirectory(prefix="feedcast-replay-test-") as temp_dir:
+            temp_path = Path(temp_dir)
+            export_path = temp_path / "export_narababy_silas_20260320.csv"
+            output_dir = temp_path / ".replay-results"
+            _write_export(export_path)
+
+            payload = score_model(
+                "slot_drift",
+                export_path=export_path,
+                output_dir=output_dir,
+            )
+
+            rw = payload["replay_windows"]
+
+            # Top-level config
+            self.assertIn("lookback_hours", rw)
+            self.assertIn("half_life_hours", rw)
+            self.assertIn("cutoff_mode", rw)
+            self.assertIn("window_count", rw)
+            self.assertIn("scored_window_count", rw)
+            self.assertIn("availability_ratio", rw)
+
+            # Aggregate sub-keys
+            aggregate = rw["aggregate"]
+            self.assertIn("headline", aggregate)
+            self.assertIn("count", aggregate)
+            self.assertIn("timing", aggregate)
+
+            # Per-window entries
+            self.assertGreater(len(rw["per_window"]), 1)
+            window = rw["per_window"][0]
+            self.assertIn("cutoff", window)
+            self.assertIn("observed_until", window)
+            self.assertIn("weight", window)
+            self.assertIn("status", window)
+            self.assertIn("score", window)
+
+    def test_lookback_and_half_life_passthrough(self) -> None:
+        """Custom lookback and half-life should appear in the result."""
+        with tempfile.TemporaryDirectory(prefix="feedcast-replay-test-") as temp_dir:
+            temp_path = Path(temp_dir)
+            export_path = temp_path / "export_narababy_silas_20260320.csv"
+            output_dir = temp_path / ".replay-results"
+            _write_export(export_path)
+
+            payload = score_model(
+                "slot_drift",
+                export_path=export_path,
+                output_dir=output_dir,
+                lookback_hours=48.0,
+                half_life_hours=24.0,
+            )
+
+            rw = payload["replay_windows"]
+            self.assertEqual(rw["lookback_hours"], 48.0)
+            self.assertEqual(rw["half_life_hours"], 24.0)
 
 
 class ReplayTuneTests(unittest.TestCase):
@@ -141,6 +209,9 @@ class ReplayTuneTests(unittest.TestCase):
             )
 
             self.assertEqual(payload["mode"], "tune")
+            self.assertEqual(
+                payload["validation"], "multi_window_directional_replay"
+            )
             self.assertEqual(payload["search"]["total_candidates"], 3)
             self.assertEqual(payload["search"]["evaluated"], 3)
             self.assertIn("LOOKBACK_DAYS", payload["baseline"]["params"])
@@ -148,9 +219,62 @@ class ReplayTuneTests(unittest.TestCase):
             self.assertEqual(len(payload["candidates"]), 3)
             self.assertTrue(Path(payload["results_path"]).exists())
 
-            # Results should be sorted by descending score
-            scores = [c["effective_score"] for c in payload["candidates"]]
-            self.assertEqual(scores, sorted(scores, reverse=True))
+            # Top-level replay_windows has shared config
+            self.assertIn("replay_windows", payload)
+            top_rw = payload["replay_windows"]
+            self.assertIn("lookback_hours", top_rw)
+            self.assertIn("half_life_hours", top_rw)
+            self.assertIn("cutoff_mode", top_rw)
+            self.assertIn("window_count", top_rw)
+
+            # Each candidate has the consistent replay_windows schema
+            for candidate in payload["candidates"]:
+                self.assertIn("params", candidate)
+                self.assertIn("replay_windows", candidate)
+                self.assertIn("aggregate", candidate["replay_windows"])
+
+            # Candidates ranked by (-scored_window_count, -headline_score)
+            candidates = payload["candidates"]
+            for i in range(len(candidates) - 1):
+                a_rw = candidates[i]["replay_windows"]
+                b_rw = candidates[i + 1]["replay_windows"]
+                a_key = (a_rw["scored_window_count"], a_rw["aggregate"]["headline"])
+                b_key = (b_rw["scored_window_count"], b_rw["aggregate"]["headline"])
+                self.assertGreaterEqual(a_key, b_key)
+
+            # Best includes deltas vs baseline
+            self.assertIn("headline_delta", payload["best"])
+            self.assertIn("availability_delta", payload["best"])
+
+    def test_tune_best_never_worse_than_baseline(self) -> None:
+        """Best should never regress vs baseline — baseline competes in ranking."""
+        with tempfile.TemporaryDirectory(prefix="feedcast-replay-test-") as temp_dir:
+            temp_path = Path(temp_dir)
+            export_path = temp_path / "export_narababy_silas_20260320.csv"
+            output_dir = temp_path / ".replay-results"
+            _write_export(export_path)
+
+            # LOOKBACK_DAYS=1 is likely worse than the default; best should
+            # still be at least as good as baseline.
+            payload = tune_model(
+                "slot_drift",
+                candidates_by_name={"LOOKBACK_DAYS": [1]},
+                export_path=export_path,
+                output_dir=output_dir,
+            )
+
+            baseline_rw = payload["baseline"]["replay_windows"]
+            best_rw = payload["best"]["replay_windows"]
+            best_key = (
+                best_rw["scored_window_count"],
+                best_rw["aggregate"]["headline"],
+            )
+            baseline_key = (
+                baseline_rw["scored_window_count"],
+                baseline_rw["aggregate"]["headline"],
+            )
+            self.assertGreaterEqual(best_key, baseline_key)
+            self.assertGreaterEqual(payload["best"]["headline_delta"], 0.0)
 
     def test_tune_consensus_raises(self) -> None:
         """Tuning should be rejected for non-scripted models."""

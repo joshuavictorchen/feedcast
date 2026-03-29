@@ -13,6 +13,7 @@ and surfaces context that the plan text alone does not capture.
 |---|---|---|---|
 | Design | 2026-03-28 | Codebase orientation, fragmentation diagnosis, sliding-window design (lookback, decay, cutoff placement), model independence vs standardization, Codex review (6 findings resolved), availability-aware tuning ranking | `.transcripts/90469386-fc85-48ef-af2f-ab43f090b68c.jsonl` |
 | Phase 1 Implementation | 2026-03-28 | Shared multi-window evaluation primitives, consensus_blend helper extraction, scorer-context decision (pass full bottle-event list to `score_forecast()`), unavailable-window semantics verification, Claude review convergence, fixed-step cutoff caveat noted for Phase 2 | `.transcripts/rollout-2026-03-28T16-24-48-019d361e-e909-7442-8801-897563198f41.jsonl` |
+| Phase 2 Implementation | 2026-03-28 | Replay adopts multi-window evaluation. Codex review caught best-can-regress bug, missing top-level tune `replay_windows`, and baseline leaking into candidates list — all resolved. 31 tests pass. | `.transcripts/9c218a97-a6db-4ace-a7d3-0d67af4fb47a.jsonl` |
 
 ## Motivation
 
@@ -420,6 +421,50 @@ Update `tests/test_replay.py`:
 - Existing tests should continue to pass (same behavior, multiple windows)
 - Add test for multi-window result structure
 - Add test for `lookback_hours` and `half_life_hours` parameter passthrough
+
+### Phase 2 implementation notes (2026-03-28)
+
+- Deleted `_latest_replay_window()`, `_evaluate_model()`, and
+  `_serialize_window()` from `runner.py`. All three are fully replaced by
+  the shared infrastructure in `evaluation/windows.py`.
+- Cutoff generation uses `group_into_episodes(scoring_events)` where
+  `scoring_events = build_feed_events(..., merge_window_minutes=None)`.
+  This matches the scorer's bottle-only episode view, as Codex flagged
+  during pre-implementation alignment.
+- The `forecast_fn` closure wraps `_run_forecast()`, which already handles
+  `ForecastUnavailable` → `Forecast(available=False)`. No second catch was
+  added in `runner.py`, per Phase 1 implementation notes.
+- `override_constants()` wraps the entire `evaluate_multi_window()` call
+  per candidate, not just closure construction (the closure reads
+  module-level constants at execution time).
+- The broad `except Exception` around candidate evaluation in `tune_model()`
+  was removed. `evaluate_multi_window()` records per-window errors and
+  unavailability internally. Catching around the whole call would discard
+  diagnostics.
+- **Baseline competes for best:** Baseline is evaluated alongside sweep
+  candidates via the same `_rank_key` comparator
+  `(-scored_window_count, -headline_score, str(params))`, but it does not
+  appear in the serialized `candidates` list — it is reported separately
+  as `baseline`. This prevents both the "best regresses vs baseline" bug
+  and the "baseline duplicated in candidates" bug caught during review.
+- **Split improvement deltas:** `improvement_vs_baseline` was replaced with
+  `availability_delta` (int, `scored_window_count` difference) and
+  `headline_delta` (float). Both are present so the artifact is honest
+  about lexicographic ranking. When baseline wins, both are 0.
+- **Tune payload has top-level `replay_windows`:** Contains the shared
+  config (lookback, half_life, cutoff_mode, step_hours if fixed,
+  window_count) via `_serialize_multi_window_config()`. Per-candidate
+  aggregates and per-window detail are nested under each candidate entry.
+  Score payload uses the full `_serialize_multi_window()` at the top level.
+- `step_hours` is persisted in the artifact only when
+  `cutoff_mode="fixed"`, so the artifact is reproducible from its own
+  metadata.
+- `results.py` required no changes — it writes whatever payload dict it
+  receives. The schema change is entirely in `runner.py` payload
+  construction.
+- Focused verification:
+  `.venv/bin/python -m pytest -q tests/test_windows.py tests/test_scoring.py tests/test_replay.py`
+  → `31 passed`
 
 ## Phase 3: Research Scripts Adopt Canonical Scoring
 

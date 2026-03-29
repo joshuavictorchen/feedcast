@@ -1,15 +1,16 @@
-"""Replay the latest observed 24 hours for scoring and tuning.
+"""Replay scoring and tuning with multi-window evaluation.
 
-The replay harness rewinds the current export by 24 hours, reruns a model
-from that synthetic cutoff, and scores the forecast against the now-known
-actuals. For tuning, it evaluates the cross-product of invoker-supplied
-candidate parameter values and ranks them by headline score.
+The replay harness generates retrospective cutoff points from observed data,
+reruns a model at each cutoff, scores each forecast against the now-known
+actuals, and aggregates results with recency weighting. For tuning, it
+evaluates the cross-product of candidate parameter values and ranks them
+by availability tier first, then weighted aggregate headline score.
 """
 
 from __future__ import annotations
 
 from contextlib import contextmanager, nullcontext
-from datetime import datetime, timedelta
+from datetime import datetime
 from importlib import import_module
 from itertools import product
 from pathlib import Path
@@ -17,17 +18,24 @@ from typing import Any, Iterator, Mapping
 
 import numpy as np
 
+from feedcast.clustering import group_into_episodes
 from feedcast.data import (
     Activity,
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
-    FeedEvent,
-    HORIZON_HOURS,
     ExportSnapshot,
+    FeedEvent,
     Forecast,
+    HORIZON_HOURS,
     build_feed_events,
     load_export_snapshot,
 )
-from feedcast.evaluation.scoring import score_forecast
+from feedcast.evaluation.windows import (
+    MultiWindowResult,
+    WindowResult,
+    evaluate_multi_window,
+    generate_episode_boundary_cutoffs,
+    generate_fixed_step_cutoffs,
+)
 from feedcast.models import (
     CONSENSUS_BLEND_SLUG,
     get_model_spec,
@@ -81,8 +89,13 @@ def score_model(
     overrides: dict[str, Any] | None = None,
     export_path: Path | None = None,
     output_dir: Path = DEFAULT_RESULTS_DIR,
+    lookback_hours: float = 96.0,
+    half_life_hours: float = 36.0,
+    cutoff_mode: str = "episode",
+    step_hours: float = 12.0,
+    parallel: bool = False,
 ) -> dict[str, Any]:
-    """Replay one model against the latest observed 24 hours.
+    """Score one model across multiple retrospective windows.
 
     Args:
         model_slug: Target model slug (scripted or consensus_blend).
@@ -90,6 +103,12 @@ def score_model(
             Module-level constants are temporarily replaced for the run.
         export_path: Explicit export CSV. Defaults to the latest file.
         output_dir: Where replay artifacts are written.
+        lookback_hours: Maximum lookback for cutoff generation.
+        half_life_hours: Recency decay half-life for window weighting.
+        cutoff_mode: "episode" for episode-boundary cutoffs, "fixed" for
+            fixed-interval cutoffs.
+        step_hours: Step size for fixed-interval cutoffs.
+        parallel: If True, evaluate windows concurrently.
 
     Returns:
         The replay result payload (also persisted as JSON).
@@ -101,38 +120,52 @@ def score_model(
         )
 
     snapshot = load_export_snapshot(export_path=export_path)
-    window = _latest_replay_window(snapshot)
-    # Bottle-only events for scoring actuals — built once, reused.
     scoring_events = build_feed_events(snapshot.activities, merge_window_minutes=None)
+    cutoffs = _generate_cutoffs(
+        scoring_events=scoring_events,
+        snapshot=snapshot,
+        lookback_hours=lookback_hours,
+        cutoff_mode=cutoff_mode,
+        step_hours=step_hours,
+    )
+    model_name = _resolve_model_name(model_slug)
 
+    def forecast_fn(cutoff: datetime) -> Forecast:
+        return _run_forecast(model_slug, snapshot.activities, cutoff)
+
+    # override_constants must wrap the entire evaluate_multi_window call,
+    # not just closure construction — the closure reads module-level
+    # constants at execution time.
     context = (
         override_constants(f"feedcast.models.{model_slug}.model", overrides)
         if overrides
         else nullcontext()
     )
     with context:
-        evaluation = _evaluate_model(
-            model_slug=model_slug,
-            activities=snapshot.activities,
+        mw_result = evaluate_multi_window(
+            forecast_fn=forecast_fn,
             scoring_events=scoring_events,
-            replay_cutoff=window["cutoff"],
-            observed_until=window["observed_until"],
+            cutoffs=cutoffs,
+            latest_activity_time=snapshot.latest_activity_time,
+            half_life_hours=half_life_hours,
+            parallel=parallel,
         )
 
-    if overrides:
-        evaluation["overrides"] = _json_safe_params(overrides)
-
-    payload = {
+    payload: dict[str, Any] = {
         "mode": "score",
-        "validation": "latest_24h_directional_replay_only",
-        "model": {"slug": model_slug, "name": evaluation["model_name"]},
+        "validation": "multi_window_directional_replay",
+        "model": {"slug": model_slug, "name": model_name},
         "export_path": str(snapshot.export_path),
         "dataset_id": snapshot.dataset_id,
-        "replay_window": _serialize_window(window),
-        "result": evaluation,
+        "replay_windows": _serialize_multi_window(
+            mw_result, lookback_hours, cutoff_mode, step_hours,
+        ),
     }
+    if overrides:
+        payload["overrides"] = _json_safe_params(overrides)
+
     save_results(
-        mode="score", model_slug=model_slug, payload=payload, output_dir=output_dir
+        mode="score", model_slug=model_slug, payload=payload, output_dir=output_dir,
     )
     return payload
 
@@ -143,11 +176,17 @@ def tune_model(
     *,
     export_path: Path | None = None,
     output_dir: Path = DEFAULT_RESULTS_DIR,
+    lookback_hours: float = 96.0,
+    half_life_hours: float = 36.0,
+    cutoff_mode: str = "episode",
+    step_hours: float = 12.0,
+    parallel: bool = False,
 ) -> dict[str, Any]:
-    """Tune one scripted model against the latest observed 24 hours.
+    """Tune one scripted model across multiple retrospective windows.
 
     Evaluates the full cross-product of candidate values, plus the current
-    baseline, and ranks by headline score.
+    baseline, and ranks by availability tier first (highest
+    scored_window_count), then by weighted aggregate headline score.
 
     Args:
         model_slug: Target scripted model slug.
@@ -155,6 +194,12 @@ def tune_model(
             The harness evaluates the full cross-product.
         export_path: Explicit export CSV. Defaults to the latest file.
         output_dir: Where replay artifacts are written.
+        lookback_hours: Maximum lookback for cutoff generation.
+        half_life_hours: Recency decay half-life for window weighting.
+        cutoff_mode: "episode" for episode-boundary cutoffs, "fixed" for
+            fixed-interval cutoffs.
+        step_hours: Step size for fixed-interval cutoffs.
+        parallel: If True, evaluate windows concurrently.
 
     Returns:
         The tuning result payload (also persisted as JSON).
@@ -168,7 +213,14 @@ def tune_model(
         )
 
     snapshot = load_export_snapshot(export_path=export_path)
-    window = _latest_replay_window(snapshot)
+    scoring_events = build_feed_events(snapshot.activities, merge_window_minutes=None)
+    cutoffs = _generate_cutoffs(
+        scoring_events=scoring_events,
+        snapshot=snapshot,
+        lookback_hours=lookback_hours,
+        cutoff_mode=cutoff_mode,
+        step_hours=step_hours,
+    )
     module_name = f"feedcast.models.{model_slug}.model"
 
     # Validate param names and read baseline values upfront so bad names
@@ -192,18 +244,18 @@ def tune_model(
             _coerce_param(name, value, baseline_params[name]) for value in values
         ]
 
-    # Bottle-only events for scoring actuals — built once, reused across candidates.
-    scoring_events = build_feed_events(snapshot.activities, merge_window_minutes=None)
+    def forecast_fn(cutoff: datetime) -> Forecast:
+        return _run_forecast(model_slug, snapshot.activities, cutoff)
 
-    # Evaluate baseline with current constants
-    baseline = _evaluate_model(
-        model_slug=model_slug,
-        activities=snapshot.activities,
+    # Evaluate baseline with current production constants
+    baseline_mw = evaluate_multi_window(
+        forecast_fn=forecast_fn,
         scoring_events=scoring_events,
-        replay_cutoff=window["cutoff"],
-        observed_until=window["observed_until"],
+        cutoffs=cutoffs,
+        latest_activity_time=snapshot.latest_activity_time,
+        half_life_hours=half_life_hours,
+        parallel=parallel,
     )
-    baseline["params"] = _json_safe_params(baseline_params)
 
     # Generate full cross-product of pre-validated candidate values
     all_candidates = [
@@ -213,59 +265,73 @@ def tune_model(
         )
     ]
 
-    # Evaluate each candidate. The broad except here catches genuine model
-    # runtime errors (e.g. insufficient history for a param combo), not
-    # param validation errors — those are already caught above.
-    results: list[dict[str, Any]] = []
+    # Evaluate each candidate across all windows. Per-window errors and
+    # unavailability are recorded inside evaluate_multi_window(); we do not
+    # catch around the whole call because that would discard diagnostics.
+    results: list[tuple[dict[str, Any], MultiWindowResult]] = []
     for params in all_candidates:
-        try:
-            with override_constants(module_name, params):
-                evaluation = _evaluate_model(
-                    model_slug=model_slug,
-                    activities=snapshot.activities,
-                    scoring_events=scoring_events,
-                    replay_cutoff=window["cutoff"],
-                    observed_until=window["observed_until"],
-                )
-        except Exception as error:
-            evaluation = {
-                "model_name": spec.name,
-                "status": "error",
-                "effective_score": 0.0,
-                "error_message": str(error),
-                "forecast_available": False,
-                "forecast_points": [],
-                "score": None,
-                "diagnostics": {},
-            }
-        evaluation["params"] = _json_safe_params(params)
-        results.append(evaluation)
+        with override_constants(module_name, params):
+            mw_result = evaluate_multi_window(
+                forecast_fn=forecast_fn,
+                scoring_events=scoring_events,
+                cutoffs=cutoffs,
+                latest_activity_time=snapshot.latest_activity_time,
+                half_life_hours=half_life_hours,
+                parallel=parallel,
+            )
+        results.append((params, mw_result))
 
-    results.sort(key=lambda r: (-r["effective_score"], str(r["params"])))
-    best = results[0] if results else baseline
+    # Rank sweep candidates.
+    _rank_key = lambda r: (-r[1].scored_window_count, -r[1].headline_score, str(r[0]))
+    results.sort(key=_rank_key)
+
+    # Baseline competes for "best" so we never recommend a regression,
+    # but it does not appear in the candidates list (it is already
+    # reported separately as "baseline").
+    best_params, best_mw = results[0] if results else (baseline_params, baseline_mw)
+    if _rank_key((baseline_params, baseline_mw)) <= _rank_key((best_params, best_mw)):
+        best_params, best_mw = baseline_params, baseline_mw
+
+    def serialize(mw: MultiWindowResult) -> dict[str, Any]:
+        return _serialize_multi_window(mw, lookback_hours, cutoff_mode, step_hours)
 
     payload = {
         "mode": "tune",
-        "validation": "latest_24h_directional_replay_only",
+        "validation": "multi_window_directional_replay",
         "model": {"slug": model_slug, "name": spec.name},
         "export_path": str(snapshot.export_path),
         "dataset_id": snapshot.dataset_id,
-        "replay_window": _serialize_window(window),
+        "replay_windows": _serialize_multi_window_config(
+            baseline_mw, lookback_hours, cutoff_mode, step_hours,
+        ),
         "search": {
             "total_candidates": len(all_candidates),
             "evaluated": len(results),
         },
-        "baseline": baseline,
+        "baseline": {
+            "params": _json_safe_params(baseline_params),
+            "replay_windows": serialize(baseline_mw),
+        },
         "best": {
-            **best,
-            "improvement_vs_baseline": round(
-                best["effective_score"] - baseline["effective_score"], 3
+            "params": _json_safe_params(best_params),
+            "replay_windows": serialize(best_mw),
+            "availability_delta": (
+                best_mw.scored_window_count - baseline_mw.scored_window_count
+            ),
+            "headline_delta": round(
+                best_mw.headline_score - baseline_mw.headline_score, 3,
             ),
         },
-        "candidates": results,
+        "candidates": [
+            {
+                "params": _json_safe_params(params),
+                "replay_windows": serialize(mw),
+            }
+            for params, mw in results
+        ],
     }
     save_results(
-        mode="tune", model_slug=model_slug, payload=payload, output_dir=output_dir
+        mode="tune", model_slug=model_slug, payload=payload, output_dir=output_dir,
     )
     return payload
 
@@ -278,22 +344,22 @@ def tune_model(
 def _coerce_param(name: str, value: Any, original: Any) -> Any:
     """Coerce an override value to match the original constant's type.
 
-    Handles the common cases: same type passthrough, int→float promotion,
-    list→ndarray conversion, and string→scalar parsing. Raises ValueError
+    Handles the common cases: same type passthrough, int->float promotion,
+    list->ndarray conversion, and string->scalar parsing. Raises ValueError
     with a clear message if coercion fails.
     """
     if isinstance(original, type(value)):
         return value
 
-    # int → float promotion
+    # int -> float promotion
     if isinstance(original, float) and isinstance(value, int):
         return float(value)
 
-    # list → numpy array
+    # list -> numpy array
     if isinstance(original, np.ndarray) and isinstance(value, list):
         return np.array(value, dtype=original.dtype)
 
-    # Attempt generic conversion (covers str→int, str→float, etc.)
+    # Attempt generic conversion (covers str->int, str->float, etc.)
     try:
         return type(original)(value)
     except (TypeError, ValueError):
@@ -324,67 +390,54 @@ def _json_safe_params(params: dict[str, Any]) -> dict[str, Any]:
     return {name: _json_safe(value) for name, value in params.items()}
 
 
-def _latest_replay_window(snapshot: ExportSnapshot) -> dict[str, datetime]:
-    """Return the single latest-24h replay window."""
-    observed_until = snapshot.latest_activity_time
-    cutoff = observed_until - timedelta(hours=HORIZON_HOURS)
-    earliest = min(activity.start for activity in snapshot.activities)
-    if cutoff < earliest:
-        raise ValueError(
-            "Replay needs at least 24 observed hours in the export snapshot."
-        )
-    return {"cutoff": cutoff, "observed_until": observed_until}
-
-
-def _evaluate_model(
+def _generate_cutoffs(
     *,
-    model_slug: str,
-    activities: list[Activity],
     scoring_events: list[FeedEvent],
-    replay_cutoff: datetime,
-    observed_until: datetime,
-) -> dict[str, Any]:
-    """Replay one model and score against the known last-24h actuals."""
-    forecast = _run_forecast(model_slug, activities, replay_cutoff)
+    snapshot: ExportSnapshot,
+    lookback_hours: float,
+    cutoff_mode: str,
+    step_hours: float,
+) -> list[datetime]:
+    """Generate retrospective cutoffs based on the chosen mode.
 
-    if not forecast.available:
-        return {
-            "model_name": forecast.name,
-            "status": "unavailable",
-            "effective_score": 0.0,
-            "error_message": forecast.error_message,
-            "forecast_available": False,
-            "forecast_points": [],
-            "score": None,
-            "diagnostics": forecast.diagnostics,
-        }
+    Episode mode places cutoffs at feeding episode boundaries derived from
+    bottle-only scoring events (matching the scorer's episode view). Fixed
+    mode places cutoffs at regular intervals, anchored at
+    max(earliest_activity, latest_activity - lookback).
 
-    # Score against bottle-only events in the observed window.
-    forecast_score = score_forecast(
-        predicted_points=forecast.points,
-        actual_events=scoring_events,
-        prediction_time=replay_cutoff,
-        observed_until=observed_until,
+    When the dataset does not span the full lookback range, the fixed-step
+    grid shifts with data availability and can yield fewer windows than the
+    episode-boundary mode.
+    """
+    if cutoff_mode == "episode":
+        episodes = group_into_episodes(scoring_events)
+        return generate_episode_boundary_cutoffs(
+            episodes=episodes,
+            latest_activity_time=snapshot.latest_activity_time,
+            lookback_hours=lookback_hours,
+        )
+    if cutoff_mode == "fixed":
+        earliest = min(activity.start for activity in snapshot.activities)
+        return generate_fixed_step_cutoffs(
+            latest_activity_time=snapshot.latest_activity_time,
+            earliest_activity_time=earliest,
+            lookback_hours=lookback_hours,
+            step_hours=step_hours,
+        )
+    raise ValueError(f"cutoff_mode must be 'episode' or 'fixed'; got {cutoff_mode!r}.")
+
+
+def _resolve_model_name(model_slug: str) -> str:
+    """Get the display name for a model slug."""
+    spec = get_model_spec(model_slug)
+    if spec is not None:
+        return spec.name
+    if model_slug == CONSENSUS_BLEND_SLUG:
+        return "Consensus Blend"
+    raise ValueError(
+        f"Replay supports scripted model slugs and {CONSENSUS_BLEND_SLUG}; "
+        f"got {model_slug!r}."
     )
-    return {
-        "model_name": forecast.name,
-        "status": "scored",
-        "effective_score": forecast_score.score,
-        "error_message": None,
-        "forecast_available": True,
-        "forecast_points": [point.to_dict() for point in forecast.points],
-        "score": {
-            "headline": forecast_score.score,
-            "count": forecast_score.count_score,
-            "timing": forecast_score.timing_score,
-            "predicted_episode_count": forecast_score.predicted_episode_count,
-            "actual_episode_count": forecast_score.actual_episode_count,
-            "matched_episode_count": forecast_score.matched_episode_count,
-            "observed_horizon_hours": forecast_score.observed_horizon_hours,
-            "coverage_ratio": forecast_score.coverage_ratio,
-        },
-        "diagnostics": forecast.diagnostics,
-    }
 
 
 def _run_forecast(
@@ -427,10 +480,74 @@ def _run_forecast(
     )
 
 
-def _serialize_window(window: dict[str, datetime]) -> dict[str, Any]:
-    """Convert replay window timestamps to JSON-ready strings."""
-    return {
-        "cutoff": window["cutoff"].isoformat(timespec="seconds"),
-        "observed_until": window["observed_until"].isoformat(timespec="seconds"),
-        "horizon_hours": HORIZON_HOURS,
+def _serialize_multi_window_config(
+    result: MultiWindowResult,
+    lookback_hours: float,
+    cutoff_mode: str,
+    step_hours: float,
+) -> dict[str, Any]:
+    """Serialize the shared multi-window configuration (no per-window detail).
+
+    Used as the top-level replay_windows in tune payloads where per-window
+    data is nested under each candidate.
+    """
+    payload: dict[str, Any] = {
+        "lookback_hours": lookback_hours,
+        "half_life_hours": result.half_life_hours,
+        "cutoff_mode": cutoff_mode,
+        "window_count": result.window_count,
     }
+    if cutoff_mode == "fixed":
+        payload["step_hours"] = step_hours
+    return payload
+
+
+def _serialize_multi_window(
+    result: MultiWindowResult,
+    lookback_hours: float,
+    cutoff_mode: str,
+    step_hours: float,
+) -> dict[str, Any]:
+    """Convert a MultiWindowResult to a JSON-serializable dict."""
+    payload: dict[str, Any] = {
+        "lookback_hours": lookback_hours,
+        "half_life_hours": result.half_life_hours,
+        "cutoff_mode": cutoff_mode,
+        "window_count": result.window_count,
+        "scored_window_count": result.scored_window_count,
+        "availability_ratio": result.availability_ratio,
+        "aggregate": {
+            "headline": result.headline_score,
+            "count": result.count_score,
+            "timing": result.timing_score,
+        },
+        "per_window": [_serialize_window_result(w) for w in result.per_window],
+    }
+    if cutoff_mode == "fixed":
+        payload["step_hours"] = step_hours
+    return payload
+
+
+def _serialize_window_result(window: WindowResult) -> dict[str, Any]:
+    """Convert one WindowResult to a JSON-serializable dict."""
+    entry: dict[str, Any] = {
+        "cutoff": window.cutoff.isoformat(timespec="seconds"),
+        "observed_until": window.observed_until.isoformat(timespec="seconds"),
+        "weight": round(window.weight, 6),
+        "status": window.status,
+        "error_message": window.error_message,
+    }
+    if window.score is not None:
+        entry["score"] = {
+            "headline": window.score.score,
+            "count": window.score.count_score,
+            "timing": window.score.timing_score,
+            "predicted_episode_count": window.score.predicted_episode_count,
+            "actual_episode_count": window.score.actual_episode_count,
+            "matched_episode_count": window.score.matched_episode_count,
+            "observed_horizon_hours": window.score.observed_horizon_hours,
+            "coverage_ratio": window.score.coverage_ratio,
+        }
+    else:
+        entry["score"] = None
+    return entry

@@ -1,8 +1,11 @@
-"""Command-line entrypoint for latest-24h replay scoring and tuning.
+"""Command-line entrypoint for multi-window replay scoring and tuning.
 
 Usage:
-    # Baseline score
+    # Score across multiple windows (defaults: episode cutoffs, 96h lookback)
     .venv/bin/python scripts/run_replay.py slot_drift
+
+    # Score with custom lookback and fixed-step cutoffs
+    .venv/bin/python scripts/run_replay.py slot_drift --lookback 48 --cutoff-mode fixed
 
     # Score with overrides
     .venv/bin/python scripts/run_replay.py slot_drift LOOKBACK_DAYS=5
@@ -43,10 +46,12 @@ TUNABLE_SLUGS = [spec.slug for spec in MODELS]
 def main() -> None:
     """Run the replay CLI."""
     parser = argparse.ArgumentParser(
-        description="Replay the latest 24 hours to score or tune a model.",
+        description="Score or tune a model across retrospective replay windows.",
         usage=(
             "%(prog)s MODEL [PARAM=VALUES | FILE.yaml ...] [--json] "
-            "[--export-path PATH] [--output-dir DIR]"
+            "[--export-path PATH] [--output-dir DIR] [--lookback HOURS] "
+            "[--half-life HOURS] [--cutoff-mode MODE] [--step-hours HOURS] "
+            "[--parallel]"
         ),
     )
     parser.add_argument(
@@ -82,8 +87,48 @@ def main() -> None:
         default=Path(".replay-results"),
         help="Where local replay artifacts are written.",
     )
+    parser.add_argument(
+        "--lookback",
+        type=float,
+        default=96.0,
+        help="Maximum lookback hours for cutoff generation (default: 96).",
+    )
+    parser.add_argument(
+        "--half-life",
+        type=float,
+        default=36.0,
+        help="Recency decay half-life in hours (default: 36).",
+    )
+    parser.add_argument(
+        "--cutoff-mode",
+        choices=["episode", "fixed"],
+        default="episode",
+        help="Cutoff generation strategy (default: episode).",
+    )
+    parser.add_argument(
+        "--step-hours",
+        type=float,
+        default=12.0,
+        help="Step size for fixed-interval cutoffs (default: 12).",
+    )
+    parser.add_argument(
+        "--parallel",
+        action="store_true",
+        help="Evaluate windows concurrently within each candidate.",
+    )
 
     args = parser.parse_args()
+
+    # Shared multi-window kwargs for both score and tune
+    window_kwargs: dict[str, Any] = {
+        "export_path": args.export_path,
+        "output_dir": args.output_dir,
+        "lookback_hours": args.lookback,
+        "half_life_hours": args.half_life,
+        "cutoff_mode": args.cutoff_mode,
+        "step_hours": args.step_hours,
+        "parallel": args.parallel,
+    }
 
     try:
         parsed = _parse_params(args.params)
@@ -97,19 +142,17 @@ def main() -> None:
             payload = tune_model(
                 model_slug=args.model,
                 candidates_by_name=parsed,
-                export_path=args.export_path,
-                output_dir=args.output_dir,
+                **window_kwargs,
             )
         else:
-            # Single value per key → score with overrides
+            # Single value per key -> score with overrides
             overrides = (
                 {k: v[0] for k, v in parsed.items()} if parsed else None
             )
             payload = score_model(
                 model_slug=args.model,
                 overrides=overrides,
-                export_path=args.export_path,
-                output_dir=args.output_dir,
+                **window_kwargs,
             )
     except ValueError as error:
         parser.exit(status=2, message=f"error: {error}\n")
@@ -149,9 +192,9 @@ def _parse_params(raw_params: list[str]) -> dict[str, list[Any]]:
     from all sources are merged.
 
     Inline examples:
-        LOOKBACK_DAYS=5         → {"LOOKBACK_DAYS": [5]}
-        LOOKBACK_DAYS=5,7,9     → {"LOOKBACK_DAYS": [5, 7, 9]}
-        WEIGHTS=[1,1,2,2]       → {"WEIGHTS": [[1, 1, 2, 2]]}
+        LOOKBACK_DAYS=5         -> {"LOOKBACK_DAYS": [5]}
+        LOOKBACK_DAYS=5,7,9     -> {"LOOKBACK_DAYS": [5, 7, 9]}
+        WEIGHTS=[1,1,2,2]       -> {"WEIGHTS": [[1, 1, 2, 2]]}
 
     YAML example (sweep.yaml):
         LOOKBACK_DAYS: [5, 7, 9]
@@ -226,44 +269,49 @@ def _format_params(params: dict[str, Any]) -> str:
 def _print_score_summary(payload: dict[str, object]) -> None:
     """Print a compact human-readable score summary."""
     model = payload["model"]
-    window = payload["replay_window"]
-    result = payload["result"]
+    rw = payload["replay_windows"]
+    aggregate = rw["aggregate"]
+
     print(f"Model:    {model['name']} ({model['slug']})")
-    print(f"Replay:   {window['cutoff']} → {window['observed_until']}")
-    print(f"Status:   {result['status']}")
-    if result.get("overrides"):
-        print(f"Params:   {_format_params(result['overrides'])}")
-    if result["score"] is not None:
-        score = result["score"]
-        print(f"Headline: {score['headline']}")
-        print(f"Count:    {score['count']}")
-        print(f"Timing:   {score['timing']}")
-        print(
-            f"Episodes: predicted={score['predicted_episode_count']} "
-            f"actual={score['actual_episode_count']} "
-            f"matched={score['matched_episode_count']}"
-        )
-    elif result.get("error_message"):
-        print(f"Error:    {result['error_message']}")
+    print(f"Windows:  {rw['scored_window_count']} scored / {rw['window_count']} total")
+    if payload.get("overrides"):
+        print(f"Params:   {_format_params(payload['overrides'])}")
+    print(f"Headline: {aggregate['headline']}")
+    print(f"Count:    {aggregate['count']}")
+    print(f"Timing:   {aggregate['timing']}")
     print(f"Saved:    {payload['results_path']}")
 
 
 def _print_tune_summary(payload: dict[str, object]) -> None:
     """Print a compact human-readable tuning summary."""
     model = payload["model"]
-    window = payload["replay_window"]
     baseline = payload["baseline"]
     best = payload["best"]
     search = payload["search"]
-    print(f"Model:    {model['name']} ({model['slug']})")
-    print(f"Replay:   {window['cutoff']} → {window['observed_until']}")
-    print(f"Evaluated: {search['evaluated']} candidates")
-    print(f"Baseline: {baseline['effective_score']}  {_format_params(baseline['params'])}")
-    print(f"Best:     {best['effective_score']}  {_format_params(best['params'])}")
-    improvement = best["improvement_vs_baseline"]
-    sign = "+" if improvement >= 0 else ""
-    print(f"Delta:    {sign}{improvement}")
-    print(f"Saved:    {payload['results_path']}")
+    baseline_rw = baseline["replay_windows"]
+    best_rw = best["replay_windows"]
+
+    print(f"Model:     {model['name']} ({model['slug']})")
+    print(
+        f"Evaluated: {search['evaluated']} candidates "
+        f"across {baseline_rw['window_count']} windows"
+    )
+    print(
+        f"Baseline:  {baseline_rw['aggregate']['headline']} headline "
+        f"({baseline_rw['scored_window_count']}/{baseline_rw['window_count']} windows)  "
+        f"{_format_params(baseline['params'])}"
+    )
+    print(
+        f"Best:      {best_rw['aggregate']['headline']} headline "
+        f"({best_rw['scored_window_count']}/{best_rw['window_count']} windows)  "
+        f"{_format_params(best['params'])}"
+    )
+    headline_delta = best["headline_delta"]
+    avail_delta = best["availability_delta"]
+    h_sign = "+" if headline_delta >= 0 else ""
+    a_sign = "+" if avail_delta >= 0 else ""
+    print(f"Delta:     {h_sign}{headline_delta} headline, {a_sign}{avail_delta} availability")
+    print(f"Saved:     {payload['results_path']}")
 
 
 if __name__ == "__main__":

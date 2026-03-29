@@ -1,4 +1,4 @@
-"""Latest-24h replay helpers for scoring and tuning scripted models."""
+"""Multi-window replay scoring and tuning for scripted models."""
 
 from .runner import override_constants, score_model, tune_model
 
