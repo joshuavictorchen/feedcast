@@ -2,6 +2,35 @@
 
 Tracks behavior-level changes to the Latent Hunger model. Add newest entries first.
 
+## Add canonical multi-window evaluation and tuning | 2026-03-28
+
+### Problem
+
+Research script selected parameters by minimizing internal `gap1_mae`
+(walk-forward gap error), a different metric than the canonical
+`score_forecast()` used by replay and the tracker. Parameter choices
+optimized for single-gap accuracy may not optimize full 24h trajectory
+quality (episode count, timing, horizon weighting).
+
+### Solution
+
+Added two canonical sections to research.py:
+
+1. **Canonical evaluation** — calls `score_model("latent_hunger")` with
+   production constants. Reports aggregate headline/count/timing scores
+   across multi-window evaluation with per-window breakdown.
+
+2. **Canonical parameter tuning** — calls `tune_model()` to sweep
+   `SATIETY_RATE` (0.05–0.8, 12 candidates) via multi-window canonical
+   scoring. Growth rate is runtime-estimated and not overridable.
+   Candidates ranked by availability tier first, then headline score.
+
+Existing internal diagnostics (walk-forward gap1/gap3/fcount MAE,
+additive vs multiplicative comparison, circadian analysis) are preserved
+as diagnostic tools that explain *why* a parameter set works.
+
+No model behavior change — only the research script is modified.
+
 ## Switch to episode-level history and re-tune parameters | 2026-03-27
 
 ### Problem

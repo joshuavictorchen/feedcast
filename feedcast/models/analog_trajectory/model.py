@@ -66,6 +66,12 @@ RECENCY_HALF_LIFE_HOURS = 36
 # Trajectory length aggregation method: "median" or "mean".
 TRAJECTORY_LENGTH_METHOD = "median"
 
+# Trajectory alignment method: "gap" or "time_offset".
+# "gap" blends inter-event gaps step-by-step and rolls forward.
+# "time_offset" blends absolute offsets from the state event and
+# positions feeds relative to cutoff. Selected via research.py sweep.
+ALIGNMENT = "gap"
+
 # A trajectory is "complete" if it has at least one event this many
 # hours past the state time. This avoids including states whose
 # 24h future was cut short by the export boundary.
@@ -87,6 +93,8 @@ def forecast_analog_trajectory(
     Returns:
         A Forecast with projected feed times and volumes.
     """
+    _validate_alignment(ALIGNMENT)
+
     # Build bottle-only events and filter to cutoff.
     history = [
         e for e in build_feed_events(activities, merge_window_minutes=None)
@@ -329,15 +337,22 @@ def _blend_trajectories(
 ) -> list[ForecastPoint]:
     """Blend neighbor trajectories into forecast points.
 
-    Each neighbor's trajectory is represented as a sequence of (gap, volume)
-    pairs. The blended forecast averages these gap-by-gap using neighbor
-    weights, then rolls forward from the cutoff to produce absolute times.
+    In "gap" alignment (default), each trajectory is a sequence of
+    inter-event gaps. Blended gaps are rolled forward from the cutoff.
 
-    The first blended gap is reduced by elapsed_since_last_bottle to account
-    for time already passed between the last bottle and the cutoff (which
-    may differ when the latest activity is a breastfeed).
+    In "time_offset" alignment, each trajectory is a sequence of
+    absolute offsets from the state event time. Blended offsets are
+    positioned relative to the cutoff (adjusted for elapsed time).
+
+    The elapsed_since_last_bottle adjustment accounts for time already
+    passed between the last bottle and the cutoff (which may differ
+    when the latest activity is a breastfeed).
     """
-    # Extract gap/volume trajectories from each neighbor.
+    use_offsets = ALIGNMENT == "time_offset"
+
+    # Extract trajectories from each neighbor.
+    # Gap mode: (gap_hours, volume) per step.
+    # Offset mode: (offset_hours_from_state, volume) per step.
     trajectories: list[list[tuple[float, float]]] = []
     weights: list[float] = []
 
@@ -345,11 +360,14 @@ def _blend_trajectories(
         state = neighbor["state"]
         traj: list[tuple[float, float]] = []
         for j, future_event in enumerate(state["future_events"]):
-            previous_time = (
-                state["time"] if j == 0 else state["future_events"][j - 1].time
-            )
-            gap = (future_event.time - previous_time).total_seconds() / 3600
-            traj.append((gap, future_event.volume_oz))
+            if use_offsets:
+                value = (future_event.time - state["time"]).total_seconds() / 3600
+            else:
+                previous_time = (
+                    state["time"] if j == 0 else state["future_events"][j - 1].time
+                )
+                value = (future_event.time - previous_time).total_seconds() / 3600
+            traj.append((value, future_event.volume_oz))
         if traj:
             trajectories.append(traj)
             weights.append(neighbor["weight"])
@@ -374,35 +392,43 @@ def _blend_trajectories(
     points: list[ForecastPoint] = []
 
     for step in range(forecast_length):
-        # Collect gap and volume from each trajectory that has this step.
-        step_gaps: list[float] = []
+        step_values: list[float] = []
         step_volumes: list[float] = []
         step_weights: list[float] = []
 
         for traj_idx, traj in enumerate(trajectories):
             if step < len(traj):
-                gap, volume = traj[step]
-                step_gaps.append(gap)
+                value, volume = traj[step]
+                step_values.append(value)
                 step_volumes.append(volume)
                 step_weights.append(float(weight_array[traj_idx]))
 
-        if not step_gaps:
+        if not step_values:
             break
 
         step_weight_array = np.array(step_weights, dtype=float)
-        blended_gap = float(np.average(step_gaps, weights=step_weight_array))
-        blended_volume = float(np.average(step_volumes, weights=step_weight_array))
+        blended_value = float(np.average(step_values, weights=step_weight_array))
+        blended_volume = max(float(np.average(step_volumes, weights=step_weight_array)), 0.5)
 
-        # On the first step, subtract time already elapsed since the last
-        # bottle so the forecast starts from cutoff, not from the last bottle.
-        if step == 0 and elapsed_since_last_bottle > 0:
-            blended_gap = blended_gap - elapsed_since_last_bottle
+        if use_offsets:
+            # Offsets are relative to state time (last bottle).
+            # Subtract elapsed to get offset from cutoff.
+            adjusted_offset = blended_value - elapsed_since_last_bottle
+            if adjusted_offset <= 0:
+                continue
+            feed_time = cutoff + timedelta(hours=adjusted_offset)
+            gap_hours = (feed_time - current_time).total_seconds() / 3600
+            # Enforce minimum spacing between consecutive predictions.
+            if gap_hours < 0.5:
+                continue
+        else:
+            # Gap mode: roll forward from current position.
+            if step == 0 and elapsed_since_last_bottle > 0:
+                blended_value -= elapsed_since_last_bottle
+            blended_value = max(blended_value, 0.5)
+            feed_time = current_time + timedelta(hours=blended_value)
+            gap_hours = blended_value
 
-        # Enforce minimum gap to avoid degenerate predictions.
-        blended_gap = max(blended_gap, 0.5)
-        blended_volume = max(blended_volume, 0.5)
-
-        feed_time = current_time + timedelta(hours=blended_gap)
         if feed_time >= horizon_end:
             break
 
@@ -410,12 +436,21 @@ def _blend_trajectories(
             ForecastPoint(
                 time=feed_time,
                 volume_oz=blended_volume,
-                gap_hours=blended_gap,
+                gap_hours=gap_hours,
             )
         )
         current_time = feed_time
 
     return points
+
+
+def _validate_alignment(alignment: str) -> None:
+    """Fail fast on unsupported trajectory alignment modes."""
+    if alignment not in {"gap", "time_offset"}:
+        raise ValueError(
+            "ALIGNMENT must be 'gap' or 'time_offset'; "
+            f"got {alignment!r}."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -443,6 +478,7 @@ def _build_diagnostics(
         "lookback_hours": LOOKBACK_HOURS,
         "recency_half_life_hours": RECENCY_HALF_LIFE_HOURS,
         "trajectory_length_method": TRAJECTORY_LENGTH_METHOD,
+        "alignment": ALIGNMENT,
         "feature_weights": {
             name: round(float(w), 3)
             for name, w in zip(feature_names, FEATURE_WEIGHTS)

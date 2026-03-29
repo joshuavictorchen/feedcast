@@ -42,6 +42,7 @@ from feedcast.models.survival_hazard.model import (
     _weibull_median,
     _weibull_quantile,
 )
+from feedcast.replay import score_model, tune_model
 
 # Output is saved alongside the script for reproducibility.
 OUTPUT_DIR = Path(__file__).parent
@@ -1349,6 +1350,86 @@ def main() -> None:
         log("episode structure on this dataset. Only episode volumes differ,")
         log("and this model is volume-free, so merge policy has no effect on")
         log("Survival Hazard predictions.")
+    log()
+
+    # ================================================================
+    # CANONICAL MULTI-WINDOW EVALUATION
+    # ================================================================
+    log(f"\n{'=' * 60}")
+    log("CANONICAL MULTI-WINDOW EVALUATION")
+    log(f"{'=' * 60}")
+    log()
+    log("Production-constant evaluation via score_model (same")
+    log("infrastructure as the replay CLI).")
+    log()
+
+    canonical = score_model("survival_hazard", export_path=snapshot.export_path)
+    rw = canonical["replay_windows"]
+    agg = rw["aggregate"]
+    log(f"Aggregate:  headline={agg['headline']:.1f}  count={agg['count']:.1f}  "
+        f"timing={agg['timing']:.1f}")
+    log(f"Windows:    {rw['scored_window_count']} scored / {rw['window_count']} total "
+        f"({rw['availability_ratio'] * 100:.1f}% availability)")
+    log(f"Half-life:  {rw['half_life_hours']}h  Lookback: {rw['lookback_hours']}h")
+    log()
+    log("Per-window breakdown:")
+    log(f"  {'Cutoff':<22} {'Weight':>7} {'Head':>7} {'Count':>7} {'Time':>7}  Status")
+    for w in rw["per_window"]:
+        if w["score"] is not None:
+            s = w["score"]
+            log(f"  {w['cutoff']:<22} {w['weight']:>7.4f} {s['headline']:>7.1f} "
+                f"{s['count']:>7.1f} {s['timing']:>7.1f}  {w['status']}")
+        else:
+            log(f"  {w['cutoff']:<22} {w['weight']:>7.4f} {'--':>7} {'--':>7} "
+                f"{'--':>7}  {w['status']}")
+    log()
+
+    # ================================================================
+    # CANONICAL PARAMETER TUNING
+    # ================================================================
+    # Sweep OVERNIGHT_SHAPE and DAYTIME_SHAPE jointly. These are the
+    # key structural parameters; scale is estimated at runtime. Ranges
+    # cover the research-derived MLE fits and production values.
+    log("=== CANONICAL PARAMETER TUNING ===")
+    log()
+    log("Sweeps OVERNIGHT_SHAPE and DAYTIME_SHAPE via tune_model")
+    log("(multi-window canonical scoring). Scale is runtime-estimated.")
+    log()
+
+    tune_result = tune_model(
+        "survival_hazard",
+        candidates_by_name={
+            "OVERNIGHT_SHAPE": [4.0, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0],
+            "DAYTIME_SHAPE": [2.0, 2.5, 3.0, 3.5, 4.0],
+        },
+        export_path=snapshot.export_path,
+    )
+    bl = tune_result["baseline"]
+    be = tune_result["best"]
+    bl_agg = bl["replay_windows"]["aggregate"]
+    be_agg = be["replay_windows"]["aggregate"]
+    log(f"Candidates evaluated: {tune_result['search']['evaluated']}")
+    log()
+    log(f"{'':20} {'Headline':>8} {'Count':>7} {'Timing':>7} {'Windows':>8}")
+    log(f"{'Baseline':<20} {bl_agg['headline']:>8.1f} {bl_agg['count']:>7.1f} "
+        f"{bl_agg['timing']:>7.1f} "
+        f"{bl['replay_windows']['scored_window_count']:>4}/"
+        f"{bl['replay_windows']['window_count']}")
+    log(f"{'Best':<20} {be_agg['headline']:>8.1f} {be_agg['count']:>7.1f} "
+        f"{be_agg['timing']:>7.1f} "
+        f"{be['replay_windows']['scored_window_count']:>4}/"
+        f"{be['replay_windows']['window_count']}")
+    log()
+    log(f"Baseline params: {bl['params']}")
+    log(f"Best params:     {be['params']}")
+    log(f"Headline delta:  {be['headline_delta']:+.3f}")
+    log(f"Availability delta: {be['availability_delta']:+d}")
+    log()
+    log("Top 5 candidates:")
+    for rank, cand in enumerate(tune_result["candidates"][:5], 1):
+        c_agg = cand["replay_windows"]["aggregate"]
+        log(f"  {rank}. {cand['params']}  headline={c_agg['headline']:.1f}  "
+            f"count={c_agg['count']:.1f}  timing={c_agg['timing']:.1f}")
     log()
 
     # ================================================================

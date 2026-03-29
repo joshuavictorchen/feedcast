@@ -30,6 +30,7 @@ from feedcast.data import (
     hour_of_day,
     load_export_snapshot,
 )
+from feedcast.replay import score_model
 
 # Volume threshold for filtering snack-sized feeds in research analysis.
 SNACK_THRESHOLD_OZ = 1.5
@@ -261,6 +262,38 @@ def main() -> None:
             f"\nSlot counts differ: raw={slot_count}, episode={episode_slot_count}. "
             f"Direct template comparison not possible."
         )
+
+    # ================================================================
+    # CANONICAL MULTI-WINDOW EVALUATION
+    # ================================================================
+    log(f"\n\n{'=' * 60}")
+    log("CANONICAL MULTI-WINDOW EVALUATION")
+    log(f"{'=' * 60}")
+    log()
+    log("Production-constant evaluation via score_model (same")
+    log("infrastructure as the replay CLI).")
+    log()
+
+    canonical = score_model("slot_drift", export_path=snapshot.export_path)
+    rw = canonical["replay_windows"]
+    agg = rw["aggregate"]
+    log(f"Aggregate:  headline={agg['headline']:.1f}  count={agg['count']:.1f}  "
+        f"timing={agg['timing']:.1f}")
+    log(f"Windows:    {rw['scored_window_count']} scored / {rw['window_count']} total "
+        f"({rw['availability_ratio'] * 100:.1f}% availability)")
+    log(f"Half-life:  {rw['half_life_hours']}h  Lookback: {rw['lookback_hours']}h")
+    log()
+    log("Per-window breakdown:")
+    log(f"  {'Cutoff':<22} {'Weight':>7} {'Head':>7} {'Count':>7} {'Time':>7}  Status")
+    for w in rw["per_window"]:
+        if w["score"] is not None:
+            s = w["score"]
+            log(f"  {w['cutoff']:<22} {w['weight']:>7.4f} {s['headline']:>7.1f} "
+                f"{s['count']:>7.1f} {s['timing']:>7.1f}  {w['status']}")
+        else:
+            log(f"  {w['cutoff']:<22} {w['weight']:>7.4f} {'--':>7} {'--':>7} "
+                f"{'--':>7}  {w['status']}")
+    log()
 
     # Save results alongside the script.
     results_path = OUTPUT_DIR / "research_results.txt"

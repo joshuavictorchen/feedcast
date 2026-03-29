@@ -2,6 +2,36 @@
 
 Tracks behavior-level changes to the Survival Hazard model. Add newest entries first.
 
+## Add canonical multi-window evaluation and tuning | 2026-03-28
+
+### Problem
+
+Research script selected parameters by minimizing internal `gap1_mae`
+(walk-forward gap error), a different metric than the canonical
+`score_forecast()` used by replay and the tracker. Shape parameters
+optimized for single-gap accuracy may not optimize full 24h trajectory
+quality (episode count, timing, horizon weighting).
+
+### Solution
+
+Added two canonical sections to research.py:
+
+1. **Canonical evaluation** — calls `score_model("survival_hazard")` with
+   production constants. Reports aggregate headline/count/timing scores
+   across multi-window evaluation with per-window breakdown.
+
+2. **Canonical parameter tuning** — calls `tune_model()` to jointly sweep
+   `OVERNIGHT_SHAPE` (4.0–8.0, 8 values) and `DAYTIME_SHAPE` (2.0–4.0,
+   5 values) = 40 candidates via multi-window canonical scoring. Scale is
+   runtime-estimated and not overridable. Candidates ranked by availability
+   tier first, then headline score.
+
+Existing internal diagnostics (walk-forward gap1/gap3/fcount MAE, Weibull
+fits, discrete hazard comparison, day-part analysis, volume covariate
+tests) are preserved as diagnostic tools.
+
+No model behavior change — only the research script is modified.
+
 ## Episode-level history and re-tuned parameters | 2026-03-27
 
 ### Problem

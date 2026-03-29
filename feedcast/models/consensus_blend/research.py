@@ -24,33 +24,44 @@ from feedcast.data import (
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     HORIZON_HOURS,
     FeedEvent,
+    Forecast,
     ForecastPoint,
     build_feed_events,
     load_export_snapshot,
 )
-from feedcast.evaluation.scoring import score_forecast
-from feedcast.evaluation.windows import recency_weight, weighted_mean
+from feedcast.evaluation.windows import (
+    evaluate_multi_window,
+    generate_episode_boundary_cutoffs,
+    recency_weight,
+)
 from feedcast.models import run_all_models
+from feedcast.replay import score_model
 from feedcast.models.consensus_blend.model import (
     ANCHOR_RADIUS_MINUTES,
     MAX_CANDIDATE_SPREAD_MINUTES,
     SELECTION_CONFLICT_WINDOW_MINUTES,
     SPREAD_PENALTY_PER_HOUR,
-    CandidateCluster,
     _candidates_to_forecast_points,
     _collapse_forecast_dict,
     _collapse_to_episode_points,
     _majority_floor,
     generate_candidate_clusters,
-    run_consensus_blend,
     select_candidate_sequence,
 )
 from feedcast.models.shared import normalize_forecast_points
 
 OUTPUT_DIR = Path(__file__).parent
 MAX_MATCH_GAP_HOURS = 2.0
-RECENCY_HALF_LIFE_DAYS = 4.0
-RECENCY_HALF_LIFE_HOURS = RECENCY_HALF_LIFE_DAYS * 24.0
+
+# Replay defaults — the sweep and canonical evaluation must use the same
+# weighting so the sweep optimizes the same objective the canonical score
+# reports. These match score_model() defaults in feedcast/replay/runner.py.
+CANONICAL_LOOKBACK_HOURS = 96.0
+CANONICAL_HALF_LIFE_HOURS = 36.0
+
+# Inter-episode gap analysis uses a longer half-life for its own
+# diagnostic weighting (unrelated to canonical scoring).
+GAP_ANALYSIS_HALF_LIFE_HOURS = 4.0 * 24.0  # 4 days
 
 
 def main() -> None:
@@ -67,69 +78,76 @@ def main() -> None:
         snapshot.activities,
         merge_window_minutes=DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     )
-    cutoffs = _pick_retrospective_cutoffs(events, cutoff)
+
+    # Bottle-only events for canonical scoring and cutoff generation.
+    # The scorer operates on bottle-only events; using merged events here
+    # would be inconsistent with score_model / replay.
+    scoring_events = build_feed_events(
+        snapshot.activities, merge_window_minutes=None,
+    )
+    scoring_episodes = group_into_episodes(scoring_events)
+    cutoffs = generate_episode_boundary_cutoffs(
+        scoring_episodes, cutoff, lookback_hours=CANONICAL_LOOKBACK_HOURS,
+    )
 
     log(f"Export: {snapshot.export_path}")
     log(f"Dataset: {snapshot.dataset_id}")
     log(f"Cutoff: {cutoff}")
+    log(f"Evaluation windows: {len(cutoffs)}")
     log(f"Run: {datetime.now().isoformat(timespec='seconds')}")
     log()
 
     episodes = group_into_episodes(events)
     _analyze_inter_episode_gaps(episodes, cutoff, log)
-    _analyze_model_agreement(episodes, snapshot.activities, cutoffs, log)
-    _report_production_scores(events, snapshot.activities, cutoffs, log)
-    _sweep_selector_parameters(events, snapshot.activities, cutoffs, log)
+
+    # Diagnostic sections use a subset of cutoffs to avoid running
+    # all models at every episode-boundary window (expensive).
+    diagnostic_cutoffs = cutoffs[-5:]
+    _analyze_model_agreement(episodes, snapshot.activities, diagnostic_cutoffs, log)
+
+    # Canonical production score via shared infrastructure.
+    _report_canonical_score(snapshot, log)
+
+    # Selector sweep via evaluate_multi_window.
+    _sweep_selector_parameters(
+        scoring_events, events, snapshot.activities, cutoffs, cutoff, log,
+    )
 
     results_path = OUTPUT_DIR / "research_results.txt"
     results_path.write_text(output_capture.getvalue())
     log(f"\nResults saved to {results_path}")
 
 
-def _pick_retrospective_cutoffs(
-    events: list[FeedEvent],
-    latest_cutoff: datetime,
-    max_cutoffs: int = 5,
-) -> list[datetime]:
-    """Pick up to ``max_cutoffs`` retrospective cutoffs.
+def _report_canonical_score(snapshot, log) -> None:
+    """Report canonical multi-window evaluation via score_model."""
+    log(f"{'=' * 60}")
+    log("CANONICAL MULTI-WINDOW EVALUATION")
+    log(f"{'=' * 60}")
+    log()
+    log("Production-constant evaluation via score_model (same")
+    log("infrastructure as the replay CLI).")
+    log()
 
-    Always includes the replay-equivalent cutoff (latest_cutoff minus
-    horizon) so the research sweep evaluates the same window that replay
-    does. Remaining slots (up to ``max_cutoffs - 1``) are filled with
-    the last feed time of each recent complete day that falls before the
-    replay cutoff. Per-day cutoffs at or after the replay cutoff are
-    excluded — they would have insufficient horizon data and would
-    distort recency weighting by anchoring the weight calculation to an
-    unscorable cutoff.
-    """
-    # The replay-equivalent cutoff: latest activity minus one horizon.
-    # This gives a full 24h scoring window matching the replay runner.
-    replay_cutoff = latest_cutoff - timedelta(hours=HORIZON_HOURS)
-
-    # Per-day cutoffs: last feed of each complete day, excluding days
-    # at or after the replay cutoff (insufficient horizon data) and
-    # the day containing latest_cutoff (may be incomplete).
-    daily: dict[str, list[FeedEvent]] = defaultdict(list)
-    for event in events:
-        daily[str(event.time.date())].append(event)
-
-    sorted_days = sorted(daily.keys())
-    if sorted_days and sorted_days[-1] == str(latest_cutoff.date()):
-        sorted_days = sorted_days[:-1]
-
-    day_cutoffs: list[datetime] = []
-    for day_str in reversed(sorted_days):
-        last_feed = max(daily[day_str], key=lambda event: event.time)
-        # Skip per-day cutoffs at or after the replay cutoff.
-        if last_feed.time >= replay_cutoff:
-            continue
-        day_cutoffs.append(last_feed.time)
-        if len(day_cutoffs) >= max_cutoffs - 1:
-            break
-
-    # Merge and sort chronologically. The replay cutoff is always the
-    # latest entry, so it gets recency weight 1.0.
-    return sorted(set(day_cutoffs + [replay_cutoff]))
+    canonical = score_model("consensus_blend", export_path=snapshot.export_path)
+    rw = canonical["replay_windows"]
+    agg = rw["aggregate"]
+    log(f"Aggregate:  headline={agg['headline']:.1f}  count={agg['count']:.1f}  "
+        f"timing={agg['timing']:.1f}")
+    log(f"Windows:    {rw['scored_window_count']} scored / {rw['window_count']} total "
+        f"({rw['availability_ratio'] * 100:.1f}% availability)")
+    log(f"Half-life:  {rw['half_life_hours']}h  Lookback: {rw['lookback_hours']}h")
+    log()
+    log("Per-window breakdown:")
+    log(f"  {'Cutoff':<22} {'Weight':>7} {'Head':>7} {'Count':>7} {'Time':>7}  Status")
+    for w in rw["per_window"]:
+        if w["score"] is not None:
+            s = w["score"]
+            log(f"  {w['cutoff']:<22} {w['weight']:>7.4f} {s['headline']:>7.1f} "
+                f"{s['count']:>7.1f} {s['timing']:>7.1f}  {w['status']}")
+        else:
+            log(f"  {w['cutoff']:<22} {w['weight']:>7.4f} {'--':>7} {'--':>7} "
+                f"{'--':>7}  {w['status']}")
+    log()
 
 
 def _analyze_inter_episode_gaps(
@@ -155,7 +173,7 @@ def _analyze_inter_episode_gaps(
             for index in range(len(day_episodes) - 1)
         ]
         age_hours = (cutoff - day_episodes[-1].time).total_seconds() / 3600.0
-        weight = recency_weight(age_hours=age_hours, half_life_hours=RECENCY_HALF_LIFE_HOURS)
+        weight = recency_weight(age_hours=age_hours, half_life_hours=GAP_ANALYSIS_HALF_LIFE_HOURS)
         weighted_gaps.extend((gap, weight) for gap in gaps)
 
         gap_text = "  ".join(f"{gap:.0f}" for gap in gaps) if gaps else "--"
@@ -177,7 +195,7 @@ def _analyze_inter_episode_gaps(
         p50 = sorted_values[np.searchsorted(cumulative, 0.50)]
         log()
         log(
-            f"Recency-weighted (half-life {RECENCY_HALF_LIFE_DAYS}d): "
+            f"Recency-weighted (half-life {GAP_ANALYSIS_HALF_LIFE_HOURS / 24:.0f}d): "
             f"P25={p25:.0f}  Median={p50:.0f}  "
             f"Min={np.min(values):.0f}  Max={np.max(values):.0f}"
         )
@@ -275,123 +293,34 @@ def _analyze_model_agreement(
     log()
 
 
-def _report_production_scores(
-    events: list[FeedEvent],
-    activities: list,
-    cutoffs: list[datetime],
-    log,
-) -> None:
-    """Report retrospective scores for the production selector."""
-    log("=== PRODUCTION EXACT SELECTOR SCORES ===")
-    log()
-    log(
-        "Production selector constants: "
-        f"radius={ANCHOR_RADIUS_MINUTES}m  "
-        f"max_spread={MAX_CANDIDATE_SPREAD_MINUTES}m  "
-        f"conflict={SELECTION_CONFLICT_WINDOW_MINUTES}m  "
-        f"spread_penalty={SPREAD_PENALTY_PER_HOUR:.2f}/h"
-    )
-    log()
-
-    production_rows: list[tuple[float, dict[str, float | int | str]]] = []
-
-    for cutoff in cutoffs:
-        horizon_end = cutoff + timedelta(hours=HORIZON_HOURS)
-        actuals = [event for event in events if cutoff < event.time <= horizon_end]
-        if len(actuals) < 2:
-            continue
-
-        observed_until = min(horizon_end, max(event.time for event in events))
-        history_at_cutoff = [event for event in events if event.time <= cutoff]
-        base_forecasts = run_all_models(activities, cutoff, HORIZON_HOURS)
-        available = {
-            forecast.slug: forecast
-            for forecast in base_forecasts
-            if forecast.available and forecast.points
-        }
-        if len(available) < 2:
-            continue
-
-        weight = recency_weight(
-            age_hours=(cutoffs[-1] - cutoff).total_seconds() / 3600.0,
-            half_life_hours=RECENCY_HALF_LIFE_HOURS,
-        )
-
-        production_forecast = run_consensus_blend(
-            base_forecasts,
-            history_at_cutoff,
-            cutoff,
-            HORIZON_HOURS,
-        )
-        production_score = score_forecast(
-            production_forecast.points,
-            actuals,
-            cutoff,
-            observed_until,
-        )
-        production_rows.append(
-            (
-                weight,
-                {
-                    "cutoff": str(cutoff),
-                    "score": production_score.score,
-                    "count_score": production_score.count_score,
-                    "timing_score": production_score.timing_score,
-                    "predicted": production_score.predicted_episode_count,
-                    "actual": production_score.actual_episode_count,
-                },
-            )
-        )
-
-    log(
-        f"{'Cutoff':<22} {'Actual':>6}  "
-        f"{'Prod_N':>6} {'Prod_Scr':>8} {'Prod_Cnt':>8} {'Prod_Tim':>8}"
-    )
-    for _, production in production_rows:
-        log(
-            f"{production['cutoff']:<22} {int(production['actual']):>6}  "
-            f"{int(production['predicted']):>6} {production['score']:>8.1f} "
-            f"{production['count_score']:>8.1f} {production['timing_score']:>8.1f}"
-        )
-
-    if production_rows:
-        log()
-        log("Recency-weighted means:")
-        log(
-            "  Production: "
-            f"score={_weighted_row_mean(production_rows, 'score'):.1f}  "
-            f"count={_weighted_row_mean(production_rows, 'count_score'):.1f}  "
-            f"timing={_weighted_row_mean(production_rows, 'timing_score'):.1f}"
-        )
-    log()
-
-
 def _sweep_selector_parameters(
+    scoring_events: list[FeedEvent],
     events: list[FeedEvent],
     activities: list,
     cutoffs: list[datetime],
+    latest_activity_time: datetime,
     log,
 ) -> None:
-    """Sweep nearby selector settings around the production constants."""
+    """Sweep nearby selector settings via evaluate_multi_window.
+
+    Uses pre-cached model outputs per cutoff and pre-generated candidate
+    clusters per (radius, spread) pair. Each (radius, spread, conflict,
+    penalty) configuration is scored via ``evaluate_multi_window`` using
+    bottle-only scoring events for consistency with the canonical scorer.
+    """
     log("=== SELECTOR PARAMETER SWEEP ===")
     log()
     log(
-        "Scores the immutable-candidate exact selector directly against "
-        "the retrospective scorer."
+        "Scores the immutable-candidate exact selector via multi-window "
+        "canonical evaluation (evaluate_multi_window)."
     )
     log()
 
-    # Pre-compute model outputs per cutoff to avoid redundant work.
-    cutoff_data: list[
-        tuple[float, list[FeedEvent], list[FeedEvent], dict[str, Forecast]]
-    ] = []
+    # Pre-compute model outputs per cutoff. Model outputs use merged
+    # events (matching production), but scoring uses bottle-only events
+    # (passed to evaluate_multi_window as scoring_events).
+    cutoff_cache: dict[datetime, tuple | None] = {}
     for cutoff in cutoffs:
-        horizon_end = cutoff + timedelta(hours=HORIZON_HOURS)
-        actuals = [event for event in events if cutoff < event.time <= horizon_end]
-        if len(actuals) < 2:
-            continue
-        observed_until = min(horizon_end, max(event.time for event in events))
-        history_at_cutoff = [event for event in events if event.time <= cutoff]
         base_forecasts = run_all_models(activities, cutoff, HORIZON_HOURS)
         available = {
             forecast.slug: forecast
@@ -399,108 +328,109 @@ def _sweep_selector_parameters(
             if forecast.available and forecast.points
         }
         if len(available) < 2:
+            cutoff_cache[cutoff] = None
             continue
-        # Collapse model predictions into episodes before candidate generation,
-        # matching production behavior in _blend_by_sequence_selection().
+        # Collapse model predictions into episodes before candidate
+        # generation, matching production behavior.
         available = _collapse_forecast_dict(available)
-        weight = recency_weight(
-            age_hours=(cutoffs[-1] - cutoff).total_seconds() / 3600.0,
-            half_life_hours=RECENCY_HALF_LIFE_HOURS,
-        )
-        cutoff_data.append(
-            (weight, cutoff, actuals, observed_until, history_at_cutoff, available)
-        )
+        history_at_cutoff = [e for e in events if e.time <= cutoff]
+        cutoff_cache[cutoff] = (available, history_at_cutoff)
 
-    # Pre-generate candidates per cutoff per (radius, spread) pair to avoid
-    # redundant candidate generation across spread_penalty variations.
-    candidate_cache: dict[
-        tuple[int, int, int],
-        list[tuple[float, list[CandidateCluster], int, list[FeedEvent]]],
-    ] = {}
+    # Pre-generate candidates per (radius, spread) per cutoff to avoid
+    # redundant candidate generation across conflict/penalty variations.
+    candidate_cache: dict[tuple[int, int], dict[datetime, tuple | None]] = {}
     for radius_minutes in [90, 120]:
         for max_spread_minutes in [150, 180]:
-            cache_key = (radius_minutes, max_spread_minutes)
-            entries = []
-            for (
-                weight,
-                cutoff,
-                actuals,
-                observed_until,
-                history_at_cutoff,
-                available,
-            ) in cutoff_data:
+            per_cutoff: dict[datetime, tuple | None] = {}
+            for cutoff in cutoffs:
+                if cutoff_cache[cutoff] is None:
+                    per_cutoff[cutoff] = None
+                    continue
+                available, history = cutoff_cache[cutoff]
                 majority_floor = _majority_floor(len(available))
                 candidates = generate_candidate_clusters(
                     available,
                     radius_minutes=radius_minutes,
                     max_spread_minutes=max_spread_minutes,
                 )
-                entries.append(
-                    (
-                        weight,
-                        cutoff,
-                        actuals,
-                        observed_until,
-                        history_at_cutoff,
-                        candidates,
-                        majority_floor,
-                    )
-                )
-            candidate_cache[cache_key] = entries
+                per_cutoff[cutoff] = (candidates, majority_floor, history)
+            candidate_cache[(radius_minutes, max_spread_minutes)] = per_cutoff
 
     rows: list[dict[str, float]] = []
-    for (radius_minutes, max_spread_minutes), entries in candidate_cache.items():
+    for (radius_minutes, max_spread_minutes), per_cutoff in candidate_cache.items():
         for conflict_minutes in [75, 90, 105]:
             for spread_penalty in [0.25, 1.0, 2.0, 5.0]:
-                sweep_rows: list[tuple[float, dict[str, float | int]]] = []
-                for (
-                    weight,
-                    cutoff,
-                    actuals,
-                    observed_until,
-                    history_at_cutoff,
-                    candidates,
-                    majority_floor,
-                ) in entries:
-                    selected = select_candidate_sequence(
-                        candidates,
-                        majority_floor=majority_floor,
-                        conflict_minutes=conflict_minutes,
-                        spread_penalty_per_hour=spread_penalty,
-                    )
-                    points = normalize_forecast_points(
-                        _candidates_to_forecast_points(selected, history_at_cutoff),
-                        cutoff,
-                        HORIZON_HOURS,
-                    )
-                    score = score_forecast(points, actuals, cutoff, observed_until)
-                    sweep_rows.append(
-                        (
-                            weight,
-                            {
-                                "score": score.score,
-                                "count_score": score.count_score,
-                                "timing_score": score.timing_score,
-                                "predicted": score.predicted_episode_count,
-                            },
+
+                # Factory function to bind loop variables into the closure.
+                def _make_forecast_fn(pc, conf, pen):
+                    def forecast_fn(cutoff: datetime) -> Forecast:
+                        entry = pc[cutoff]
+                        if entry is None:
+                            return Forecast(
+                                name="Consensus Blend",
+                                slug="consensus_blend",
+                                points=[],
+                                methodology="",
+                                diagnostics={},
+                                available=False,
+                            )
+                        candidates, majority_floor, history = entry
+                        selected = select_candidate_sequence(
+                            candidates,
+                            majority_floor=majority_floor,
+                            conflict_minutes=conf,
+                            spread_penalty_per_hour=pen,
                         )
-                    )
+                        points = normalize_forecast_points(
+                            _candidates_to_forecast_points(selected, history),
+                            cutoff,
+                            HORIZON_HOURS,
+                        )
+                        # Mirror production semantics: if the selector
+                        # yields no points, the forecast is unavailable.
+                        if not points:
+                            return Forecast(
+                                name="Consensus Blend",
+                                slug="consensus_blend",
+                                points=[],
+                                methodology="",
+                                diagnostics={},
+                                available=False,
+                                error_message="selector produced no points",
+                            )
+                        return Forecast(
+                            name="Consensus Blend",
+                            slug="consensus_blend",
+                            points=points,
+                            methodology="",
+                            diagnostics={},
+                            available=True,
+                        )
+                    return forecast_fn
 
-                rows.append(
-                    {
-                        "radius_minutes": radius_minutes,
-                        "max_spread_minutes": max_spread_minutes,
-                        "conflict_minutes": conflict_minutes,
-                        "spread_penalty": spread_penalty,
-                        "score": _weighted_row_mean(sweep_rows, "score"),
-                        "count_score": _weighted_row_mean(sweep_rows, "count_score"),
-                        "timing_score": _weighted_row_mean(sweep_rows, "timing_score"),
-                        "predicted": _weighted_row_mean(sweep_rows, "predicted"),
-                    }
+                fn = _make_forecast_fn(per_cutoff, conflict_minutes, spread_penalty)
+                result = evaluate_multi_window(
+                    fn, scoring_events, cutoffs,
+                    latest_activity_time,
+                    half_life_hours=CANONICAL_HALF_LIFE_HOURS,
                 )
+                rows.append({
+                    "radius_minutes": radius_minutes,
+                    "max_spread_minutes": max_spread_minutes,
+                    "conflict_minutes": conflict_minutes,
+                    "spread_penalty": spread_penalty,
+                    "score": result.headline_score,
+                    "count_score": result.count_score,
+                    "timing_score": result.timing_score,
+                    "scored_windows": result.scored_window_count,
+                    "window_count": result.window_count,
+                })
 
+    # Rank by availability tier first (most scored windows wins), then
+    # by headline score within that tier — same policy as tune_model.
     rows.sort(
         key=lambda row: (
+            -int(row["scored_windows"]),
             -float(row["score"]),
             -float(row["timing_score"]),
             -float(row["count_score"]),
@@ -508,7 +438,7 @@ def _sweep_selector_parameters(
     )
     log(
         f"{'Radius':>6} {'Spread':>6} {'Conflict':>8} {'Penalty':>7}  "
-        f"{'Score':>8} {'Count':>8} {'Timing':>8} {'Pred':>6}"
+        f"{'Score':>8} {'Count':>8} {'Timing':>8} {'Win':>7}"
     )
     for row in rows[:15]:
         marker = ""
@@ -523,20 +453,11 @@ def _sweep_selector_parameters(
             f"{int(row['radius_minutes']):>6} {int(row['max_spread_minutes']):>6} "
             f"{int(row['conflict_minutes']):>8} {row['spread_penalty']:>7.2f}  "
             f"{row['score']:>8.1f} {row['count_score']:>8.1f} "
-            f"{row['timing_score']:>8.1f} {row['predicted']:>6.1f}{marker}"
+            f"{row['timing_score']:>8.1f} "
+            f"{int(row['scored_windows']):>3}/{int(row['window_count'])}"
+            f"{marker}"
         )
     log()
-
-
-def _weighted_row_mean(
-    rows: list[tuple[float, dict[str, float | int | str]]],
-    key: str,
-) -> float:
-    """Return the weighted mean for one numeric result column."""
-    return weighted_mean(
-        [float(row[key]) for _, row in rows],
-        [weight for weight, _ in rows],
-    )
 
 
 if __name__ == "__main__":

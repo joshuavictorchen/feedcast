@@ -38,6 +38,7 @@ from feedcast.models.analog_trajectory.model import (
     TRAJECTORY_COMPLETENESS_HOURS,
     _state_features,
 )
+from feedcast.replay import score_model
 
 # Output is saved alongside the script for reproducibility.
 OUTPUT_DIR = Path(__file__).parent
@@ -302,6 +303,83 @@ def main() -> None:
             log(f"  Abs errors:  {[f'{e:.2f}' for e in err]}")
             log(f"  Neighbors: {[f'd={nd:.2f}' for _, nd in nearest]}")
             log()
+
+    # ===================================================================
+    # CANONICAL MULTI-WINDOW EVALUATION
+    # ===================================================================
+    log(f"\n{'=' * 60}")
+    log("CANONICAL MULTI-WINDOW EVALUATION")
+    log(f"{'=' * 60}")
+    log()
+    log("Production-constant evaluation via score_model (same")
+    log("infrastructure as the replay CLI).")
+    log()
+
+    canonical = score_model("analog_trajectory", export_path=snapshot.export_path)
+    rw = canonical["replay_windows"]
+    agg = rw["aggregate"]
+    log(f"Aggregate:  headline={agg['headline']:.1f}  count={agg['count']:.1f}  "
+        f"timing={agg['timing']:.1f}")
+    log(f"Windows:    {rw['scored_window_count']} scored / {rw['window_count']} total "
+        f"({rw['availability_ratio'] * 100:.1f}% availability)")
+    log(f"Half-life:  {rw['half_life_hours']}h  Lookback: {rw['lookback_hours']}h")
+    log()
+    log("Per-window breakdown:")
+    log(f"  {'Cutoff':<22} {'Weight':>7} {'Head':>7} {'Count':>7} {'Time':>7}  Status")
+    for w in rw["per_window"]:
+        if w["score"] is not None:
+            s = w["score"]
+            log(f"  {w['cutoff']:<22} {w['weight']:>7.4f} {s['headline']:>7.1f} "
+                f"{s['count']:>7.1f} {s['timing']:>7.1f}  {w['status']}")
+        else:
+            log(f"  {w['cutoff']:<22} {w['weight']:>7.4f} {'--':>7} {'--':>7} "
+                f"{'--':>7}  {w['status']}")
+    log()
+
+    # ===================================================================
+    # TWO-STAGE CANONICAL VALIDATION (top 10 from internal sweep)
+    # ===================================================================
+    # The full grid search is too expensive to run through multi-window
+    # canonical scoring (~2700 configs × ~20 windows). Instead, validate
+    # the top 10 configs from the internal sweep via score_model with
+    # overrides (ALIGNMENT is now a module-level constant).
+    log("=== TWO-STAGE CANONICAL VALIDATION ===")
+    log()
+    log("Top 10 configs from internal sweep, validated via multi-window")
+    log("canonical scoring (score_model with overrides).")
+    log()
+
+    canonical_ranked: list[tuple[dict, dict]] = []
+    for rank, config in enumerate(results[:10], 1):
+        overrides = {
+            "LOOKBACK_HOURS": config["lookback"],
+            "FEATURE_WEIGHTS": config["weights"],
+            "K_NEIGHBORS": config["k"],
+            "RECENCY_HALF_LIFE_HOURS": config["half_life"],
+            "TRAJECTORY_LENGTH_METHOD": config["traj_method"],
+            "ALIGNMENT": config["alignment"],
+        }
+        result = score_model(
+            "analog_trajectory",
+            overrides=overrides,
+            export_path=snapshot.export_path,
+        )
+        canonical_ranked.append((config, result))
+
+    # Sort by canonical headline descending.
+    canonical_ranked.sort(
+        key=lambda pair: -pair[1]["replay_windows"]["aggregate"]["headline"],
+    )
+
+    log(f"{'Rank':>4} {'lb':>3} {'weights':<15} {'k':>2} {'hl':>4} {'len':<7} "
+        f"{'align':<12} {'internal':>8} {'canonical':>9}")
+    for rank, (config, result) in enumerate(canonical_ranked, 1):
+        c_agg = result["replay_windows"]["aggregate"]
+        log(f"{rank:>4} {config['lookback']:>3} {config['weights_name']:<15} "
+            f"{config['k']:>2} {config['half_life']:>4} {config['traj_method']:<7} "
+            f"{config['alignment']:<12} "
+            f"{config['full_traj_mae']:>8.3f} {c_agg['headline']:>9.1f}")
+    log()
 
     # --- Episode-level comparison ---
     # Compare raw vs. episode state library and feature distributions.
