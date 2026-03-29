@@ -15,6 +15,7 @@ and surfaces context that the plan text alone does not capture.
 | Phase 1 Implementation | 2026-03-28 | Shared multi-window evaluation primitives, consensus_blend helper extraction, scorer-context decision (pass full bottle-event list to `score_forecast()`), unavailable-window semantics verification, Claude review convergence, fixed-step cutoff caveat noted for Phase 2 | `.transcripts/rollout-2026-03-28T16-24-48-019d361e-e909-7442-8801-897563198f41.jsonl` |
 | Phase 2 Implementation | 2026-03-28 | Replay adopts multi-window evaluation. Codex review caught best-can-regress bug, missing top-level tune `replay_windows`, and baseline leaking into candidates list — all resolved. 31 tests pass. | `.transcripts/9c218a97-a6db-4ace-a7d3-0d67af4fb47a.jsonl` |
 | Phase 3 Implementation | 2026-03-28 | All five research scripts gain canonical multi-window evaluation. latent_hunger/survival_hazard gain canonical tuning. analog_trajectory gains two-stage validation and ALIGNMENT constant. consensus_blend migrates to shared infrastructure (Codex caught weighting divergence and availability bug). Plan restructured to Phases 4–6. 79 tests pass. | `.transcripts/bcc43b44-38db-44e7-8b68-513c05b7aac8.jsonl` |
+| Phase 4–5 Planning | 2026-03-29 | Merged old Phases 4+5 into per-model end-to-end sub-phases. Defined research.md template (canonical/diagnostic split, last-run staleness box), document relationship contract, advisory tuning pipeline. Codex review resolved: commit instruction conflict, readiness marker, consensus_blend dual-purpose framing. Old Phase 6 renamed to Phase 5 with system contract section. | `.transcripts/14689751-83e9-4d29-be6f-9c8b90bc90b7.jsonl` |
 
 ## Motivation
 
@@ -629,138 +630,348 @@ python -m feedcast.models.<slug>.research
 - Focused verification:
   `.venv/bin/python -m pytest -q` → `79 passed`
 
-## Phase 4: Document Model Research Scripts
+## Phase 4: Per-Model Research Refresh and Documentation
 
-**This phase should be fleshed out with the user before implementing.**
+*Fleshed out 2026-03-29 with user and Codex peer review. Ready to
+execute.*
 
-Each model's `research.py` has grown organically and now contains a mix
-of exploratory data analysis, internal diagnostic evaluation, and (as of
-Phase 3) canonical multi-window scoring. A new reader — human or agent —
-cannot quickly answer "what does this script do and why?" without reading
-hundreds of lines of code.
+Phases 1–3 built canonical multi-window evaluation into all five
+research scripts. Phase 4 handles each model end-to-end: run its
+research script, analyze the results, write a `research.md` guide,
+and decide whether production constants should change.
 
-### Deliverable
+**Current state:** All five `research_results.txt` files predate Phase 3
+and lack canonical evaluation sections. Each script must be re-run
+before its documentation can reference concrete results.
 
-Create a `research.md` file in each model directory that serves as a
-readable guide to that model's research script. The document should make
-the script's purpose, methods, and conclusions immediately clear without
-requiring the reader to trace through the code.
+### Document relationships
 
-### Structure (per model)
+Each model directory has three documents that serve different audiences:
 
-Each `research.md` should include at least:
+| Document | Purpose |
+|---|---|
+| `design.md` | **The why.** Design decisions and rationale — why the model works the way it does. |
+| `methodology.md` | **The report-facing how.** Text rendered into the forecast report for end-user consumption. |
+| `research.md` | **The evidence.** Current support and challenges for the model's design and constants. |
+
+Research should inform design and methodology, but the three documents
+are not redundant. Each `research.md` should open with a brief note
+establishing this relationship so readers know where to look for what.
+
+### Research-tuning-production pipeline
+
+This pipeline is advisory at the infrastructure level but Phase 4
+sub-phases may apply constant changes directly when evidence warrants:
+
+1. **Research scripts produce evidence.** Canonical scores, parameter
+   recommendations, diagnostic analysis. The scripts themselves do not
+   modify production behavior — `research.py` writes
+   `research_results.txt`, not `model.py`.
+2. **Tuning constants live in `model.py`.** Each model's tunable
+   constants are module-level variables. `tune_model()` evaluates
+   candidates using temporary overrides (`override_constants`) that
+   are restored after evaluation. Nothing writes back to `model.py`
+   automatically.
+3. **Replay is for evidence, not automation.** `score_model()` and
+   `tune_model()` provide canonical evaluation. The output is a ranked
+   list with scores. The decision to change a constant is made by the
+   agent or human reviewing the evidence in each sub-phase.
+
+This distinction should be clear in every `research.md` Conclusions
+section: the research pipeline produces recommendations; constant
+changes are intentional decisions with documented evidence.
+
+### Document template
+
+Each `research.md` follows this structure:
 
 | Section | Content |
 |---|---|
+| **Header** | One-line document-relationship note: `design.md` is the why, `methodology.md` is the report-facing how, `research.md` is the evidence. |
 | **Overview** | What question(s) this research answers. Why the model needs its own research beyond canonical scoring. |
-| **Methods** | What each section of the script does, in plain language. Data inputs, evaluation approach, parameter sweep design. Distinguish between canonical sections (shared infrastructure) and internal diagnostics (model-specific). |
-| **Results** | Key findings from the most recent run. Reference `research_results.txt` for full output. |
-| **Conclusions** | What the results mean for the model's current constants and design. Which findings informed production parameters and which are informational. |
-| **Open questions** | Unresolved issues or areas where further research could help. |
+| **Last canonical run** | Metadata box (see format below). Hard staleness signals so readers know when results are outdated. |
+| **Methods** | Two structural subsections: **Canonical evaluation and tuning** first (shared replay infrastructure, cross-model comparable), then **Model-specific diagnostics** (internal metrics, model mechanics). Within each subsection, follow script section order. |
+| **Results** | Lead with **Canonical findings** (do current production constants win?), then **Diagnostic findings**. Summarize — do not mirror raw output. Reference `research_results.txt` for full tables. |
+| **Conclusions** | What results mean for current constants and design. Frame as recommendations. Note which findings informed production parameters and which are informational. |
+| **Open questions** | Labeled as **Model-local** or **Cross-cutting**. Cross-cutting questions include enough local context to be useful but point to `feedcast/research/index.md` for shared discussion rather than duplicating analysis across five files. |
 
-### Per-model notes
+**Last canonical run format:**
 
-- **slot_drift:** Alignment analysis only (no parameter sweep). Canonical
-  eval is the only predictive scoring. Research.md should explain what the
-  template alignment analysis tells you and what it doesn't.
-- **latent_hunger:** Internal walk-forward diagnostics (gap1/gap3/fcount
-  MAE), additive vs multiplicative comparison, circadian analysis, episode
-  comparison. Canonical tune sweeps SATIETY_RATE. Research.md should map
-  each section to the design question it answers.
-- **survival_hazard:** Weibull fitting, day-part analysis, discrete hazard
-  comparison, volume covariate testing, episode analysis. Canonical tune
-  sweeps shapes. Research.md should clarify which sections are historical
-  exploration vs current validation.
-- **analog_trajectory:** 2688-config internal grid sweep (the most
-  expensive section), feature statistics, neighbor diagnostics, episode
-  comparison. Canonical two-stage validation of top 10. Research.md should
-  explain the two-stage rationale and when to rerun the full internal
-  sweep vs just the canonical validation.
-- **consensus_blend:** Inter-episode gap analysis, model agreement
-  analysis, selector parameter sweep. Research.md should clarify which
-  sections are ensemble-specific diagnostics vs dataset context, and
-  whether the selector sweep is active tuning or design validation.
+```markdown
+| Field | Value |
+|---|---|
+| Run date | YYYY-MM-DD |
+| Export | `exports/export_narababy_silas_YYYYMMDD.csv` |
+| Dataset | `sha256:...` |
+| Command | `.venv/bin/python -m feedcast.models.<slug>.research` |
+| Canonical headline | XX.X |
+| Availability | N/N windows (100%) |
+| Full output | [`research_results.txt`](research_results.txt) |
 
-## Phase 5: Execute Research And Decide Follow-Up Changes
-
-**This phase should be fleshed out with the user before implementing.**
-
-Phase 3 made the research scripts capable of canonical multi-window
-evaluation and canonical tuning. Phase 5 is the first full run on the
-current dataset. The goal is to generate fresh research outputs, inspect
-whether canonical ranking agrees with current production constants, and
-decide which behavior changes (if any) should actually ship.
-
-### Scope
-
-Run all five model research scripts on the same latest export:
-
-```bash
-.venv/bin/python -m feedcast.models.slot_drift.research
-.venv/bin/python -m feedcast.models.latent_hunger.research
-.venv/bin/python -m feedcast.models.survival_hazard.research
-.venv/bin/python -m feedcast.models.analog_trajectory.research
-.venv/bin/python -m feedcast.models.consensus_blend.research
+> **Staleness check:** if the current export differs from the one
+> listed here, re-run the command above to refresh results.
 ```
 
-Each script writes `research_results.txt` in its own model directory.
-Do not change `model.py` constants automatically based on these runs.
-First compare canonical results against the current production settings,
-then decide intentionally whether any model behavior should change.
+The dataset fingerprint makes staleness mechanically detectable: if
+the export has changed, the fingerprint won't match. The absolute run
+date and export path provide a second signal.
 
-### Questions to answer from the run
+### Per-model sub-phase structure
 
-- Do the canonical sections complete successfully for all five models?
-- For `latent_hunger` and `survival_hazard`, does `tune_model()` select
-  the current production constants or a different candidate?
-- For `analog_trajectory`, does the canonical top-10 validation agree
-  with the internal `full_traj_mae` ranking, or does canonical scoring
-  materially reshuffle the best configurations?
-- For `analog_trajectory`, does canonical scoring produce evidence that
-  `ALIGNMENT="time_offset"` should replace the current `ALIGNMENT="gap"`?
-  Only change the production constant if the canonical result is clearly
-  better and the improvement is defensible.
-- For `consensus_blend`, do the selector-sweep winners agree with the
-  current production selector constants under the canonical objective?
-- Do any models show non-100% availability on the current dataset?
+Each model sub-phase (4.1–4.5) follows the same steps:
 
-### Expected runtime characteristics
+1. **Run** the research script:
+   `.venv/bin/python -m feedcast.models.<slug>.research`
+2. **Verify** the output includes canonical sections
+   (`CANONICAL MULTI-WINDOW EVALUATION` header present in output).
+3. **Analyze** the results against the model-specific questions listed
+   in that sub-phase.
+4. **Write** `research.md` following the document template above.
+5. **Decide** on constants — end with an explicit disposition:
+   - **Keep:** Current production constants are optimal or near-optimal.
+     Document the evidence supporting them in Conclusions.
+   - **Change:** Update `model.py` and add a `CHANGELOG.md` entry with
+     the canonical evidence that motivated the change.
+   - **Unresolved:** Results are ambiguous or the improvement is
+     marginal. Document the uncertainty in Open questions.
 
-With the current export (24 canonical replay cutoffs), the canonical
-additions are tractable but not free:
+### Ordering constraints
 
-- `slot_drift`: one canonical `score_model()` run (24 windows)
-- `latent_hunger`: one canonical `score_model()` plus 12-candidate
-  canonical tuning
-- `survival_hazard`: one canonical `score_model()` plus 40-candidate
-  canonical tuning
-- `analog_trajectory`: existing 2688-config internal sweep still
-  dominates cost; canonical validation adds 10 replay score runs
-- `consensus_blend`: canonical score plus 48 selector combinations over
-  cached model outputs; model re-execution cost is front-loaded in the
-  cutoff cache rather than repeated for every parameter combination
+- Sub-phase 4.0 must complete before any model sub-phase begins.
+- Sub-phases 4.1–4.4 are independent and can run in any order.
+- **Sub-phase 4.5 (consensus_blend) must run after 4.1–4.4.** Its
+  research script calls `run_all_models()`, which executes every model
+  with current production constants. If earlier sub-phases change
+  constants, consensus_blend should see those changes.
+- Sub-phase 4.6 must wait until all model sub-phases are done.
 
-Wall-clock time is expected to be in the low-to-mid tens of minutes on
-current hardware. The dominant costs are the pre-existing analog
-internal sweep and the survival-hazard research loops, not the new
-canonical wrappers themselves.
+### Expected runtime reference
 
-### Follow-up after the run
+Per-model cost breakdown (with current export, ~20+ canonical windows):
+- `slot_drift`: one `score_model()` run — fast
+- `latent_hunger`: one `score_model()` + 12-candidate `tune_model()`
+- `survival_hazard`: one `score_model()` + 40-candidate `tune_model()`
+- `analog_trajectory`: large internal grid sweep + 10 canonical
+  validation runs — dominates wall-clock time
+- `consensus_blend`: one `score_model()` + 48 selector sweep configs
+  over cached model outputs
 
-- Refresh committed `research_results.txt` files if the outputs are meant
-  to represent current conclusions.
-- If a model constant changes, add a new top entry to that model's
-  `CHANGELOG.md` explaining the canonical evidence for the change.
-- If the canonical run changes any cross-model conclusion, update the
-  relevant shared research article or the model-local design/methodology
-  docs in Phase 6.
+### Sub-phase 4.0: Shared setup
 
-## Phase 6: Documentation
+1. Verify the latest export is available in `exports/`.
+2. Run `.venv/bin/python -m pytest -q` to confirm all tests pass
+   (baseline check before any changes).
+3. Read and internalize the document template, document relationships,
+   and research-tuning-production pipeline sections above.
+
+**Deliverable:** Confirmed test baseline. No script execution or file
+creation in this sub-phase.
+
+### Sub-phase 4.1: slot_drift
+
+**Questions to answer:**
+- What is the canonical headline score with production constants?
+- Is availability 100%?
+- Does the alignment analysis still support the current template
+  slot count and positions?
+
+**Per-model context:** Alignment analysis only (no parameter sweep).
+Canonical eval is the only predictive scoring. `research.md` should
+explain what the template alignment analysis tells you (whether the
+daily feeding pattern is stable enough for a fixed-slot template) and
+what it doesn't (whether the template parameters are optimal — there
+is no constant-only sweep to test this).
+
+**Disposition guidance:** slot_drift has no constant-only parameter
+sweep. Constants should not change unless the alignment analysis
+reveals a material issue with the current template.
+
+**Deliverable:** Fresh `research_results.txt`,
+`feedcast/models/slot_drift/research.md`, and any `model.py` /
+`CHANGELOG.md` updates if warranted.
+
+### Sub-phase 4.2: latent_hunger
+
+**Questions to answer:**
+- What is the canonical headline score with production constants?
+- Does `tune_model()` select the current `SATIETY_RATE` or a different
+  value? If different, is the improvement material?
+- Do the internal walk-forward diagnostics (gap1/gap3/fcount MAE)
+  agree with canonical ranking direction?
+- Is availability 100%?
+
+**Per-model context:** Internal walk-forward diagnostics
+(gap1/gap3/fcount MAE), additive vs multiplicative comparison,
+circadian analysis, episode comparison. Canonical tune sweeps
+`SATIETY_RATE`. Growth rate is runtime-estimated and not overridable
+via constant overrides. `research.md` should map each diagnostic
+section to the design question it answers (e.g., "Section 4 compares
+additive vs multiplicative satiety — this is the evidence for the
+multiplicative design choice in `design.md`").
+
+**Disposition guidance:** If `tune_model()` selects a different
+`SATIETY_RATE` and the improvement is material and defensible, update
+`model.py`.
+
+**Deliverable:** Fresh `research_results.txt`,
+`feedcast/models/latent_hunger/research.md`, and any `model.py` /
+`CHANGELOG.md` updates if warranted.
+
+### Sub-phase 4.3: survival_hazard
+
+**Questions to answer:**
+- What is the canonical headline score with production constants?
+- Does `tune_model()` select the current `OVERNIGHT_SHAPE` and
+  `DAYTIME_SHAPE` or different values? If different, is the improvement
+  material?
+- Do the internal Weibull fitting diagnostics agree with canonical
+  ranking direction?
+- Is availability 100%?
+
+**Per-model context:** Weibull fitting, day-part analysis, discrete
+hazard comparison, volume covariate testing, episode analysis. Canonical
+tune sweeps both shape parameters jointly (8 overnight × 5 daytime = 40
+candidates). Scale is runtime-estimated. `research.md` should clarify
+which sections are historical exploration (e.g., discrete hazard
+comparison was an early design alternative) vs current validation (e.g.,
+day-part Weibull fits confirm the overnight/daytime split).
+
+**Disposition guidance:** Same criteria as latent_hunger. Update both
+shape constants together if the evidence supports it.
+
+**Deliverable:** Fresh `research_results.txt`,
+`feedcast/models/survival_hazard/research.md`, and any `model.py` /
+`CHANGELOG.md` updates if warranted.
+
+### Sub-phase 4.4: analog_trajectory
+
+**Questions to answer:**
+- What is the canonical headline score with production constants?
+- Does the canonical top-10 validation agree with the internal
+  `full_traj_mae` ranking, or does canonical scoring materially
+  reshuffle the best configurations?
+- Does canonical scoring produce evidence that
+  `ALIGNMENT="time_offset"` should replace the current
+  `ALIGNMENT="gap"`? Only change the production constant if the
+  canonical result is clearly better and the improvement is defensible.
+- Is availability 100%?
+
+**Per-model context:** Large internal grid sweep (the most expensive
+section), feature statistics, neighbor diagnostics, episode comparison.
+Canonical two-stage validation of top 10 from the internal sweep.
+`research.md` should explain the two-stage rationale (full canonical
+sweep is prohibitively expensive — see "Analog trajectory: pragmatic
+exception for sweep cost" in Design Decisions) and when to rerun the
+full internal sweep vs just the canonical validation.
+
+**Disposition guidance:** The two-stage validation may reveal that a
+non-production configuration scores better canonically. If the
+improvement is material and the internal metric agrees directionally,
+update constants. For `ALIGNMENT`, only change if canonical evidence
+is unambiguous.
+
+**Deliverable:** Fresh `research_results.txt`,
+`feedcast/models/analog_trajectory/research.md`, and any `model.py` /
+`CHANGELOG.md` updates if warranted.
+
+### Sub-phase 4.5: consensus_blend
+
+**Must run after sub-phases 4.1–4.4** so that any constant changes
+from earlier models are reflected in the `run_all_models()` calls.
+
+**Questions to answer:**
+- What is the canonical headline score with production constants?
+- Do the selector-sweep winners agree with the current production
+  selector constants under the canonical objective?
+- Does the sweep surface any configuration with materially higher
+  availability (more scored windows)?
+- Is availability 100%?
+
+**Per-model context:** Inter-episode gap analysis, model agreement
+analysis, selector parameter sweep via `evaluate_multi_window()` with
+custom `forecast_fn` closures. `research.md` should clarify which
+sections are ensemble-specific diagnostics (inter-model spread) vs
+dataset context (inter-episode gaps). The selector sweep serves both
+purposes: it validates the current production constants and may
+surface a better configuration. `research.md` should frame it as
+design validation first — if the sweep also reveals a clearly
+superior alternative, that is a finding worth acting on, not just a
+confirmation exercise.
+
+**Disposition guidance:** If the selector sweep identifies a clearly
+better configuration with equal or better availability, update
+constants. If the production constants are confirmed or the
+differences are marginal, document the validation in Conclusions.
+
+**Deliverable:** Fresh `research_results.txt`,
+`feedcast/models/consensus_blend/research.md`, and any `model.py` /
+`CHANGELOG.md` updates if warranted.
+
+### Sub-phase 4.6: Cross-model synthesis and cleanup
+
+After all five model sub-phases are complete:
+
+1. **Cross-model comparison:** Compare canonical headline scores across
+   all five models. Note any surprises — a model that scores much
+   better or worse than expected, availability differences, or cases
+   where canonical and internal metrics disagree.
+
+2. **Consistency check:** Verify all five `research.md` files follow
+   the agreed structure template (header, overview, last canonical run,
+   methods with canonical/diagnostic split, results with
+   canonical/diagnostic split, conclusions, labeled open questions).
+   Verify all "Last canonical run" boxes reference the same export and
+   dataset fingerprint.
+
+3. **Cross-cutting question dedup:** Review the Open Questions sections
+   across all five `research.md` files. If the same cross-cutting
+   question appears in multiple models, promote it to
+   `feedcast/research/index.md` and replace the duplicates with
+   pointers.
+
+4. **Shared research update:** If any canonical run or constant change
+   alters a cross-model conclusion (e.g., episode clustering
+   effectiveness, volume-gap relationship strength), update the
+   relevant article in `feedcast/research/` and
+   `feedcast/research/index.md`.
+
+5. **Disposition summary:** Produce a brief summary of all five model
+   dispositions (keep / change / unresolved) and present it to the
+   user. Do not commit — the user will decide when to commit and may
+   want to review changes first.
+
+## Phase 5: Documentation
+
+### System contract
+
+Phase 5 documents the relationships between the system's components
+as a coherent contract. The individual file updates below implement
+this contract in their respective locations. The contract:
+
+- **`model.py` holds production constants.** Each model's tunable
+  parameters are module-level variables in its `model.py`. This is the
+  single source of truth for what the model does in production.
+- **`research.py` and `research.md` generate and interpret evidence.**
+  Research scripts call into replay infrastructure to produce canonical
+  scores and parameter recommendations. `research.md` documents the
+  findings. Neither modifies production behavior directly.
+- **Replay and `tune_model()` evaluate alternatives but do not apply
+  them.** `override_constants()` is temporary and restored after
+  evaluation. The output is a ranked list — applying a change to
+  `model.py` is a separate intentional step.
+- **Tracker measures realized production accuracy.** One prediction,
+  one score, single-window. This is distinct from replay/research,
+  which estimate capability across multiple scenarios.
+- **Evaluation defines the canonical scoring method.** `score_forecast()`
+  in `scoring.py` is the single-window scorer. `evaluate_multi_window()`
+  in `windows.py` aggregates across windows. Both are reused by replay
+  and research — no component reimplements scoring.
 
 ### feedcast/evaluation/methodology.md
 
-Update to serve as an agent-usable methodology guide (no separate README.md
-exists in this directory; methodology.md serves that role). Should cover:
+Update to serve as an agent-usable methodology guide (no separate
+README.md exists in this directory; methodology.md serves that role).
+Should cover:
 - What `score_forecast()` measures and why (episode matching, horizon
   weighting, geometric mean)
 - What event stream evaluation operates on by default (currently
@@ -777,22 +988,28 @@ exists in this directory; methodology.md serves that role). Should cover:
 
 Rewrite as an agent-usable guide for conducting research:
 - What replay does (rewind, run, score across windows)
-- What input policy replay uses for canonical evaluation and how that may
-  differ from a model's local event-building policy
+- What input policy replay uses for canonical evaluation and how that
+  may differ from a model's local event-building policy
 - How to use it for parameter tuning (score mode, tune mode)
 - Default configuration and what each parameter controls
 - How to interpret results (aggregate vs per-window, availability,
   what a good score looks like)
-- Relationship to evaluation (replay uses evaluation, not the other way
-  around)
+- Relationship to evaluation (replay uses evaluation, not the other
+  way around)
+- The research-tuning-production pipeline: research is advisory,
+  `tune_model()` evaluates but does not apply, constants live in
+  `model.py`, the decision to change is made by a human or agent
 
 ### README.md
 
-Update the project README to make the event-construction split explicit:
-- Which parts of the system use canonical evaluation inputs versus
-  model-local inputs
-- When bottle-only versus breastfeed-merged events are used today
-- Why those policies differ across layers and what assumptions they make
+Update the project README:
+- Make the event-construction split explicit: which parts of the system
+  use canonical evaluation inputs versus model-local inputs, when
+  bottle-only versus breastfeed-merged events are used, why those
+  policies differ across layers
+- Add `research.md` to the model directory convention table
+- Note the advisory nature of the research-tuning pipeline in the
+  "Working with Models" section
 
 ### feedcast/tracker.py documentation
 
@@ -801,45 +1018,50 @@ Add a docstring or comment block explicitly stating:
 - This is intentional — it measures realized production accuracy
 - Multi-window evaluation is for replay/research (estimated capability)
 
-### Model research documentation
+### Model research documentation verification
 
-Each model's research output and findings.md should note:
+Each model's `research.md` (created in Phase 4) should already cover:
 - Which metric drives parameter selection (canonical headline score)
 - Which input policy the model uses locally (bottle-only or
   breastfeed-merged) and why
 - What internal diagnostics are reported and why
 - Date of last canonical evaluation run
 
+Verify these are present and accurate after Phase 4 completes. Update
+`feedcast/research/index.md` if any model's research changed a shared
+conclusion.
+
 ## Implementation Notes
 
 ### Ordering
 
-Phases 1–3 are sequential: Phase 1 (shared infrastructure) before Phase 2
-(replay adoption) before Phase 3 (research scripts adopt canonical scoring).
-Phase 4 (document research scripts) can proceed independently once Phase 3
-is complete. Phase 5 (execute research) depends on Phase 3 and benefits from
-Phase 4 context. Phase 6 (documentation) can partially overlap with
-Phases 4 and 5.
+Phases 1–3 are complete. Phase 4 is next. Sub-phase 4.0 must complete
+before any model sub-phase. Sub-phases 4.1–4.4 are independent.
+Sub-phase 4.5 (consensus_blend) must run after 4.1–4.4 because its
+research script calls `run_all_models()` with current production
+constants. Sub-phase 4.6 must wait until all model sub-phases are done.
+Phase 5 can partially overlap with Phase 4 model sub-phases but should
+finalize after 4.6.
 
 ### What NOT to do
 
 - Do not modify `score_forecast()` in `scoring.py`. The single-window
   scorer is correct and unchanged.
 - Do not modify the tracker to use multi-window evaluation.
-- Do not delete internal diagnostic functions from research scripts (they
-  have diagnostic value).
-- Do not add parallelism for cross-candidate sweeps (module-level mutation
-  conflict).
-- Do not change model behavior (model.py files). Only research.py scripts
-  and infrastructure are modified. Exception: analog_trajectory gained an
-  `ALIGNMENT` constant (default preserves existing behavior) to enable
-  canonical validation of both alignment modes.
+- Do not delete internal diagnostic functions from research scripts
+  (they have diagnostic value).
+- Do not add parallelism for cross-candidate sweeps (module-level
+  mutation conflict).
+- Do not change model constants without canonical evidence. If
+  `tune_model()` or the research analysis suggests a change, evaluate
+  whether the improvement is material and defensible before updating
+  `model.py`. Add a `CHANGELOG.md` entry explaining the evidence.
 - Do not add dependencies beyond what is already in the project.
 
 ### Key invariant
 
-`score_model("some_model")` with default parameters should produce a result
-that is directly comparable to the canonical evaluation section in that
-model's `research.py`. Both use the same windows, same weights, same scorer.
-This is guaranteed when research scripts call `score_model()` directly for
-their canonical section.
+`score_model("some_model")` with default parameters should produce a
+result that is directly comparable to the canonical evaluation section
+in that model's `research.py`. Both use the same windows, same weights,
+same scorer. This is guaranteed when research scripts call
+`score_model()` directly for their canonical section.
