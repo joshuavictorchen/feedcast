@@ -16,6 +16,7 @@ and surfaces context that the plan text alone does not capture.
 | Phase 2 Implementation | 2026-03-28 | Replay adopts multi-window evaluation. Codex review caught best-can-regress bug, missing top-level tune `replay_windows`, and baseline leaking into candidates list — all resolved. 31 tests pass. | `.transcripts/9c218a97-a6db-4ace-a7d3-0d67af4fb47a.jsonl` |
 | Phase 3 Implementation | 2026-03-28 | All five research scripts gain canonical multi-window evaluation. latent_hunger/survival_hazard gain canonical tuning. analog_trajectory gains two-stage validation and ALIGNMENT constant. consensus_blend migrates to shared infrastructure (Codex caught weighting divergence and availability bug). Plan restructured to Phases 4–6. 79 tests pass. | `.transcripts/bcc43b44-38db-44e7-8b68-513c05b7aac8.jsonl` |
 | Phase 4–5 Planning | 2026-03-29 | Merged old Phases 4+5 into per-model end-to-end sub-phases. Defined research.md template (canonical/diagnostic split, last-run staleness box), document relationship contract, advisory tuning pipeline. Codex review resolved: commit instruction conflict, readiness marker, consensus_blend dual-purpose framing. Old Phase 6 renamed to Phase 5 with system contract section. | `.transcripts/14689751-83e9-4d29-be6f-9c8b90bc90b7.jsonl` |
+| Phase 4.0–4.1 Implementation | 2026-03-29 | slot_drift research refresh and constant tuning. 128-candidate sweep updated DRIFT 3.0→1.0, LOOKBACK 7→5, THRESHOLD 2.0→1.5 (+9.2 headline). Codex caught overclaim about tuning surface and stale disposition guidance — resolved. Plan threshold normalized to "any improvement." | `.transcripts/e61917e0-0184-48b8-b7f9-29807ea6140a.jsonl` |
 
 ## Motivation
 
@@ -728,12 +729,13 @@ Each model sub-phase (4.1–4.5) follows the same steps:
    in that sub-phase.
 4. **Write** `research.md` following the document template above.
 5. **Decide** on constants — end with an explicit disposition:
-   - **Keep:** Current production constants are optimal or near-optimal.
-     Document the evidence supporting them in Conclusions.
+   - **Keep:** Current production constants are optimal. Document the
+     evidence supporting them in Conclusions.
    - **Change:** Update `model.py` and add a `CHANGELOG.md` entry with
-     the canonical evidence that motivated the change.
-   - **Unresolved:** Results are ambiguous or the improvement is
-     marginal. Document the uncertainty in Open questions.
+     the canonical evidence that motivated the change. Any improvement
+     in canonical headline score warrants a constant update.
+   - **Unresolved:** Results are ambiguous (e.g., availability drops
+     offset a headline gain). Document the uncertainty in Open questions.
 
 ### Ordering constraints
 
@@ -767,6 +769,14 @@ Per-model cost breakdown (with current export, ~20+ canonical windows):
 **Deliverable:** Confirmed test baseline. No script execution or file
 creation in this sub-phase.
 
+### Sub-phase 4.0 implementation notes (2026-03-29)
+
+- Latest export: `export_narababy_silas_20260327.csv`. 79 tests pass.
+- Disposition guidance updated: any improvement in canonical headline
+  warrants a constant update (replaces "material and defensible"
+  threshold).
+- Workflow: Claude performs, Codex reviews, sub-phase by sub-phase.
+
 ### Sub-phase 4.1: slot_drift
 
 **Questions to answer:**
@@ -782,20 +792,41 @@ daily feeding pattern is stable enough for a fixed-slot template) and
 what it doesn't (whether the template parameters are optimal — there
 is no constant-only sweep to test this).
 
-**Disposition guidance:** slot_drift has no constant-only parameter
-sweep. Constants should not change unless the alignment analysis
-reveals a material issue with the current template.
+**Disposition guidance:** No canonical tuning sweep was defined for
+slot_drift. Constants are technically overridable but were assessed
+via alignment analysis. Change constants if alignment diagnostics or
+a future sweep show any improvement.
 
 **Deliverable:** Fresh `research_results.txt`,
 `feedcast/models/slot_drift/research.md`, and any `model.py` /
 `CHANGELOG.md` updates if warranted.
+
+### Sub-phase 4.1 implementation notes (2026-03-29)
+
+- Canonical sweep: 128 candidates (`DRIFT_WEIGHT_HALF_LIFE_DAYS` ×
+  `MATCH_COST_THRESHOLD_HOURS` × `LOOKBACK_DAYS`). All 128 had 24/24
+  availability.
+- Disposition: **Change.** Updated three constants:
+  `DRIFT_WEIGHT_HALF_LIFE_DAYS` 3.0→1.0, `LOOKBACK_DAYS` 7→5,
+  `MATCH_COST_THRESHOLD_HOURS` 2.0→1.5. Headline improved 59.2→68.4
+  (+9.2), primarily from timing 40.4→51.9 (+11.5). Count also
+  improved 87.6→90.8 (+3.2). No availability loss.
+- Updated constants confirmed as sweep winner: re-running with new
+  production values shows baseline = best candidate.
+- Tuning section added to `research.py` so future runs include the
+  128-candidate sweep. Design.md and methodology.md updated with new
+  constant values.
+- `research.md` written with canonical/diagnostic split, last-run
+  staleness box, and document-relationship header. No phase references
+  in persistent docs.
+- Focused verification: `.venv/bin/python -m pytest -q` → 79 passed.
 
 ### Sub-phase 4.2: latent_hunger
 
 **Questions to answer:**
 - What is the canonical headline score with production constants?
 - Does `tune_model()` select the current `SATIETY_RATE` or a different
-  value? If different, is the improvement material?
+  value? If different, is there any headline improvement?
 - Do the internal walk-forward diagnostics (gap1/gap3/fcount MAE)
   agree with canonical ranking direction?
 - Is availability 100%?
@@ -810,8 +841,7 @@ additive vs multiplicative satiety — this is the evidence for the
 multiplicative design choice in `design.md`").
 
 **Disposition guidance:** If `tune_model()` selects a different
-`SATIETY_RATE` and the improvement is material and defensible, update
-`model.py`.
+`SATIETY_RATE` with any headline improvement, update `model.py`.
 
 **Deliverable:** Fresh `research_results.txt`,
 `feedcast/models/latent_hunger/research.md`, and any `model.py` /
@@ -822,8 +852,8 @@ multiplicative design choice in `design.md`").
 **Questions to answer:**
 - What is the canonical headline score with production constants?
 - Does `tune_model()` select the current `OVERNIGHT_SHAPE` and
-  `DAYTIME_SHAPE` or different values? If different, is the improvement
-  material?
+  `DAYTIME_SHAPE` or different values? If different, is there any
+  headline improvement?
 - Do the internal Weibull fitting diagnostics agree with canonical
   ranking direction?
 - Is availability 100%?
@@ -836,8 +866,9 @@ which sections are historical exploration (e.g., discrete hazard
 comparison was an early design alternative) vs current validation (e.g.,
 day-part Weibull fits confirm the overnight/daytime split).
 
-**Disposition guidance:** Same criteria as latent_hunger. Update both
-shape constants together if the evidence supports it.
+**Disposition guidance:** Same criteria as latent_hunger — any headline
+improvement warrants an update. Update both shape constants together
+if the evidence supports it.
 
 **Deliverable:** Fresh `research_results.txt`,
 `feedcast/models/survival_hazard/research.md`, and any `model.py` /
@@ -848,12 +879,11 @@ shape constants together if the evidence supports it.
 **Questions to answer:**
 - What is the canonical headline score with production constants?
 - Does the canonical top-10 validation agree with the internal
-  `full_traj_mae` ranking, or does canonical scoring materially
-  reshuffle the best configurations?
+  `full_traj_mae` ranking, or does canonical scoring reshuffle the
+  best configurations?
 - Does canonical scoring produce evidence that
   `ALIGNMENT="time_offset"` should replace the current
-  `ALIGNMENT="gap"`? Only change the production constant if the
-  canonical result is clearly better and the improvement is defensible.
+  `ALIGNMENT="gap"`? Change if canonical headline improves.
 - Is availability 100%?
 
 **Per-model context:** Large internal grid sweep (the most expensive
@@ -865,10 +895,9 @@ exception for sweep cost" in Design Decisions) and when to rerun the
 full internal sweep vs just the canonical validation.
 
 **Disposition guidance:** The two-stage validation may reveal that a
-non-production configuration scores better canonically. If the
-improvement is material and the internal metric agrees directionally,
-update constants. For `ALIGNMENT`, only change if canonical evidence
-is unambiguous.
+non-production configuration scores better canonically. Any headline
+improvement warrants an update. For `ALIGNMENT`, only change if
+canonical evidence is unambiguous.
 
 **Deliverable:** Fresh `research_results.txt`,
 `feedcast/models/analog_trajectory/research.md`, and any `model.py` /
@@ -883,8 +912,8 @@ from earlier models are reflected in the `run_all_models()` calls.
 - What is the canonical headline score with production constants?
 - Do the selector-sweep winners agree with the current production
   selector constants under the canonical objective?
-- Does the sweep surface any configuration with materially higher
-  availability (more scored windows)?
+- Does the sweep surface any configuration with higher availability
+  (more scored windows)?
 - Is availability 100%?
 
 **Per-model context:** Inter-episode gap analysis, model agreement
@@ -898,10 +927,10 @@ design validation first — if the sweep also reveals a clearly
 superior alternative, that is a finding worth acting on, not just a
 confirmation exercise.
 
-**Disposition guidance:** If the selector sweep identifies a clearly
-better configuration with equal or better availability, update
-constants. If the production constants are confirmed or the
-differences are marginal, document the validation in Conclusions.
+**Disposition guidance:** If the selector sweep identifies a
+configuration with any headline improvement and equal or better
+availability, update constants. If the production constants are
+confirmed, document the validation in Conclusions.
 
 **Deliverable:** Fresh `research_results.txt`,
 `feedcast/models/consensus_blend/research.md`, and any `model.py` /
@@ -1052,10 +1081,9 @@ finalize after 4.6.
   (they have diagnostic value).
 - Do not add parallelism for cross-candidate sweeps (module-level
   mutation conflict).
-- Do not change model constants without canonical evidence. If
-  `tune_model()` or the research analysis suggests a change, evaluate
-  whether the improvement is material and defensible before updating
-  `model.py`. Add a `CHANGELOG.md` entry explaining the evidence.
+- Do not change model constants without canonical evidence. Any
+  improvement in canonical headline score warrants a constant update.
+  Add a `CHANGELOG.md` entry explaining the evidence.
 - Do not add dependencies beyond what is already in the project.
 
 ### Key invariant

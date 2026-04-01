@@ -30,7 +30,7 @@ from feedcast.data import (
     hour_of_day,
     load_export_snapshot,
 )
-from feedcast.replay import score_model
+from feedcast.replay import score_model, tune_model
 
 # Volume threshold for filtering snack-sized feeds in research analysis.
 SNACK_THRESHOLD_OZ = 1.5
@@ -293,6 +293,57 @@ def main() -> None:
         else:
             log(f"  {w['cutoff']:<22} {w['weight']:>7.4f} {'--':>7} {'--':>7} "
                 f"{'--':>7}  {w['status']}")
+    log()
+
+    # ================================================================
+    # CANONICAL MULTI-WINDOW TUNING
+    # ================================================================
+    log(f"\n\n{'=' * 60}")
+    log("CANONICAL MULTI-WINDOW TUNING")
+    log(f"{'=' * 60}")
+    log()
+    log("Parameter sweep via tune_model (same infrastructure as the")
+    log("replay CLI). Sweeps DRIFT_WEIGHT_HALF_LIFE_DAYS,")
+    log("MATCH_COST_THRESHOLD_HOURS, and LOOKBACK_DAYS jointly.")
+    log()
+
+    tune_result = tune_model(
+        "slot_drift",
+        candidates_by_name={
+            "DRIFT_WEIGHT_HALF_LIFE_DAYS": [1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0],
+            "MATCH_COST_THRESHOLD_HOURS": [1.5, 2.0, 2.5, 3.0],
+            "LOOKBACK_DAYS": [5, 7, 10, 14],
+        },
+        export_path=snapshot.export_path,
+    )
+
+    bl = tune_result["baseline"]
+    bl_rw = bl["replay_windows"]
+    bl_agg = bl_rw["aggregate"]
+    log(f"Baseline: {bl['params']}")
+    log(f"  headline={bl_agg['headline']:.1f}  count={bl_agg['count']:.1f}  "
+        f"timing={bl_agg['timing']:.1f}  "
+        f"scored={bl_rw['scored_window_count']}/{bl_rw['window_count']}")
+
+    best = tune_result["best"]
+    best_rw = best["replay_windows"]
+    best_agg = best_rw["aggregate"]
+    log(f"\nBest: {best['params']}")
+    log(f"  headline={best_agg['headline']:.1f}  count={best_agg['count']:.1f}  "
+        f"timing={best_agg['timing']:.1f}  "
+        f"scored={best_rw['scored_window_count']}/{best_rw['window_count']}")
+    log(f"  headline_delta={best['headline_delta']:+.1f}  "
+        f"availability_delta={best['availability_delta']:+d}")
+
+    log(f"\nTop 10 of {tune_result['search']['total_candidates']} candidates:")
+    log(f"  {'Rank':<5} {'Headline':>9} {'Count':>7} {'Timing':>7} "
+        f"{'Scored':>7}  Params")
+    for i, c in enumerate(tune_result["candidates"][:10]):
+        cw = c["replay_windows"]
+        ca = cw["aggregate"]
+        log(f"  {i + 1:<5} {ca['headline']:>9.1f} {ca['count']:>7.1f} "
+            f"{ca['timing']:>7.1f} "
+            f"{cw['scored_window_count']:>3}/{cw['window_count']:<3}  {c['params']}")
     log()
 
     # Save results alongside the script.

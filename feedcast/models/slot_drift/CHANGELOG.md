@@ -2,6 +2,41 @@
 
 Tracks behavior-level changes to the Slot Drift model. Add newest entries first.
 
+## Tighter constants from canonical sweep | 2026-03-29
+
+### Problem
+
+Timing score (40.4) was the primary bottleneck with the original
+constants. The 3-day drift half-life and 7-day lookback included
+stale history that diluted recent pattern signal.
+
+### Research
+
+128-candidate canonical sweep via `tune_model()` over
+`DRIFT_WEIGHT_HALF_LIFE_DAYS` (8 values), `MATCH_COST_THRESHOLD_HOURS`
+(4 values), and `LOOKBACK_DAYS` (4 values). Multi-window evaluation
+(24 windows, 96h lookback, 36h half-life) on 20260327 export.
+
+| Constant | Before | After |
+|---|---|---|
+| `DRIFT_WEIGHT_HALF_LIFE_DAYS` | 3.0 | 1.0 |
+| `LOOKBACK_DAYS` | 7 | 5 |
+| `MATCH_COST_THRESHOLD_HOURS` | 2.0 | 1.5 |
+
+| Metric | Before | After | Delta |
+|---|---|---|---|
+| Headline | 59.2 | 68.4 | +9.2 |
+| Count | 87.6 | 90.8 | +3.2 |
+| Timing | 40.4 | 51.9 | +11.5 |
+| Availability | 24/24 | 24/24 | 0 |
+
+### Solution
+
+All three constants push the model toward more recent, more focused
+data: shorter drift half-life responds faster to recent timing shifts,
+shorter lookback excludes stale days, tighter match threshold rejects
+weak slot assignments. Timing improved +11.5 with no availability loss.
+
 ## Episode-level template building | 2026-03-26
 
 ### Problem

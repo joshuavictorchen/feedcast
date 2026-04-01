@@ -14,7 +14,7 @@ better headline replay score (+0.28) due to improved timing accuracy.
 ## Slot count
 
 The canonical slot count is the median daily episode count across
-recent complete days in the lookback window (default 7 days). It is
+recent complete days in the lookback window (default 5 days). It is
 not fixed: it is recomputed from recent history on each run, so it
 adapts as the baby's pattern evolves.
 
@@ -28,7 +28,7 @@ tracking per slot position.
 
 The Hungarian algorithm (scipy.optimize.linear_sum_assignment) finds
 the globally optimal assignment of episodes to slots, minimizing total
-time-of-day distance. The 2-hour cost threshold rejects assignments
+time-of-day distance. The 1.5-hour cost threshold rejects assignments
 where an episode is too far from any slot. Episodes that exceed the
 threshold are left unmatched.
 
@@ -40,7 +40,7 @@ wrap correctly.
 
 ## Recency-weighted linear drift
 
-Per-slot drift is fit via weighted linear regression with a 3-day
+Per-slot drift is fit via weighted linear regression with a 1-day
 half-life. Recent days dominate the trend estimate. Linear drift is
 sufficient for now; curvature (second derivative) would require more
 data to estimate reliably.
