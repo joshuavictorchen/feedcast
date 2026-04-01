@@ -200,12 +200,9 @@ gaps is smaller than at the internal diagnostic optimum.
 
 ### Cross-cutting
 
-- **Timing as shared bottleneck:** Timing (47.9) is substantially
-  weaker than count (94.0). If other models show a similar pattern, the
-  timing gap may reflect dataset variability rather than model-specific
-  issues. See `feedcast/research/index.md` for cross-model patterns
-  once all canonical evaluations are complete.
-- **Internal vs. canonical metric divergence:** The disagreement
-  between internal gap-MAE ranking and canonical headline ranking may
-  affect other models with volume-sensitive mechanisms. Worth tracking
-  whether survival_hazard or analog_trajectory show similar patterns.
+- **Timing as shared bottleneck:** Timing (47.9) is substantially weaker
+  than count (94.0). This pattern persists across all five models — see
+  `feedcast/research/index.md`.
+- **Internal vs. canonical metric divergence:** The gap-MAE (sr≈0.6) vs
+  canonical (sr=0.05) disagreement is part of a broader cross-model
+  pattern — see `feedcast/research/index.md`.

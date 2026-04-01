@@ -1221,6 +1221,39 @@ After all five model sub-phases are complete:
    user. Do not commit — the user will decide when to commit and may
    want to review changes first.
 
+### Sub-phase 4.6 implementation notes (2026-04-01)
+
+- **Cross-model comparison:** All five models evaluated on the same
+  export (`20260327`, fingerprint `118402...`), all with 24/24
+  availability. Headlines: Consensus Blend 73.0, Survival Hazard 72.7,
+  Analog Trajectory 69.9, Slot Drift 68.4, Latent Hunger 66.9. Count
+  scores are uniformly strong (90.8–95.4); timing scores are uniformly
+  weak (47.9–56.6). The consensus blend adds only ~0.3 headline over
+  the best individual model. No scoring anomalies or availability
+  differences.
+- **Consistency check passed.** All five `research.md` files follow the
+  agreed template. All reference the same export and dataset fingerprint.
+  Analog Trajectory was missing `Model-local` / `Cross-cutting`
+  sub-headings under Open Questions — fixed.
+- **Cross-cutting question dedup:** Two shared patterns promoted to
+  `feedcast/research/index.md`:
+  (1) Timing as shared bottleneck — count >> timing across all five
+  models, with enough context to start a dedicated research article.
+  (2) Internal vs canonical metric divergence — at least three models
+  show local diagnostics and canonical replay preferring different
+  constants. Added as open questions in index.md with model-specific
+  evidence cited. All five model `research.md` cross-cutting sections
+  replaced with concise pointers to index.md. Consensus Blend gained a
+  new timing pointer that had been implicit in its diagnostic findings
+  but absent from its open questions.
+- **Shared research update:** Added episode-level history convergence to
+  `Cross-Cutting Considerations` in index.md. All four scripted models
+  independently produce better canonical scores with episode-collapsed
+  history — noted as a cross-cutting observation, not a research article
+  (the evidence is established).
+- **Disposition summary:** All five models changed constants. Full
+  details in the implementation notes for sub-phases 4.1–4.5.
+
 ## Phase 5: Documentation
 
 ### System contract

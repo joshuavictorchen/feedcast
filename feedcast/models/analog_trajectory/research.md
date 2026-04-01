@@ -189,9 +189,8 @@ the script only as diagnostic evidence.
 
 ## Open questions
 
-- **Timing is still the weaker metric.** Count is `93.8`; timing is
-  `52.8`. The model is much better than before, but timing drift remains
-  the main quality constraint.
+### Model-local
+
 - **Top-up windows are still fragile.** Some of the weakest per-window
   scores still sit around short daytime follow-ups. The local neighbor
   diagnostics show the same pattern.
@@ -199,3 +198,9 @@ the script only as diagnostic evidence.
   within a few tenths of headline score. If future exports shift, the
   exact weight/half-life combination may move while the higher-level
   design stays the same.
+
+### Cross-cutting
+
+- **Timing as shared bottleneck:** Count is `93.8`; timing is `52.8`.
+  Timing drift remains the main quality constraint. This pattern persists
+  across all five models — see `feedcast/research/index.md`.

@@ -159,8 +159,6 @@ structural limits of the fixed-slot approach.
 
 ### Cross-cutting
 
-- **Timing as shared bottleneck:** If other models also show stronger
-  count than timing scores, the timing gap may reflect dataset
-  variability rather than model-specific issues. See
-  `feedcast/research/index.md` for cross-model patterns once all
-  canonical evaluations are complete.
+- **Timing as shared bottleneck:** Count (90.8) substantially outperforms
+  timing (51.9). This pattern persists across all five models — see
+  `feedcast/research/index.md`.

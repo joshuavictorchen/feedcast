@@ -218,8 +218,10 @@ but also to the current behavior of the base scripted models it blends.
 
 ### Cross-cutting
 
+- **Timing as shared bottleneck:** Count (95.4) is strong while timing
+  (56.2) is the weaker component. This pattern persists across all five
+  models — see `feedcast/research/index.md`.
 - **Upstream-model sensitivity:** Consensus constants can move when the
-  four base scripted models move. It may be worth asking whether
-  selector retunes generally follow upstream timing sharpness rather
-  than changes in the blend itself. See `feedcast/research/index.md`
-  if this starts to look like a recurring cross-model pattern.
+  four base scripted models change. Whether selector retunes track
+  upstream timing sharpness is an open question — see
+  `feedcast/research/index.md` for cross-model patterns.

@@ -255,13 +255,9 @@ improves the model without resolving that structural gap.
 
 ### Cross-cutting
 
-- **Internal-fit vs canonical-objective divergence:** This model is now
-  a clear example where a local statistical fit points one way and the
-  project metric points another. If analog_trajectory or
-  consensus_blend show similar tension, the repo may need a stronger
-  rule about which diagnostics are allowed to drive production changes.
-- **Timing as the shared bottleneck:** Even after the retune, timing
-  lags count materially. If this pattern persists across other models,
-  it may reflect dataset or target noise more than model-specific
-  defects. See `feedcast/research/index.md` once more model research is
-  refreshed.
+- **Internal vs. canonical metric divergence:** Episode-level MLE prefers
+  shapes 7.2/3.4 while canonical replay selects 4.75/1.75. This is part
+  of a broader cross-model pattern — see `feedcast/research/index.md`.
+- **Timing as shared bottleneck:** Timing (56.6) lags count (94.3). This
+  pattern persists across all five models — see
+  `feedcast/research/index.md`.
