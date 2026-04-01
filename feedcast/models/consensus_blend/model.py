@@ -27,24 +27,20 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 
 # --- Production selector constants ---
 
-# Candidate slots are built around every model prediction. A 2-hour anchor
-# radius keeps wide-but-real agreement regions in play so the exact selector
-# can choose among them.
+# Candidate slots are built around every model prediction. Keep the anchor
+# radius wide enough to capture legitimate multi-model agreement regions;
+# tighter filtering happens via the spread cap and exact selector.
 ANCHOR_RADIUS_MINUTES = 120
 
 # Candidate slots wider than this are too diffuse to treat as one feed.
-MAX_CANDIDATE_SPREAD_MINUTES = 180
+MAX_CANDIDATE_SPREAD_MINUTES = 150
 
 # Selected consensus slots closer than this are competing explanations for
-# the same real feed. Set to 105 minutes based on parameter sweep evidence:
-# conflict=105 outperforms conflict=75 and conflict=90 at every spread
-# penalty level when the research sweep includes the latest 24h window.
-# The selector does not decide what counts as a real episode — that is
-# the cluster rule's job (73-minute base). The conflict window decides
-# which competing candidate slots to keep when multiple slots target the
-# same region. A wider window forces the selector to pick the
-# better-supported candidate, which produces more accurate predictions.
-SELECTION_CONFLICT_WINDOW_MINUTES = 105
+# the same real feed. Canonical tuning currently favors a wider conflict
+# window than the raw gap context alone would suggest: stronger duplicate
+# suppression improves timing more than it harms close-episode recall on
+# the current ensemble.
+SELECTION_CONFLICT_WINDOW_MINUTES = 135
 
 # Support is the primary signal. Spread breaks ties in favor of tighter slots.
 SPREAD_PENALTY_PER_HOUR = 0.25

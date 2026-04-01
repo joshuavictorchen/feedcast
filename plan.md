@@ -20,6 +20,7 @@ and surfaces context that the plan text alone does not capture.
 | Phase 4.2 Implementation | 2026-03-31 | latent_hunger research refresh and constant tuning. 12-candidate SATIETY_RATE sweep updated 0.257→0.05 (+0.550 headline). Codex caught stale artifacts (research_results.txt generated before constant change) and overstated volume insensitivity (post-feed hunger framing vs correct satiety effect 3.7x ratio). Third review caught stale "adopted" label on diagnostic section. All resolved. 79 tests pass. | `.transcripts/b7826d26-7e2a-457c-b4d1-15a691aba5ce.jsonl` |
 | Phase 4.3 Implementation | 2026-03-31 | survival_hazard research refresh and constant tuning. Initial 40-candidate canonical sweep hit the grid boundary, so the sweep was widened to a 154-candidate mixed-resolution grid; production shapes updated 6.54/3.04→4.75/1.75 (+6.981 headline, 24/24 availability). Follow-up discussion clarified descriptive episode-level MLE vs canonical replay tuning, added windowed-MLE and component-ablation follow-ups, and renamed the final-summary label to "Episode-level MLE (descriptive fit)". 79 tests pass. | `.transcripts/rollout-2026-03-31T22-25-05-019d46db-d72c-7c81-9bff-1af02fc6638b.jsonl` |
 | Phase 4.3.5–4.4 Implementation | 2026-04-01 | Implemented replay candidate parallelism via process isolation, passing the analog benchmark gate, then completed analog_trajectory retuning under a full canonical sweep. Found and fixed the LOOKBACK_HOURS default-argument override bug, added HISTORY_MODE to the canonical search space, updated analog production constants to the corrected winner (episode history, recent_only, k=5, 72h half-life), completed Claude review convergence, and did a repo-wide docs cleanup to remove phase-framed or quickly stale numbers from design/methodology files. 84 tests pass. | `.transcripts/rollout-2026-04-01T00-04-38-019d4736-f7f2-77b3-b0c8-69db397bf39d.jsonl` |
+| Phase 4.5 Implementation | 2026-04-01 | consensus_blend selector sweep and retune. Initial 48-config sweep hit grid boundaries on all three geometric parameters; widened to 384 configs (4 radii × 4 spread caps × 6 conflict windows × 4 penalties). Winner moved to radius=120, spread=150, conflict=135 — all interior. Production updated 72.020→72.996 headline, 24/24 availability. Claude review caught boundary hit, artifact truncation, CHANGELOG reversal narrative, and sharp conflict peak at 135 (±15 min costs 0.765–1.406). Codex fixed all: full table at 3-decimal precision, supersession note, quantified peak in research.md, boundary-region test added. 85 tests pass. | `.transcripts/7dae7abe-764c-448b-b6aa-f31be9c5afec.jsonl` |
 
 ## Motivation
 
@@ -1152,6 +1153,40 @@ confirmed, document the validation in Conclusions.
 **Deliverable:** Fresh `research_results.txt`,
 `feedcast/models/consensus_blend/research.md`, and any `model.py` /
 `CHANGELOG.md` updates if warranted.
+
+### Sub-phase 4.5 implementation notes (2026-04-01)
+
+- Canonical evaluation with the pre-update production selector
+  (`radius=120`, `spread=180`, `conflict=105`, `penalty=0.25`) scored
+  headline=`72.020`, count=`95.176`, timing=`54.994`, availability
+  `24/24`.
+- The canonical selector sweep evaluated 48 configurations
+  (`2 radii × 2 spread caps × 3 conflict windows × 4 penalties`) on
+  the same 24 replay windows. That initial pass still hit geometry and
+  conflict boundaries, so the authoritative selector sweep was widened
+  to 384 configurations (`4 radii × 4 spread caps × 6 conflict windows × 4 penalties`).
+  Every configuration had `24/24` availability, so the decision reduced
+  to headline score.
+- Disposition: **Change.** The best canonical configuration was
+  `radius=120`, `spread=150`, `conflict=135`, with headline=`72.996`,
+  count=`95.434`, timing=`56.176`, availability `24/24`. This is a
+  modest but real improvement (`+0.976` headline) driven mostly by
+  tighter timing (`+1.182`) plus a smaller count gain (`+0.258`).
+- `SPREAD_PENALTY_PER_HOUR` was flat across the tested values at the
+  top of the surface, so production kept `0.25` rather than changing a
+  selector weight without evidence of benefit.
+- The widened grid resolves the earlier radius/spread boundary problem:
+  `radius=120` and `spread=150` are now interior winners. Conflict
+  needed widening beyond the original 105-minute cap; the final grid
+  extends to 150 minutes because the recency-weighted lower quartile of
+  real episode gaps is about 147 minutes on the current export.
+- Updated `model.py`, `CHANGELOG.md`, `design.md`, and created
+  `feedcast/models/consensus_blend/research.md`. Re-ran the research
+  script after the constant change so `research_results.txt` ends in the
+  final production state.
+- Updated `tests/test_consensus_blend.py` to assert that two
+  majority-supported episodes 136 minutes apart both survive, matching
+  the shipped 135-minute conflict window.
 
 ### Sub-phase 4.6: Cross-model synthesis and cleanup
 

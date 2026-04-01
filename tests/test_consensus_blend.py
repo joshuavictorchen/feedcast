@@ -385,18 +385,18 @@ class ConsensusBlendTests(unittest.TestCase):
         ):
             self.assertEqual(cluster_point.time, clean_point.time)
 
-    def test_conflict_window_admits_106_minute_episode_pair(self) -> None:
-        """Two majority-supported feeds 106 minutes apart should both survive.
+    def test_conflict_window_admits_136_minute_episode_pair(self) -> None:
+        """Two majority-supported feeds 136 minutes apart should both survive.
 
-        The 105-minute conflict window admits pairs at 105+ minutes. Pairs
-        closer than 105 minutes are treated as competing candidates for the
+        The 135-minute conflict window admits pairs at 135+ minutes. Pairs
+        closer than 135 minutes are treated as competing candidates for the
         same feed, and only the better-supported one survives.
         """
         cutoff = datetime(2026, 3, 24, 12, 0, 0)
         history = [_history_event(cutoff)]
-        # All four models agree on two feeds 106 minutes apart.
+        # All four models agree on two feeds 136 minutes apart.
         early_offset = 3.0
-        late_offset = early_offset + 106 / 60  # 106 minutes later
+        late_offset = early_offset + 136 / 60  # 136 minutes later
         forecast = run_consensus_blend(
             base_forecasts=[
                 _forecast("model_a", [early_offset, late_offset]),
@@ -411,6 +411,31 @@ class ConsensusBlendTests(unittest.TestCase):
 
         self.assertTrue(forecast.available)
         self.assertEqual(len(forecast.points), 2)
+
+    def test_conflict_window_rejects_134_minute_episode_pair(self) -> None:
+        """Two majority-supported feeds 134 minutes apart should collapse.
+
+        Use exact agreement so the selector cannot escape the boundary by
+        choosing a slightly shifted 3-of-4 candidate.
+        """
+        cutoff = datetime(2026, 3, 24, 12, 0, 0)
+        history = [_history_event(cutoff)]
+        early_offset = 3.0
+        late_offset = early_offset + 134 / 60  # 134 minutes later
+        forecast = run_consensus_blend(
+            base_forecasts=[
+                _forecast("model_a", [early_offset, late_offset]),
+                _forecast("model_b", [early_offset, late_offset]),
+                _forecast("model_c", [early_offset, late_offset]),
+                _forecast("model_d", [early_offset, late_offset]),
+            ],
+            history=history,
+            cutoff=cutoff,
+            horizon_hours=24,
+        )
+
+        self.assertTrue(forecast.available)
+        self.assertEqual(len(forecast.points), 1)
 
 
 if __name__ == "__main__":

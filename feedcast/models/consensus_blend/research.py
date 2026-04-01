@@ -63,6 +63,14 @@ CANONICAL_HALF_LIFE_HOURS = 36.0
 # diagnostic weighting (unrelated to canonical scoring).
 GAP_ANALYSIS_HALF_LIFE_HOURS = 4.0 * 24.0  # 4 days
 
+SWEEP_RADIUS_MINUTES = [60, 90, 120, 150]
+SWEEP_MAX_SPREAD_MINUTES = [90, 120, 150, 180]
+# Stop at 150 minutes because the recency-weighted lower quartile of real
+# episode gaps is ~147 minutes on the current export; much wider conflict
+# windows would suppress a large share of legitimate close episodes.
+SWEEP_CONFLICT_MINUTES = [75, 90, 105, 120, 135, 150]
+SWEEP_SPREAD_PENALTIES = [0.25, 1.0, 2.0, 5.0]
+
 
 def main() -> None:
     """Run the consensus blend research report."""
@@ -339,8 +347,8 @@ def _sweep_selector_parameters(
     # Pre-generate candidates per (radius, spread) per cutoff to avoid
     # redundant candidate generation across conflict/penalty variations.
     candidate_cache: dict[tuple[int, int], dict[datetime, tuple | None]] = {}
-    for radius_minutes in [90, 120]:
-        for max_spread_minutes in [150, 180]:
+    for radius_minutes in SWEEP_RADIUS_MINUTES:
+        for max_spread_minutes in SWEEP_MAX_SPREAD_MINUTES:
             per_cutoff: dict[datetime, tuple | None] = {}
             for cutoff in cutoffs:
                 if cutoff_cache[cutoff] is None:
@@ -358,8 +366,8 @@ def _sweep_selector_parameters(
 
     rows: list[dict[str, float]] = []
     for (radius_minutes, max_spread_minutes), per_cutoff in candidate_cache.items():
-        for conflict_minutes in [75, 90, 105]:
-            for spread_penalty in [0.25, 1.0, 2.0, 5.0]:
+        for conflict_minutes in SWEEP_CONFLICT_MINUTES:
+            for spread_penalty in SWEEP_SPREAD_PENALTIES:
 
                 # Factory function to bind loop variables into the closure.
                 def _make_forecast_fn(pc, conf, pen):
@@ -440,7 +448,7 @@ def _sweep_selector_parameters(
         f"{'Radius':>6} {'Spread':>6} {'Conflict':>8} {'Penalty':>7}  "
         f"{'Score':>8} {'Count':>8} {'Timing':>8} {'Win':>7}"
     )
-    for row in rows[:15]:
+    for row in rows:
         marker = ""
         if (
             int(row["radius_minutes"]) == ANCHOR_RADIUS_MINUTES
@@ -452,8 +460,8 @@ def _sweep_selector_parameters(
         log(
             f"{int(row['radius_minutes']):>6} {int(row['max_spread_minutes']):>6} "
             f"{int(row['conflict_minutes']):>8} {row['spread_penalty']:>7.2f}  "
-            f"{row['score']:>8.1f} {row['count_score']:>8.1f} "
-            f"{row['timing_score']:>8.1f} "
+            f"{row['score']:>8.3f} {row['count_score']:>8.3f} "
+            f"{row['timing_score']:>8.3f} "
             f"{int(row['scored_windows']):>3}/{int(row['window_count'])}"
             f"{marker}"
         )

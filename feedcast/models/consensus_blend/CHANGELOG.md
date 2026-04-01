@@ -2,6 +2,50 @@
 
 Tracks behavior-level changes to the Consensus Blend model. Add newest entries first.
 
+## Broaden selector sweep, tighten spread cap, and widen conflict window | 2026-04-01
+
+### Problem
+
+The shipped selector constants (`spread=180`, `conflict=105`) were
+chosen under an older five-cutoff research pass. After the base scripted
+models were retuned on the March 27 export, that selector no longer
+matched the best canonical multi-window configuration. The old setting
+was still solid, but it left a small amount of timing accuracy on the
+table.
+
+### Research
+
+Ran the refreshed consensus research script on
+`export_narababy_silas_20260327.csv` using the canonical 24-window
+multi-window objective (96h lookback, 36h half-life, episode-boundary
+cutoffs). An initial nearby sweep still hit the geometry/conflict
+boundaries, so the authoritative selector sweep was widened to:
+
+- `ANCHOR_RADIUS_MINUTES`: `60`, `90`, `120`, `150`
+- `MAX_CANDIDATE_SPREAD_MINUTES`: `90`, `120`, `150`, `180`
+- `SELECTION_CONFLICT_WINDOW_MINUTES`: `75`, `90`, `105`, `120`, `135`, `150`
+- `SPREAD_PENALTY_PER_HOUR`: `0.25`, `1.0`, `2.0`, `5.0`
+
+The conflict grid stops at `150` because the recency-weighted lower
+quartile of real episode gaps is about `147` minutes on this export;
+going much wider would suppress a large share of legitimate close
+episodes by construction.
+
+All 384 configurations scored all 24 windows. The shipped constants
+scored headline `72.020`, count `95.176`, timing `54.994`. The best
+configuration scored headline `72.996`, count `95.434`, timing
+`56.176` at `radius=120`, `spread=150`, `conflict=135`. The gain came
+mainly from tighter timing (+1.182) plus a smaller count gain (+0.258).
+`SPREAD_PENALTY_PER_HOUR` was flat across the tested values at the top
+of the surface, so the utility weight was not a meaningful lever on this
+export.
+
+### Solution
+
+Lowered `MAX_CANDIDATE_SPREAD_MINUTES` from `180` to `150` and
+raised `SELECTION_CONFLICT_WINDOW_MINUTES` from `105` to `135`. Kept
+`ANCHOR_RADIUS_MINUTES=120` and `SPREAD_PENALTY_PER_HOUR=0.25`.
+
 ## Raise conflict window from 75 to 105, fix research method | 2026-03-27
 
 ### Problem
@@ -26,9 +70,10 @@ Fixed the research script in three ways:
   episodes, consistent with what the production blend sees.
 
 With the latest window included, all conflict=105 combos outperform
-all conflict=75/90 combos. The conflict window decides which
-competing candidate slots survive — a wider window forces the
-selector to pick the better-supported candidate, improving timing.
+all conflict=75/90 combos under that narrower five-cutoff research
+pass. That conclusion was later superseded by the broader 24-window
+canonical sweep on 2026-04-01, which re-opened the selector search and
+shifted the preferred conflict window again.
 
 ### Solution
 

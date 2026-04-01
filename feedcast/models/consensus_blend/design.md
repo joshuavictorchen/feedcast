@@ -55,10 +55,11 @@ set subject to two hard rules:
    decide what counts as a real episode — that is the cluster rule's
    job (`feedcast/clustering.py`). The conflict window decides which
    competing candidate slots to keep when multiple slots target the
-   same region. A wider window forces the selector to pick the
-   better-supported candidate rather than fitting both, which
-   produces more accurate timing. See `research_results.txt` for the
-   parameter sweep evidence and `model.py` for the current constant.
+   same region. The current canonical sweep favors a wider spacing rule
+   than raw gap context alone would suggest, which means duplicate
+   suppression is currently more valuable than preserving every close
+   episode pair. See `research.md` for the current evidence and
+   `model.py` for the shipped constant.
 
 ## Why a bounded search radius?
 
@@ -84,18 +85,18 @@ accuracy by also excluding legitimate wide agreement.
 The consensus research script evaluates the selector across multiple
 retrospective cutoffs. It always includes the replay-equivalent
 cutoff (latest activity time minus horizon) so the research sweep
-evaluates the same window that the replay runner does. Remaining
-cutoffs come from the last feed time of each recent complete day.
-This ensures the research sweep captures the most recent model
-behavior while also testing stability across older windows.
+evaluates the same window that the replay runner does. The remaining
+cutoffs come from recent episode boundaries, not arbitrary wall-clock
+steps, so the research sweep stays aligned with the scorer's ontology
+and samples the recent regime more densely during active periods.
 
 ## Where to improve next
 
-The constraint structure (single-use + conflict window) is tight
-enough to dominate the selector outcome across a wide range of
-utility weights. Radius and spread parameters have little effect;
-the conflict window and spread penalty are the levers that
-differentiate. See `research_results.txt` for the latest sweep.
+The selector surface is now shaped mostly by candidate geometry and
+conflict handling rather than utility weighting. The latest sweep shows
+that tighter spread caps and a wider conflict window can move the
+headline, while the tested spread penalties sit on a broad local
+plateau. See `research.md` for the current evidence.
 
 Gains would come from changing how candidates are generated or how
 conflicts are defined — for example, a scoring model where a tight
