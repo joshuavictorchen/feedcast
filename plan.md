@@ -19,6 +19,7 @@ and surfaces context that the plan text alone does not capture.
 | Phase 4.0–4.1 Implementation | 2026-03-29 | slot_drift research refresh and constant tuning. 128-candidate sweep updated DRIFT 3.0→1.0, LOOKBACK 7→5, THRESHOLD 2.0→1.5 (+9.2 headline). Codex caught overclaim about tuning surface and stale disposition guidance — resolved. Plan threshold normalized to "any improvement." | `.transcripts/e61917e0-0184-48b8-b7f9-29807ea6140a.jsonl` |
 | Phase 4.2 Implementation | 2026-03-31 | latent_hunger research refresh and constant tuning. 12-candidate SATIETY_RATE sweep updated 0.257→0.05 (+0.550 headline). Codex caught stale artifacts (research_results.txt generated before constant change) and overstated volume insensitivity (post-feed hunger framing vs correct satiety effect 3.7x ratio). Third review caught stale "adopted" label on diagnostic section. All resolved. 79 tests pass. | `.transcripts/b7826d26-7e2a-457c-b4d1-15a691aba5ce.jsonl` |
 | Phase 4.3 Implementation | 2026-03-31 | survival_hazard research refresh and constant tuning. Initial 40-candidate canonical sweep hit the grid boundary, so the sweep was widened to a 154-candidate mixed-resolution grid; production shapes updated 6.54/3.04→4.75/1.75 (+6.981 headline, 24/24 availability). Follow-up discussion clarified descriptive episode-level MLE vs canonical replay tuning, added windowed-MLE and component-ablation follow-ups, and renamed the final-summary label to "Episode-level MLE (descriptive fit)". 79 tests pass. | `.transcripts/rollout-2026-03-31T22-25-05-019d46db-d72c-7c81-9bff-1af02fc6638b.jsonl` |
+| Phase 4.3.5–4.4 Implementation | 2026-04-01 | Implemented replay candidate parallelism via process isolation, passing the analog benchmark gate, then completed analog_trajectory retuning under a full canonical sweep. Found and fixed the LOOKBACK_HOURS default-argument override bug, added HISTORY_MODE to the canonical search space, updated analog production constants to the corrected winner (episode history, recent_only, k=5, 72h half-life), completed Claude review convergence, and did a repo-wide docs cleanup to remove phase-framed or quickly stale numbers from design/methodology files. 84 tests pass. | `.transcripts/rollout-2026-04-01T00-04-38-019d4736-f7f2-77b3-b0c8-69db397bf39d.jsonl` |
 
 ## Motivation
 
@@ -135,28 +136,38 @@ Two layers:
    simulation, alignment analysis, etc.). These are diagnostic tools, not
    tuning objectives.
 
-### Analog trajectory: pragmatic exception for sweep cost
+### Analog trajectory: exception retired
 
-The canonical metric is authoritative for parameter selection. However,
-analog_trajectory's 672-config grid search is too expensive to run
-entirely through multi-window canonical scoring (potentially 15,000+
-model runs). The recommended approach is a two-stage approximation:
-use the internal `full_traj_mae` metric for the initial sweep to narrow
-candidates, then validate the top N (e.g., top 10) via multi-window
-canonical scoring. This is a pragmatic concession to compute cost, not
-the ideal policy. If parallelization or fixed-step cutoffs make full
-canonical sweeps tractable, prefer that instead. The plan should not be
-read as endorsing proxy metrics in general — this exception is specific
-to analog_trajectory's grid size.
+Sub-phase 4.4 retired the old analog-specific proxy exception. Analog
+now uses:
+
+- two 1344-config `full_traj_mae` sweeps as diagnostic evidence only
+  (`raw` and `episode` history)
+- one 2688-config canonical replay sweep as the shipping gate
+
+The canonical metric is authoritative for parameter selection.
+`full_traj_mae` remains useful for understanding retrieval quality, but
+it no longer acts as a shortlist gate for shipping decisions.
 
 ### Parallelization
 
 Optional `parallel: bool = False` flag on the multi-window evaluator.
 Parallelizes across windows within a single candidate evaluation using
 `concurrent.futures.ThreadPoolExecutor`. Safe because all windows share the
-same model constants (no shared-state mutation). Cross-candidate parallelism
-(for sweeps) is out of scope — it conflicts with `override_constants`
-module-level mutation.
+same model constants (no shared-state mutation).
+
+Cross-candidate parallelism is valid only through **process isolation**.
+The replay harness currently mutates module-level constants via
+`override_constants()`, so concurrent candidate evaluation in a shared
+process would be incorrect. The clean path is process-local mutation:
+`tune_model()` submits one candidate per worker in a
+`concurrent.futures.ProcessPoolExecutor`, each worker initializes its
+own snapshot / scoring context once, and candidate evaluation happens in
+that worker process only. This preserves `model.py` as the production
+source of truth and avoids a broader refactor of every model API.
+
+When candidate-parallel replay is enabled, worker-local window
+parallelism should default to off to avoid nested parallel oversubscription.
 
 ## File Layout
 
@@ -512,24 +523,15 @@ The internal evaluation functions (`_evaluate_multiplicative()`,
 `_evaluate_additive()`, `_walk_forward_weibull()`, etc.) remain in the
 scripts as diagnostic tools. They are not deleted.
 
-### analog_trajectory: two-stage canonical evaluation
+### analog_trajectory: full canonical evaluation
 
-Currently tunes on `full_traj_mae` via a 672-config grid search. Running
-all 672 configs through multi-window canonical scoring is prohibitively
-expensive. Use a two-stage approach:
+Sub-phase 4.4 replaces the old two-stage analog path.
 
-1. Run the existing internal grid search using `full_traj_mae` as a fast
-   proxy to rank all 672 configurations.
-2. Take the top 10 candidates and validate each via replay's
-   `score_model()` with appropriate overrides. Pass
-   `export_path=snapshot.export_path` explicitly.
-3. Report the canonical ranking of those top 10 as the authoritative
-   result.
-
-This is a pragmatic concession to compute cost (see "Analog trajectory:
-pragmatic exception for sweep cost" in Design Decisions). The canonical
-metric remains authoritative. If parallelization or fixed-step cutoffs
-make full canonical sweeps tractable, prefer that instead.
+1. Run the raw and episode `full_traj_mae` sweeps as diagnostic
+   evidence.
+2. Run one full canonical replay sweep across all production-relevant
+   constants, including `HISTORY_MODE`.
+3. Report the canonical winner as the authoritative result.
 
 Also report the production-constant canonical score via
 `score_model(slug, export_path=snapshot.export_path)` (no overrides) so
@@ -586,7 +588,7 @@ python -m feedcast.models.<slug>.research
   and `DAYTIME_SHAPE` (5 values, 2.0–4.0) = 40 candidates. Scale is
   runtime-estimated. Existing diagnostics preserved.
 - **analog_trajectory:** Added canonical evaluation and two-stage
-  validation. Top 10 configs from the 2688-config internal sweep are
+  validation. Top 10 configs from the 1344-config internal sweep are
   validated via `score_model()` with overrides. `ALIGNMENT` is now a
   module-level constant, so canonical validation can compare both `gap`
   and `time_offset` variants instead of hard-coding `gap` only.
@@ -742,7 +744,9 @@ Each model sub-phase (4.1–4.5) follows the same steps:
 ### Ordering constraints
 
 - Sub-phase 4.0 must complete before any model sub-phase begins.
-- Sub-phases 4.1–4.4 are independent and can run in any order.
+- Sub-phases 4.1–4.3 are independent and can run in any order.
+- **Sub-phase 4.3.5 must run before 4.4.** Analog trajectory is the
+  first consumer of candidate-parallel replay.
 - **Sub-phase 4.5 (consensus_blend) must run after 4.1–4.4.** Its
   research script calls `run_all_models()`, which executes every model
   with current production constants. If earlier sub-phases change
@@ -755,8 +759,9 @@ Per-model cost breakdown (with current export, ~20+ canonical windows):
 - `slot_drift`: one `score_model()` run — fast
 - `latent_hunger`: one `score_model()` + 12-candidate `tune_model()`
 - `survival_hazard`: one `score_model()` + 40-candidate `tune_model()`
-- `analog_trajectory`: large internal grid sweep + 10 canonical
-  validation runs — dominates wall-clock time
+- `analog_trajectory`: two 1344-config diagnostic sweeps plus one
+  2688-config canonical sweep; candidate-parallel replay keeps it
+  practical but it still dominates wall-clock time
 - `consensus_blend`: one `score_model()` + 48 selector sweep configs
   over cached model outputs
 
@@ -953,34 +958,167 @@ if the evidence supports it.
   avoids frozen parameter values.
 - Focused verification: `.venv/bin/python -m pytest -q` → `79 passed`.
 
+### Sub-phase 4.3.5: Replay Candidate Isolation and Parallel Sweeps
+
+*Fleshed out 2026-04-01 with Codex and Claude peer review. Ready to
+execute before Sub-phase 4.4.*
+
+The goal of this prereq is to make cross-candidate replay sweeps safe
+and fast enough to test whether analog_trajectory still needs the
+`full_traj_mae` shortlist proxy.
+
+**Architecture choice:** keep `model.py` as the production source of
+truth for constants. Do **not** externalize model constants into YAML.
+That would duplicate configuration, add drift risk, and still require a
+runtime injection mechanism. Use process-local module mutation instead.
+
+**Implementation path:**
+
+1. Refactor `feedcast/replay/runner.py` so serial and parallel tuning
+   share one candidate-evaluation helper that returns
+   `(params, MultiWindowResult)`.
+2. Add process-isolated candidate evaluation inside `runner.py` using
+   `ProcessPoolExecutor`.
+   Prefer an explicit multiprocessing context rather than relying on
+   platform defaults.
+3. Each worker initializes its own replay context once:
+   `load_export_snapshot(export_path=...)`, bottle-only scoring events,
+   and generated cutoffs.
+4. Each worker task evaluates exactly one candidate by wrapping
+   `override_constants()` around `evaluate_multi_window()`. Module-level
+   mutation is therefore process-local and safe.
+5. Parent process remains responsible for baseline evaluation, ranking,
+   artifact assembly, and serial-vs-parallel parity checks.
+
+**API changes:**
+
+- Add `parallel_candidates: bool = False` to `tune_model()`.
+- Add `candidate_workers: int | None = None` to `tune_model()`.
+- Keep existing window-level `parallel` flag, but when
+  `parallel_candidates=True`, worker-local window parallelism should
+  default to `False` unless explicitly benchmarked otherwise.
+
+**Correctness constraints:**
+
+- Parallel and serial tune runs must produce identical `baseline`,
+  `best`, `candidates`, ranking, and top-level `replay_windows`.
+- Baseline must still compete for `best` without leaking into
+  `candidates`.
+- Artifact schema must not change.
+- No model code should need to read external config files for this work.
+
+**Verification:**
+
+- Add replay parity tests: serial vs candidate-parallel on a small sweep
+  return identical results.
+- Re-run existing replay tests to ensure schema stability.
+- Validate parity on at least one previously completed real sweep
+  (slot_drift or latent_hunger) before trusting the analog benchmark.
+
+**Benchmark gate for Sub-phase 4.4:**
+
+- Run a full analog canonical sweep on the current export with
+  candidate-parallel replay.
+- If the full analog canonical sweep completes in **15 minutes or
+  less** wall-clock, Sub-phase 4.4 uses the full canonical sweep as the
+  shipping gate. Sub-phase 4.4 later expands that authoritative sweep
+  to 2688 candidates by making `HISTORY_MODE` tunable.
+- If it exceeds 15 minutes, Sub-phase 4.4 falls back to a broadened
+  two-stage approach: internal `full_traj_mae` ranking for shortlist
+  generation plus canonical validation that explicitly includes the best
+  `time_offset` config even if it is outside the top 10 by proxy.
+
+**Deliverable:** parallel-safe replay tuning for candidate sweeps,
+parity tests, and an analog benchmark result that determines Sub-phase
+4.4's execution path.
+
+### Sub-phase 4.3.5 implementation notes (2026-04-01)
+
+- Implemented candidate-parallel replay tuning in
+  `feedcast/replay/runner.py` using `ProcessPoolExecutor` with an
+  explicit `spawn` multiprocessing context. Worker functions live in
+  `runner.py`; no separate worker module or YAML config layer was
+  added.
+- Added `parallel_candidates` and `candidate_workers` to `tune_model()`
+  and CLI flags `--parallel-candidates` / `--candidate-workers` in
+  `scripts/run_replay.py`.
+- Worker processes initialize their own export snapshot, bottle-only
+  scoring events, and replay cutoffs once, then evaluate one candidate
+  at a time with process-local `override_constants()`.
+- Worker-local window parallelism is disabled in candidate-parallel mode
+  to avoid nested oversubscription. Serial and candidate-parallel paths
+  share the same candidate-evaluation helper.
+- Added replay parity coverage:
+  serial vs candidate-parallel tuning now compare equal in
+  `tests/test_replay.py`, and invalid `candidate_workers` values raise
+  a clear error.
+- Real-sweep parity check passed on `slot_drift` with the current export
+  (`DRIFT_WEIGHT_HALF_LIFE_DAYS=[1.0, 3.0]`,
+  `LOOKBACK_DAYS=[5]`, `MATCH_COST_THRESHOLD_HOURS=[1.5]`):
+  serial and candidate-parallel tune payloads matched exactly
+  (excluding artifact path).
+- **Benchmark gate passed.** Full analog canonical sweep on
+  `export_narababy_silas_20260327.csv` with candidate-parallel replay:
+  `1344` candidates evaluated in `14.484s` (`0.241m`). Sub-phase 4.4
+  later discovered and fixed a `LOOKBACK_HOURS` override bug in
+  analog_trajectory, so this benchmark remains authoritative for runtime
+  only, not for parameter selection.
+- **Sub-phase 4.4 path is now decided:** use the full canonical
+  sweep as the shipping gate on the current export. Sub-phase 4.4 later
+  expands that sweep to 2688 candidates when `HISTORY_MODE` becomes
+  part of the canonical search space.
+- Focused verification:
+  `.venv/bin/python -m pytest -q` → `81 passed`.
+
 ### Sub-phase 4.4: analog_trajectory
 
-**Questions to answer:**
-- What is the canonical headline score with production constants?
-- Does the canonical top-10 validation agree with the internal
-  `full_traj_mae` ranking, or does canonical scoring reshuffle the
-  best configurations?
-- Does canonical scoring produce evidence that
-  `ALIGNMENT="time_offset"` should replace the current
-  `ALIGNMENT="gap"`? Change if canonical headline improves.
-- Is availability 100%?
+**Must run after Sub-phase 4.3.5.**
+
+**Current state:** Completed on `export_narababy_silas_20260327.csv`.
+
+**Outcome:**
+- Full-canonical replay is now the analog shipping gate.
+- `HISTORY_MODE` became a real production parameter, expanding the
+  canonical sweep from `1344` to `2688` candidates.
+- The earlier raw-vs-episode rejection was overturned under the
+  canonical metric.
+- `ALIGNMENT="gap"` remains correct.
+- Availability is 100%.
 
 **Per-model context:** Large internal grid sweep (the most expensive
 section), feature statistics, neighbor diagnostics, episode comparison.
-Canonical two-stage validation of top 10 from the internal sweep.
-`research.md` should explain the two-stage rationale (full canonical
-sweep is prohibitively expensive — see "Analog trajectory: pragmatic
-exception for sweep cost" in Design Decisions) and when to rerun the
-full internal sweep vs just the canonical validation.
 
-**Disposition guidance:** The two-stage validation may reveal that a
-non-production configuration scores better canonically. Any headline
-improvement warrants an update. For `ALIGNMENT`, only change if
-canonical evidence is unambiguous.
+**Sub-phase 4.4 implementation notes (2026-04-01):**
 
-**Deliverable:** Fresh `research_results.txt`,
-`feedcast/models/analog_trajectory/research.md`, and any `model.py` /
-`CHANGELOG.md` updates if warranted.
+- Added `HISTORY_MODE` to `feedcast/models/analog_trajectory/model.py`
+  so raw vs episode state history could be evaluated by the same
+  canonical tuning machinery as every other analog constant.
+- Fixed a correctness bug in `analog_trajectory`: `_state_features()`
+  had captured `LOOKBACK_HOURS` as a default argument, so replay
+  overrides were not actually changing lookback. The recorded sweep is
+  post-fix and authoritative.
+- Rewrote `feedcast/models/analog_trajectory/research.py` around:
+  - two 1344-config diagnostic `full_traj_mae` sweeps (`raw`,
+    `episode`)
+  - one 2688-config canonical replay sweep across `HISTORY_MODE`,
+    `LOOKBACK_HOURS`, `FEATURE_WEIGHTS`, `K_NEIGHBORS`,
+    `RECENCY_HALF_LIFE_HOURS`, `TRAJECTORY_LENGTH_METHOD`, and
+    `ALIGNMENT`
+- Canonical baseline before the 4.4 update (old production config:
+  `raw`, `72h`, `hour_emphasis`, `k=7`, `36h`, `median`, `gap`) scored
+  headline `63.540`, count `88.186`, timing `46.107`, availability
+  `24/24`.
+- Final shipped config:
+  `episode`, `12h`, `recent_only`, `k=5`, `72h`, `median`, `gap`.
+  Canonical headline `69.899`, count `93.800`, timing `52.800`,
+  availability `24/24`.
+- Corrected raw-history canonical best still reached headline `69.2`,
+  but episode history won at `69.9`, so the earlier raw-history policy
+  was reopened and replaced.
+- Updated `model.py`, `design.md`, `methodology.md`, `research.md`,
+  `research_results.txt`, and `CHANGELOG.md`.
+- Added `tests/test_analog_trajectory.py` to cover history-mode
+  behavior, the lookback-override regression, and the shipped constants.
 
 ### Sub-phase 4.5: consensus_blend
 
@@ -1059,6 +1197,11 @@ this contract in their respective locations. The contract:
 - **`model.py` holds production constants.** Each model's tunable
   parameters are module-level variables in its `model.py`. This is the
   single source of truth for what the model does in production.
+- **Tunable constants must be read at call time.** Replay overrides
+  only affect code paths that read module-level constants during
+  forecast execution. Do not capture tunable constants in Python
+  default arguments, import-time caches, or other long-lived derived
+  state that bypasses the current module value.
 - **`research.py` and `research.md` generate and interpret evidence.**
   Research scripts call into replay infrastructure to produce canonical
   scores and parameter recommendations. `research.md` documents the
@@ -1100,6 +1243,10 @@ Rewrite as an agent-usable guide for conducting research:
   may differ from a model's local event-building policy
 - How to use it for parameter tuning (score mode, tune mode)
 - Default configuration and what each parameter controls
+- Operational note for candidate-parallel tuning: replay uses process
+  isolation with `spawn`, so prefer normal file-backed entrypoints
+  (`scripts/run_replay.py`, model `research.py`) over ad hoc stdin
+  snippets when running cross-candidate sweeps
 - How to interpret results (aggregate vs per-window, availability,
   what a good score looks like)
 - Relationship to evaluation (replay uses evaluation, not the other
@@ -1139,12 +1286,23 @@ Verify these are present and accurate after Phase 4 completes. Update
 `feedcast/research/index.md` if any model's research changed a shared
 conclusion.
 
+Cross-model conclusion to carry forward from Sub-phase 4.4:
+- Episode-level local history is now the production choice for
+  slot_drift, latent_hunger, survival_hazard, and analog_trajectory.
+  Analog had previously been the outlier. Phase 5 should reflect that
+  this is now a consistent local-model pattern, while also noting that
+  internal diagnostics can still diverge from canonical replay on the
+  final tuned constant values.
+
 ## Implementation Notes
 
 ### Ordering
 
 Phases 1–3 are complete. Phase 4 is next. Sub-phase 4.0 must complete
-before any model sub-phase. Sub-phases 4.1–4.4 are independent.
+before any model sub-phase. Sub-phases 4.1–4.3 are independent.
+Sub-phase 4.3.5 completed before 4.4. Sub-phase 4.4 used that
+benchmark result to replace the old analog two-stage fallback with a
+full canonical sweep.
 Sub-phase 4.5 (consensus_blend) must run after 4.1–4.4 because its
 research script calls `run_all_models()` with current production
 constants. Sub-phase 4.6 must wait until all model sub-phases are done.
@@ -1158,8 +1316,11 @@ finalize after 4.6.
 - Do not modify the tracker to use multi-window evaluation.
 - Do not delete internal diagnostic functions from research scripts
   (they have diagnostic value).
-- Do not add parallelism for cross-candidate sweeps (module-level
-  mutation conflict).
+- Do not solve cross-candidate replay parallelism by moving production
+  constants into YAML or any other second source of truth outside
+  `model.py`.
+- Do not add cross-candidate parallelism through shared-process module
+  mutation. Use process isolation inside replay.
 - Do not change model constants without canonical evidence. Any
   improvement in canonical headline score warrants a constant update.
   Add a `CHANGELOG.md` entry explaining the evidence.

@@ -2,92 +2,91 @@
 
 ## Tunable parameters
 
-All model parameters are tunable via research.py. The research script
-jointly sweeps all parameters in a single grid (no staged optimization)
-using leave-one-out evaluation with fold-causal normalization and
-full-trajectory comparison. Run research after new exports to validate
-or update constants in model.py.
+All production constants are tuned in `research.py`. The shipping gate
+is a full canonical replay sweep through `tune_model()`. The local
+`full_traj_MAE` sweeps remain diagnostic only. Current values are in
+`model.py`; see `research.md` for the evidence behind each choice.
 
-| Parameter | Value | Rationale |
-| --------- | ----- | --------- |
-| LOOKBACK_HOURS | 72 | 3-day rolling mean provides stable context |
-| FEATURE_WEIGHTS | hour_emphasis [1,1,1,1,2,2] | Hour-of-day is the strongest similarity signal |
-| K_NEIGHBORS | 7 | Consistent top performer across weight profiles |
-| RECENCY_HALF_LIFE_HOURS | 36 | Patterns shift fast enough that 36h beats longer half-lives |
-| TRAJECTORY_LENGTH_METHOD | median | Slight edge (0.748h) over mean (0.753h) on full trajectories |
+| Parameter | Rationale |
+| --------- | --------- |
+| HISTORY_MODE | Episode-level history removes cluster noise from the state library, improving both local retrieval quality and canonical replay headline |
+| LOOKBACK_HOURS | A short lookback keeps rolling means focused on recent feeding rhythm rather than smoothing across older patterns |
+| FEATURE_WEIGHTS | The latest gap and volume are the sharpest similarity signals; rolling means and hour-of-day provide supporting context |
+| K_NEIGHBORS | Balances count accuracy against timing precision under canonical replay |
+| RECENCY_HALF_LIFE_HOURS | Moderately broad recency weighting keeps useful analogs available without letting much older states dominate |
+| TRAJECTORY_LENGTH_METHOD | Median is more robust than mean on variable-length neighbor trajectories |
+| ALIGNMENT | Gap-based blending outperforms time-offset alignment under both diagnostic and canonical evaluation |
 
-## Feature selection
+## History source
 
-The feature vector uses six dimensions:
-- **last_gap** (instantaneous): gap before this event
-- **mean_gap** (72h lookback): mean of gaps within lookback window
-- **last_volume** (instantaneous): volume of this event
-- **mean_volume** (72h lookback): mean volume within lookback window
-- **sin_hour**, **cos_hour**: circular hour-of-day encoding
+The model builds bottle-only events, then collapses them into feeding
+episodes before constructing analog states. This removes cluster-
+internal top-ups from the feature space and makes each state represent
+one real feeding episode rather than one bottle event.
 
-Feature weights control per-dimension influence on neighbor distance.
-The "hour_emphasis" profile (2.0 for sin/cos hour, 1.0 for all others)
-reflects that time-of-day is the strongest similarity signal in this
-dataset. Gap and volume features contribute equally at lower weight.
+Episode history improves both local retrieval quality (all diagnostic
+metrics) and the canonical replay headline. See `research.md` for
+specific numbers.
 
-The top 20 configurations (out of 1,344 tested) are tightly clustered
-(0.748–0.763h full_traj_MAE), with k=7 and half_life=36h appearing in
-all of them. Lookback and weight profiles vary more, suggesting the
-model is relatively robust to those choices.
+## Feature selection and weighting
 
-## Recency + distance weighting
+Each state uses six features:
 
-The combined weight is `recency / (distance + epsilon)` with a 36-hour
-half-life. Prior research also tested simple averaging and distance-only
-weighting; recency+distance was best. The current script optimizes the
-half-life parameter within the recency+distance approach.
+- `last_gap`
+- `mean_gap`
+- `last_volume`
+- `mean_volume`
+- `sin_hour`
+- `cos_hour`
 
-## Gap-based trajectory alignment
+The shipped weight profile emphasizes instantaneous gap and volume over
+rolling means, with hour-of-day as a supporting context signal. The
+internal diagnostic sweep and canonical replay disagree on the best
+profile — canonical replay prefers sharper, more local state matching.
+That divergence is why the canonical metric, not `full_traj_MAE`, owns
+production constants. See `research.md` for the specific comparison.
 
-Gap-based alignment (average gap sequences, then roll forward) significantly
-outperforms time-offset alignment (average absolute times). Gap-based
-full_traj MAE was 0.748h vs time-offset at ~1.96h across all top configs.
+## Lookback and recency
 
-## Trajectory length
+A short lookback window complements the weight profile: the model uses
+rolling means, but only over recent hours. Longer windows smooth away
+changes in rhythm that matter for the next 24-hour forecast.
 
-The forecast uses the median trajectory length across neighbors. Median
-(0.748h) slightly outperforms mean (0.753h) and guards against outlier
-trajectories with unusual event counts.
+Neighbor weights are `recency / (distance + epsilon)`. The recency
+half-life is set broad enough to keep useful analogs available without
+letting much older states dominate the blend. See `model.py` for the
+current values.
 
-## Cluster relationship
+## Alignment and trajectory length
 
-The model currently uses raw feed history, including cluster-internal
-feeds. Research showed episode-level history substantially
-improves feature quality and neighbor retrieval accuracy, but the
-episode model under-predicts because episode-level trajectories are
-shorter. The median trajectory length (which controls how many
-predictions to emit) drops when trajectories contain fewer events.
-The replay headline degraded and the change was not shipped.
+The forecast blends neighbor trajectories as inter-episode gaps, then
+rolls those gaps forward from the cutoff. Time-offset alignment remains
+inferior on the current export, including within the best raw-history
+surface.
 
-The model tolerates cluster noise reasonably well because
-time-of-day features (the dominant similarity signal) are unaffected
-by clustering, and the gap/volume features, while noisier with raw
-feeds, still produce acceptable neighbor matches. Evaluation
-collapses both predictions and actuals into episodes before scoring
-so the model is not penalized for predicting cluster
-internal structure.
+Trajectory length is the median neighbor trajectory length. That guards
+against unusually short or long neighbor traces and remains the best
+canonical choice.
 
-A future path: decouple the trajectory length decision from
-per-neighbor event count to avoid under-prediction with episode
-inputs.
+## Metric hierarchy
 
-## Bottle-only events
+The model has two research layers:
 
-Builds bottle-only events locally (no breastfeed merge). Breastfeeding
-volume estimation is noisy and the model uses volume as a similarity
-feature, not a causal input. Adding noise to similarity computation
-would degrade neighbor quality. Revisit if the bottle/breast mix
-changes significantly.
+- **Diagnostic layer:** per-history-mode `full_traj_MAE` sweeps that
+  explain retrieval and blending behavior.
+- **Shipping layer:** a full canonical replay sweep across all
+  production-relevant constants, including `HISTORY_MODE`.
 
-## Minimum completeness threshold
+The canonical sweep is authoritative. When the two layers disagree on
+a knob setting, canonical replay wins. See `research.md` for the
+current comparison.
 
-A state needs a future event at least 20 hours out to be "complete."
-This ensures trajectories represent a full daily cycle, not just a
-few hours before the export was taken. The model needs at least 10
-complete states to produce a forecast. Revisit if availability
-becomes an issue with future data.
+## Bottle-only events and completeness
+
+The model still uses bottle-only inputs. Breastfeed volume estimation is
+too noisy for a similarity-based model that relies on volume as a
+distance feature.
+
+A state is complete only if it has at least three future events and at
+least one future event at least 20 hours after the anchor. The model
+requires at least 10 complete states to forecast.

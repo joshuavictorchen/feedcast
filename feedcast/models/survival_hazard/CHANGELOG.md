@@ -6,9 +6,9 @@ Tracks behavior-level changes to the Survival Hazard model. Add newest entries f
 
 ### Problem
 
-The initial canonical tuning grid from Phase 3 was too narrow for the
-current export. A fresh Phase 4.3 replay run put the best candidate at
-the lowest-tested corner (`OVERNIGHT_SHAPE=4.0`, `DAYTIME_SHAPE=2.0`),
+The initial canonical tuning grid was too narrow for the current
+export. A wider replay run put the best candidate at the lowest-tested
+corner of the original grid (`OVERNIGHT_SHAPE=4.0`, `DAYTIME_SHAPE=2.0`),
 which meant the evidence did not support stopping there. The production
 constants (`6.54`, `3.04`) were materially behind the canonical replay
 objective on the current dataset.

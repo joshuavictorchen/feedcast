@@ -24,8 +24,8 @@ last observed episode and elapsed time, then simulates forward: hunger
 grows until it crosses the threshold, a feed fires at the simulation
 median volume, hunger resets, and the cycle repeats.
 
-Uses breastfeed-merged events (45-minute merge window) so that
-nearby breastfeed volume is attributed to the next bottle event.
+Uses breastfeed-merged events so that nearby breastfeed volume is
+attributed to the next bottle event.
 Infrastructure is in place for smooth circadian modulation of the
 growth rate, but research found no benefit over the multiplicative
 model's inherent volume-driven day/night sensitivity — larger

@@ -2,6 +2,86 @@
 
 Tracks behavior-level changes to the Analog Trajectory model. Add newest entries first.
 
+## Full canonical retune adopts episode history | 2026-04-01
+
+### Problem
+
+The model was still shipping the old raw-history configuration:
+
+- `HISTORY_MODE=raw`
+- `LOOKBACK_HOURS=72`
+- `FEATURE_WEIGHTS=hour_emphasis`
+- `K_NEIGHBORS=7`
+- `RECENCY_HALF_LIFE_HOURS=36`
+- `TRAJECTORY_LENGTH_METHOD=median`
+- `ALIGNMENT=gap`
+
+That configuration had only been partially pressure-tested against the
+true ship metric. The earlier research path still treated
+`full_traj_MAE` as a shortlist metric for canonical validation, and the
+reopened raw-vs-episode question needed to be answered under the same
+canonical replay objective as every other production constant.
+
+Research also exposed a correctness bug: `LOOKBACK_HOURS` had been
+captured as a Python default argument in `_state_features()`, so replay
+overrides were not actually changing the forecast lookback. The final
+sweep below is post-fix and is the authoritative result.
+
+### Research
+
+Ran the corrected research script on
+`exports/export_narababy_silas_20260327.csv` with:
+
+- two diagnostic 1344-config `full_traj_MAE` sweeps (`raw` and `episode`)
+- one full 2688-config canonical replay sweep across all production
+  parameters, including `HISTORY_MODE`
+
+Canonical replay comparison:
+
+| Metric | Old production | New production | Better? |
+|--------|----------------|----------------|---------|
+| Headline | 63.54 | 69.90 | New (+6.36) |
+| Count | 88.19 | 93.80 | New (+5.61) |
+| Timing | 46.11 | 52.80 | New (+6.69) |
+| Availability | 24/24 | 24/24 | Tie |
+
+Best corrected raw-history candidate:
+
+| Metric | Raw best | Episode best | Better? |
+|--------|----------|--------------|---------|
+| Headline | 69.2 | 69.9 | Episode (+0.7) |
+| Count | 92.2 | 93.8 | Episode |
+| Timing | 52.3 | 52.8 | Episode |
+
+Diagnostic retrieval quality also still prefers episode history:
+
+| Metric | Raw best diagnostic | Episode best diagnostic | Better? |
+|--------|---------------------|-------------------------|---------|
+| full_traj_MAE | 1.696h | 1.126h | Episode |
+| gap1_MAE | 0.785h | 0.659h | Episode |
+| traj3_MAE | 0.802h | 0.621h | Episode |
+
+Final canonical winner:
+
+- `HISTORY_MODE=episode`
+- `LOOKBACK_HOURS=12`
+- `FEATURE_WEIGHTS=recent_only [2, 0.5, 2, 0.5, 1, 1]`
+- `K_NEIGHBORS=5`
+- `RECENCY_HALF_LIFE_HOURS=72`
+- `TRAJECTORY_LENGTH_METHOD=median`
+- `ALIGNMENT=gap`
+
+### Solution
+
+Shipped the full-canonical winner and retired the analog-specific
+two-stage proxy gate. The model now builds states from episode-level
+history, uses a shorter 12-hour lookback, emphasizes the latest gap and
+volume, broadens recency weighting to 72 hours, and keeps gap-based
+alignment with median trajectory length.
+
+Also fixed the lookback override bug by making `_state_features()`
+read `LOOKBACK_HOURS` at call time rather than at import time.
+
 ## Episode-level history evaluated, not shipped | 2026-03-26
 
 ### Problem

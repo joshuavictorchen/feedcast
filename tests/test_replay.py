@@ -193,6 +193,10 @@ class ReplayScoreTests(unittest.TestCase):
 class ReplayTuneTests(unittest.TestCase):
     """Replay tune behavior."""
 
+    def _without_results_path(self, payload: dict) -> dict:
+        """Drop the artifact path so payloads from separate runs compare cleanly."""
+        return {k: v for k, v in payload.items() if k != "results_path"}
+
     def test_tune_evaluates_cross_product(self) -> None:
         """Tuning should evaluate the full cross-product and rank results."""
         with tempfile.TemporaryDirectory(prefix="feedcast-replay-test-") as temp_dir:
@@ -276,6 +280,34 @@ class ReplayTuneTests(unittest.TestCase):
             self.assertGreaterEqual(best_key, baseline_key)
             self.assertGreaterEqual(payload["best"]["headline_delta"], 0.0)
 
+    def test_tune_parallel_candidates_matches_serial(self) -> None:
+        """Candidate-parallel tuning should exactly match the serial result."""
+        with tempfile.TemporaryDirectory(prefix="feedcast-replay-test-") as temp_dir:
+            temp_path = Path(temp_dir)
+            export_path = temp_path / "export_narababy_silas_20260320.csv"
+            output_dir = temp_path / ".replay-results"
+            _write_export(export_path)
+
+            serial_payload = tune_model(
+                "slot_drift",
+                candidates_by_name={"LOOKBACK_DAYS": [3, 5]},
+                export_path=export_path,
+                output_dir=output_dir,
+            )
+            parallel_payload = tune_model(
+                "slot_drift",
+                candidates_by_name={"LOOKBACK_DAYS": [3, 5]},
+                export_path=export_path,
+                output_dir=output_dir,
+                parallel_candidates=True,
+                candidate_workers=2,
+            )
+
+            self.assertEqual(
+                self._without_results_path(parallel_payload),
+                self._without_results_path(serial_payload),
+            )
+
     def test_tune_consensus_raises(self) -> None:
         """Tuning should be rejected for non-scripted models."""
         with self.assertRaises(ValueError, msg="scripted models"):
@@ -285,6 +317,15 @@ class ReplayTuneTests(unittest.TestCase):
         """Tuning with no candidates should fail."""
         with self.assertRaises(ValueError, msg="at least one"):
             tune_model("slot_drift", candidates_by_name={})
+
+    def test_tune_invalid_candidate_workers_raises(self) -> None:
+        """candidate_workers must be positive when provided."""
+        with self.assertRaises(ValueError, msg="at least 1"):
+            tune_model(
+                "slot_drift",
+                candidates_by_name={"LOOKBACK_DAYS": [5]},
+                candidate_workers=0,
+            )
 
 
 class CLIParsingTests(unittest.TestCase):

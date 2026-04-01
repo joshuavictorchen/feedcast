@@ -9,7 +9,10 @@ by availability tier first, then weighted aggregate headline score.
 
 from __future__ import annotations
 
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager, nullcontext
+from dataclasses import dataclass
 from datetime import datetime
 from importlib import import_module
 from itertools import product
@@ -44,6 +47,22 @@ from feedcast.models import (
 )
 from feedcast.models.shared import ForecastUnavailable
 from .results import DEFAULT_RESULTS_DIR, save_results
+
+
+@dataclass(frozen=True)
+class _CandidateWorkerContext:
+    """Replay context initialized once per candidate worker process."""
+
+    model_slug: str
+    module_name: str
+    snapshot: ExportSnapshot
+    scoring_events: list[FeedEvent]
+    cutoffs: list[datetime]
+    half_life_hours: float
+    parallel: bool
+
+
+_CANDIDATE_WORKER_CONTEXT: _CandidateWorkerContext | None = None
 
 
 @contextmanager
@@ -181,6 +200,8 @@ def tune_model(
     cutoff_mode: str = "episode",
     step_hours: float = 12.0,
     parallel: bool = False,
+    parallel_candidates: bool = False,
+    candidate_workers: int | None = None,
 ) -> dict[str, Any]:
     """Tune one scripted model across multiple retrospective windows.
 
@@ -200,6 +221,10 @@ def tune_model(
             fixed-interval cutoffs.
         step_hours: Step size for fixed-interval cutoffs.
         parallel: If True, evaluate windows concurrently.
+        parallel_candidates: If True, evaluate candidates concurrently in
+            separate worker processes.
+        candidate_workers: Optional worker-process count for candidate
+            parallelism. Ignored unless ``parallel_candidates`` is True.
 
     Returns:
         The tuning result payload (also persisted as JSON).
@@ -211,6 +236,8 @@ def tune_model(
         raise ValueError(
             "Tuning requires at least one parameter with candidate values."
         )
+    if candidate_workers is not None and candidate_workers < 1:
+        raise ValueError("candidate_workers must be at least 1 when provided.")
 
     snapshot = load_export_snapshot(export_path=export_path)
     scoring_events = build_feed_events(snapshot.activities, merge_window_minutes=None)
@@ -244,16 +271,16 @@ def tune_model(
             _coerce_param(name, value, baseline_params[name]) for value in values
         ]
 
-    def forecast_fn(cutoff: datetime) -> Forecast:
-        return _run_forecast(model_slug, snapshot.activities, cutoff)
-
     # Evaluate baseline with current production constants
-    baseline_mw = evaluate_multi_window(
-        forecast_fn=forecast_fn,
+    baseline_mw = _evaluate_candidate_multi_window(
+        model_slug=model_slug,
+        module_name=module_name,
+        activities=snapshot.activities,
         scoring_events=scoring_events,
         cutoffs=cutoffs,
         latest_activity_time=snapshot.latest_activity_time,
         half_life_hours=half_life_hours,
+        params=None,
         parallel=parallel,
     )
 
@@ -265,21 +292,37 @@ def tune_model(
         )
     ]
 
-    # Evaluate each candidate across all windows. Per-window errors and
-    # unavailability are recorded inside evaluate_multi_window(); we do not
-    # catch around the whole call because that would discard diagnostics.
-    results: list[tuple[dict[str, Any], MultiWindowResult]] = []
-    for params in all_candidates:
-        with override_constants(module_name, params):
-            mw_result = evaluate_multi_window(
-                forecast_fn=forecast_fn,
-                scoring_events=scoring_events,
-                cutoffs=cutoffs,
-                latest_activity_time=snapshot.latest_activity_time,
-                half_life_hours=half_life_hours,
-                parallel=parallel,
+    results: list[tuple[dict[str, Any], MultiWindowResult]]
+    if parallel_candidates and all_candidates:
+        results = _evaluate_candidates_in_parallel(
+            model_slug=model_slug,
+            module_name=module_name,
+            export_path=snapshot.export_path.resolve(),
+            lookback_hours=lookback_hours,
+            half_life_hours=half_life_hours,
+            cutoff_mode=cutoff_mode,
+            step_hours=step_hours,
+            all_candidates=all_candidates,
+            candidate_workers=candidate_workers,
+        )
+    else:
+        results = [
+            (
+                params,
+                _evaluate_candidate_multi_window(
+                    model_slug=model_slug,
+                    module_name=module_name,
+                    activities=snapshot.activities,
+                    scoring_events=scoring_events,
+                    cutoffs=cutoffs,
+                    latest_activity_time=snapshot.latest_activity_time,
+                    half_life_hours=half_life_hours,
+                    params=params,
+                    parallel=parallel,
+                ),
             )
-        results.append((params, mw_result))
+            for params in all_candidates
+        ]
 
     # Rank sweep candidates.
     _rank_key = lambda r: (-r[1].scored_window_count, -r[1].headline_score, str(r[0]))
@@ -388,6 +431,126 @@ def _json_safe(value: Any) -> Any:
 def _json_safe_params(params: dict[str, Any]) -> dict[str, Any]:
     """Return a JSON-serializable copy of a parameter dict."""
     return {name: _json_safe(value) for name, value in params.items()}
+
+
+def _evaluate_candidate_multi_window(
+    *,
+    model_slug: str,
+    module_name: str,
+    activities: list[Activity],
+    scoring_events: list[FeedEvent],
+    cutoffs: list[datetime],
+    latest_activity_time: datetime,
+    half_life_hours: float,
+    params: Mapping[str, Any] | None,
+    parallel: bool,
+) -> MultiWindowResult:
+    """Evaluate one candidate's constants across all replay windows."""
+
+    def forecast_fn(cutoff: datetime) -> Forecast:
+        return _run_forecast(model_slug, activities, cutoff)
+
+    context = override_constants(module_name, params) if params else nullcontext()
+    with context:
+        return evaluate_multi_window(
+            forecast_fn=forecast_fn,
+            scoring_events=scoring_events,
+            cutoffs=cutoffs,
+            latest_activity_time=latest_activity_time,
+            half_life_hours=half_life_hours,
+            parallel=parallel,
+        )
+
+
+def _evaluate_candidates_in_parallel(
+    *,
+    model_slug: str,
+    module_name: str,
+    export_path: Path,
+    lookback_hours: float,
+    half_life_hours: float,
+    cutoff_mode: str,
+    step_hours: float,
+    all_candidates: list[dict[str, Any]],
+    candidate_workers: int | None,
+) -> list[tuple[dict[str, Any], MultiWindowResult]]:
+    """Evaluate replay candidates concurrently in isolated worker processes."""
+    with ProcessPoolExecutor(
+        max_workers=candidate_workers,
+        mp_context=_get_candidate_mp_context(),
+        initializer=_init_candidate_worker,
+        initargs=(
+            str(export_path),
+            model_slug,
+            module_name,
+            lookback_hours,
+            half_life_hours,
+            cutoff_mode,
+            step_hours,
+        ),
+    ) as executor:
+        return list(executor.map(_evaluate_candidate_in_worker, all_candidates))
+
+
+def _init_candidate_worker(
+    export_path_str: str,
+    model_slug: str,
+    module_name: str,
+    lookback_hours: float,
+    half_life_hours: float,
+    cutoff_mode: str,
+    step_hours: float,
+) -> None:
+    """Initialize one worker process with replay context shared by its tasks."""
+    global _CANDIDATE_WORKER_CONTEXT
+
+    snapshot = load_export_snapshot(export_path=Path(export_path_str))
+    scoring_events = build_feed_events(snapshot.activities, merge_window_minutes=None)
+    cutoffs = _generate_cutoffs(
+        scoring_events=scoring_events,
+        snapshot=snapshot,
+        lookback_hours=lookback_hours,
+        cutoff_mode=cutoff_mode,
+        step_hours=step_hours,
+    )
+    _CANDIDATE_WORKER_CONTEXT = _CandidateWorkerContext(
+        model_slug=model_slug,
+        module_name=module_name,
+        snapshot=snapshot,
+        scoring_events=scoring_events,
+        cutoffs=cutoffs,
+        half_life_hours=half_life_hours,
+        parallel=False,
+    )
+
+
+def _evaluate_candidate_in_worker(
+    params: dict[str, Any],
+) -> tuple[dict[str, Any], MultiWindowResult]:
+    """Run one replay candidate inside an initialized worker process."""
+    if _CANDIDATE_WORKER_CONTEXT is None:
+        raise RuntimeError("Candidate worker context was not initialized.")
+
+    context = _CANDIDATE_WORKER_CONTEXT
+    return (
+        params,
+        _evaluate_candidate_multi_window(
+            model_slug=context.model_slug,
+            module_name=context.module_name,
+            activities=context.snapshot.activities,
+            scoring_events=context.scoring_events,
+            cutoffs=context.cutoffs,
+            latest_activity_time=context.snapshot.latest_activity_time,
+            half_life_hours=context.half_life_hours,
+            params=params,
+            parallel=context.parallel,
+        ),
+    )
+
+
+def _get_candidate_mp_context() -> multiprocessing.context.BaseContext:
+    """Return an explicit multiprocessing context for replay workers."""
+    return multiprocessing.get_context("spawn")
 
 
 def _generate_cutoffs(

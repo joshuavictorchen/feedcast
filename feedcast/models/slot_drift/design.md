@@ -7,14 +7,14 @@ the daily template. This removes cluster-internal feeds (top-ups and
 continuations) that would otherwise inflate the daily count and create
 spurious template slots. The episode rule is defined in
 `feedcast/clustering.py` (see `feedcast/research/feed_clustering/`
-for derivation). Episode-level history gives a more stable slot count
-(median 8 vs. 9 with raw feeds on the 20260325 export) and slightly
-better headline replay score (+0.28) due to improved timing accuracy.
+for derivation). Episode-level history gives a more stable slot count and slightly
+better headline replay score due to improved timing accuracy. See
+`research.md` for specific numbers.
 
 ## Slot count
 
 The canonical slot count is the median daily episode count across
-recent complete days in the lookback window (default 5 days). It is
+recent complete days in the configured lookback window. It is
 not fixed: it is recomputed from recent history on each run, so it
 adapts as the baby's pattern evolves.
 
@@ -28,9 +28,9 @@ tracking per slot position.
 
 The Hungarian algorithm (scipy.optimize.linear_sum_assignment) finds
 the globally optimal assignment of episodes to slots, minimizing total
-time-of-day distance. The 1.5-hour cost threshold rejects assignments
-where an episode is too far from any slot. Episodes that exceed the
-threshold are left unmatched.
+time-of-day distance. A cost threshold (see `model.py`) rejects
+assignments where an episode is too far from any slot. Episodes that
+exceed the threshold are left unmatched.
 
 ## Circular time-of-day distance
 
@@ -40,8 +40,9 @@ wrap correctly.
 
 ## Recency-weighted linear drift
 
-Per-slot drift is fit via weighted linear regression with a 1-day
-half-life. Recent days dominate the trend estimate. Linear drift is
+Per-slot drift is fit via weighted linear regression with a short
+recency half-life (see `model.py`). Recent days dominate the trend
+estimate. Linear drift is
 sufficient for now; curvature (second derivative) would require more
 data to estimate reliably.
 

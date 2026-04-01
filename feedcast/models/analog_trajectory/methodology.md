@@ -1,27 +1,28 @@
 # Analog Trajectory Retrieval
 
-Instance-based forecasting that asks "when have we seen a state like
-this before, and what happened next?" Instead of fitting a global
-function, the model treats each historical feed event as a reference
-state with a known 24-hour future trajectory.
+Instance-based forecasting that asks "when have we seen a feeding
+episode like this before, and what happened next?" Instead of fitting a
+global function, the model stores historical episode states with their
+observed 24-hour futures and retrieves the closest analogs at forecast
+time.
 
-At forecast time the model summarizes the current state as a six-
-dimensional feature vector: last gap and last volume (instantaneous),
-rolling mean gap and rolling mean volume (computed over a 72-hour
-lookback window), and circular hour-of-day (sin/cos encoding). It
-finds the most similar historical states using weighted Euclidean
-distance with per-feature weights that emphasize hour-of-day over
-gap and volume. Neighbors are weighted by a combination of proximity
-and recency (36-hour half-life), and the forecast is produced by
-averaging their actual future gap sequences. The predicted gaps are
-rolled forward from the cutoff time to produce absolute feed times.
+The model first builds bottle-only events, then collapses close-together
+feeds into feeding episodes. Each episode state is summarized by six
+features: last gap, rolling mean gap, last volume, rolling mean volume,
+and circular hour-of-day (`sin_hour`, `cos_hour`). The rolling means use
+a configurable lookback window.
 
-Volume predictions use per-step weighted averages from the same
-neighbor trajectories. This lets volume reflect what actually happened
-in analogous situations rather than relying on a global time-of-day
-profile.
+Similarity is weighted Euclidean distance with per-feature weights that
+emphasize recent gap and volume over rolling means, with hour-of-day as
+supporting context. The model retrieves the K nearest historical states
+and weights them by both proximity and recency.
 
-Uses bottle-only events (no breastfeed merge). The model needs at
-least 10 historical states whose trajectories extend at least 20
-hours past the state time (with at least 3 future events) to
-produce a forecast.
+The forecast is produced by blending neighbor gap sequences step by
+step. Gaps are rolled forward from the cutoff to generate predicted feed
+times, and per-step volumes are weighted averages from the same neighbor
+trajectories. The number of predicted steps is the median neighbor
+trajectory length.
+
+The model requires at least 10 complete historical states. A state is
+complete only if it has at least 3 future events and at least one future
+event at least 20 hours after the anchor episode.

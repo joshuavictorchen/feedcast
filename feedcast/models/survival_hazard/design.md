@@ -17,13 +17,13 @@ likely the next — matching biological reality.
 
 The model operates on episode-level history. Raw bottle-only events
 are collapsed into feeding episodes via `episodes_as_events()` at
-function entry. This removes cluster-internal gaps (50–70 min) that
+function entry. This removes cluster-internal sub-hour gaps that
 would otherwise create a bimodal artifact in a distribution where real
-inter-episode gaps are 2–3+ hours.
+inter-episode gaps are measured in hours.
 
 Inter-episode gaps use anchor-to-anchor timing (first constituent to
 first constituent). This overestimates the true inter-hunger gap by
-the cluster-internal duration (up to ~80 min), but the same
+the cluster-internal duration, but the same
 overestimation applies to both training (scale estimation) and
 prediction (conditional survival elapsed time), so the model is
 self-consistent.
@@ -113,7 +113,7 @@ percentiles are included in diagnostics as uncertainty bounds.
 The model builds bottle-only events locally (no breastfeed merge).
 
 Under episode semantics, merge policy is not purely cosmetic: the
-clustering rule's 80-minute extension arm checks the later feed's
+clustering rule's extension arm checks the later feed's
 `volume_oz`, so breastfeed merge could theoretically change episode
 boundaries. This model keeps a bottle-only local input policy. The
 current bottle-only vs breastfeed-merged comparison is documented in

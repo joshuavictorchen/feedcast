@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
+from feedcast.clustering import episodes_as_events
 from feedcast.data import (
     Activity,
     FeedEvent,
@@ -36,21 +37,22 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 # Per-feature weights for weighted Euclidean distance.
 # Order: last_gap, mean_gap, last_volume, mean_volume, sin_hour, cos_hour.
 # Higher weight = more influence on neighbor selection.
-# "hour_emphasis" profile: time-of-day dominates similarity; gap and
-# volume features at equal lower weight. Selected via research.py
-# joint sweep (fold-causal, full-trajectory evaluation).
-FEATURE_WEIGHTS = np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
+# "recent_only" profile: the latest gap and volume dominate similarity,
+# rolling means are deemphasized, and hour-of-day remains informative
+# but secondary. Selected via the full canonical replay sweep in
+# research.py.
+FEATURE_WEIGHTS = np.array([2.0, 0.5, 2.0, 0.5, 1.0, 1.0])
 
 # Lookback window for rolling mean features (hours).
 # Events within this window contribute to mean_gap and mean_volume.
-# 72h provides a stable 3-day rolling average. Selected via research.py
-# joint sweep (fold-causal, full-trajectory evaluation).
-LOOKBACK_HOURS = 72
+# 12h focuses the means on the most recent feeding rhythm. Selected via
+# the full canonical replay sweep in research.py.
+LOOKBACK_HOURS = 12
 
 # Number of nearest neighbors to retrieve.
-# k=7 is the consistent top performer across weight profiles in the
-# joint sweep. Selected via research.py (fold-causal, full-trajectory).
-K_NEIGHBORS = 7
+# k=5 gives the best count/timing balance on episode-level state
+# history. Selected via the full canonical replay sweep in research.py.
+K_NEIGHBORS = 5
 
 # Minimum number of historical states with complete trajectories.
 MIN_COMPLETE_STATES = 10
@@ -59,18 +61,27 @@ MIN_COMPLETE_STATES = 10
 MIN_PRIOR_EVENTS = 3
 
 # Half-life for recency weighting of neighbor states (hours).
-# 36h means a state from 1.5 days ago gets half the weight of an
-# equivalent state right now. Selected via research.py sweep.
-RECENCY_HALF_LIFE_HOURS = 36
+# 72h means a state from 3 days ago gets half the weight of an
+# equivalent state right now. Selected via research.py canonical sweep.
+RECENCY_HALF_LIFE_HOURS = 72
 
 # Trajectory length aggregation method: "median" or "mean".
+# "median" remains best under canonical replay.
 TRAJECTORY_LENGTH_METHOD = "median"
 
 # Trajectory alignment method: "gap" or "time_offset".
 # "gap" blends inter-event gaps step-by-step and rolls forward.
 # "time_offset" blends absolute offsets from the state event and
-# positions feeds relative to cutoff. Selected via research.py sweep.
+# positions feeds relative to cutoff. Canonical replay still prefers
+# gap alignment on the current export.
 ALIGNMENT = "gap"
+
+# History source for state construction: "raw" or "episode".
+# "raw" keeps every bottle event. "episode" collapses close-together
+# bottle feeds into single feeding episodes before building states.
+# Episode history materially improves both internal diagnostics and the
+# canonical replay headline on the current export.
+HISTORY_MODE = "episode"
 
 # A trajectory is "complete" if it has at least one event this many
 # hours past the state time. This avoids including states whose
@@ -94,12 +105,9 @@ def forecast_analog_trajectory(
         A Forecast with projected feed times and volumes.
     """
     _validate_alignment(ALIGNMENT)
+    _validate_history_mode(HISTORY_MODE)
 
-    # Build bottle-only events and filter to cutoff.
-    history = [
-        e for e in build_feed_events(activities, merge_window_minutes=None)
-        if e.time <= cutoff
-    ]
+    history = _build_history_events(activities, cutoff)
 
     # Build the library of historical states and their future trajectories.
     states = _build_state_library(history, cutoff, horizon_hours)
@@ -124,19 +132,26 @@ def forecast_analog_trajectory(
 
     # Find K nearest neighbors with recency + distance weighting.
     neighbors = _find_neighbors(
-        query_normed, query["time"], states_normed, complete_states,
+        query_normed,
+        query["time"],
+        states_normed,
+        complete_states,
     )
 
     # Blend neighbor trajectories into a forecast.
-    # The cutoff may be later than the last bottle event (e.g., if a
-    # breastfeed ended after the last bottle). The blended gaps measure
-    # time from last bottle to next bottle, so we subtract the elapsed
-    # time since the last bottle from the first blended gap.
-    elapsed_since_last_bottle = (
+    # The cutoff may be later than the last history event (e.g., if a
+    # breastfeed ended after the last bottle, or if episode mode anchors
+    # the last state at the start of a clustered feed). The blended
+    # trajectories measure time from the last history event to the next
+    # one, so we subtract elapsed time already spent since that anchor.
+    elapsed_since_last_history_event = (
         cutoff - history[-1].time
     ).total_seconds() / 3600
     points = _blend_trajectories(
-        neighbors, cutoff, horizon_hours, elapsed_since_last_bottle,
+        neighbors,
+        cutoff,
+        horizon_hours,
+        elapsed_since_last_history_event,
     )
 
     return Forecast(
@@ -145,10 +160,29 @@ def forecast_analog_trajectory(
         points=normalize_forecast_points(points, cutoff, horizon_hours),
         methodology=MODEL_METHODOLOGY,
         diagnostics=_build_diagnostics(
-            query, neighbors, complete_states, feature_means, feature_stds,
-            elapsed_since_last_bottle,
+            query,
+            neighbors,
+            complete_states,
+            feature_means,
+            feature_stds,
+            elapsed_since_last_history_event,
         ),
     )
+
+
+def _build_history_events(
+    activities: list[Activity],
+    cutoff: datetime,
+) -> list[FeedEvent]:
+    """Build the event history used for analog states and query features."""
+    raw_history = [
+        event
+        for event in build_feed_events(activities, merge_window_minutes=None)
+        if event.time <= cutoff
+    ]
+    if HISTORY_MODE == "raw":
+        return raw_history
+    return episodes_as_events(raw_history)
 
 
 # ---------------------------------------------------------------------------
@@ -177,9 +211,7 @@ def _build_state_library(
 
         features = _state_features(history, index)
         future_end = event.time + timedelta(hours=horizon_hours)
-        future_events = [
-            e for e in history[index + 1 :] if e.time <= future_end
-        ]
+        future_events = [e for e in history[index + 1 :] if e.time <= future_end]
 
         # A trajectory is complete if there's at least one future event
         # far enough out that we're confident we captured most of the day.
@@ -205,7 +237,7 @@ def _build_state_library(
 def _state_features(
     history: list[FeedEvent],
     index: int,
-    lookback_hours: float = LOOKBACK_HOURS,
+    lookback_hours: float | None = None,
 ) -> np.ndarray:
     """Compute the feature vector for one historical state.
 
@@ -223,6 +255,9 @@ def _state_features(
       4: sin_hour     - sin(2*pi*hour/24) for circular time encoding
       5: cos_hour     - cos(2*pi*hour/24) for circular time encoding
     """
+    if lookback_hours is None:
+        lookback_hours = LOOKBACK_HOURS
+
     event = history[index]
     lookback_cutoff = event.time - timedelta(hours=lookback_hours)
 
@@ -333,7 +368,7 @@ def _blend_trajectories(
     neighbors: list[dict],
     cutoff: datetime,
     horizon_hours: int,
-    elapsed_since_last_bottle: float,
+    elapsed_since_last_history_event: float,
 ) -> list[ForecastPoint]:
     """Blend neighbor trajectories into forecast points.
 
@@ -344,9 +379,8 @@ def _blend_trajectories(
     absolute offsets from the state event time. Blended offsets are
     positioned relative to the cutoff (adjusted for elapsed time).
 
-    The elapsed_since_last_bottle adjustment accounts for time already
-    passed between the last bottle and the cutoff (which may differ
-    when the latest activity is a breastfeed).
+    The elapsed_since_last_history_event adjustment accounts for time
+    already passed between the last history event and the cutoff.
     """
     use_offsets = ALIGNMENT == "time_offset"
 
@@ -408,12 +442,14 @@ def _blend_trajectories(
 
         step_weight_array = np.array(step_weights, dtype=float)
         blended_value = float(np.average(step_values, weights=step_weight_array))
-        blended_volume = max(float(np.average(step_volumes, weights=step_weight_array)), 0.5)
+        blended_volume = max(
+            float(np.average(step_volumes, weights=step_weight_array)), 0.5
+        )
 
         if use_offsets:
             # Offsets are relative to state time (last bottle).
             # Subtract elapsed to get offset from cutoff.
-            adjusted_offset = blended_value - elapsed_since_last_bottle
+            adjusted_offset = blended_value - elapsed_since_last_history_event
             if adjusted_offset <= 0:
                 continue
             feed_time = cutoff + timedelta(hours=adjusted_offset)
@@ -423,8 +459,8 @@ def _blend_trajectories(
                 continue
         else:
             # Gap mode: roll forward from current position.
-            if step == 0 and elapsed_since_last_bottle > 0:
-                blended_value -= elapsed_since_last_bottle
+            if step == 0 and elapsed_since_last_history_event > 0:
+                blended_value -= elapsed_since_last_history_event
             blended_value = max(blended_value, 0.5)
             feed_time = current_time + timedelta(hours=blended_value)
             gap_hours = blended_value
@@ -448,8 +484,15 @@ def _validate_alignment(alignment: str) -> None:
     """Fail fast on unsupported trajectory alignment modes."""
     if alignment not in {"gap", "time_offset"}:
         raise ValueError(
-            "ALIGNMENT must be 'gap' or 'time_offset'; "
-            f"got {alignment!r}."
+            "ALIGNMENT must be 'gap' or 'time_offset'; " f"got {alignment!r}."
+        )
+
+
+def _validate_history_mode(history_mode: str) -> None:
+    """Fail fast on unsupported state-history modes."""
+    if history_mode not in {"raw", "episode"}:
+        raise ValueError(
+            "HISTORY_MODE must be 'raw' or 'episode'; " f"got {history_mode!r}."
         )
 
 
@@ -464,12 +507,16 @@ def _build_diagnostics(
     complete_states: list[dict],
     feature_means: np.ndarray,
     feature_stds: np.ndarray,
-    elapsed_since_last_bottle: float,
+    elapsed_since_last_history_event: float,
 ) -> dict:
     """Build diagnostics dict for the report and debugging."""
     feature_names = [
-        "last_gap", "mean_gap", "last_volume", "mean_volume",
-        "sin_hour", "cos_hour",
+        "last_gap",
+        "mean_gap",
+        "last_volume",
+        "mean_volume",
+        "sin_hour",
+        "cos_hour",
     ]
 
     return {
@@ -479,11 +526,13 @@ def _build_diagnostics(
         "recency_half_life_hours": RECENCY_HALF_LIFE_HOURS,
         "trajectory_length_method": TRAJECTORY_LENGTH_METHOD,
         "alignment": ALIGNMENT,
+        "history_mode": HISTORY_MODE,
         "feature_weights": {
-            name: round(float(w), 3)
-            for name, w in zip(feature_names, FEATURE_WEIGHTS)
+            name: round(float(w), 3) for name, w in zip(feature_names, FEATURE_WEIGHTS)
         },
-        "elapsed_since_last_bottle_hours": round(elapsed_since_last_bottle, 3),
+        "elapsed_since_last_history_event_hours": round(
+            elapsed_since_last_history_event, 3
+        ),
         "query_features": {
             name: round(float(val), 3)
             for name, val in zip(feature_names, query["features"])

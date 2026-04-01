@@ -35,19 +35,17 @@ multi-window tuning (`tune_model()` sweep). Growth rate is fit at
 runtime, so only the satiety rate needs to be stable across data
 windows. See `research.md` for the canonical sweep results.
 
-The canonical sweep selects a lower satiety rate (0.05) than the
-internal walk-forward diagnostic prefers (~0.6). The tuning surface is
-shallow — nearby values produce similar accuracy. The model retains
-meaningful volume sensitivity at this rate (satiety effect scales ~3.7x
-from 1oz to 4oz), but the absolute effects are smaller than at higher
-rates, producing more uniform gap predictions that score better on
-canonical episode-count matching.
-
-The current value is recorded in `model.py`.
+The canonical sweep selects a lower satiety rate than the internal
+walk-forward diagnostic prefers. The tuning surface is shallow — nearby
+values produce similar accuracy. The model retains meaningful volume
+sensitivity at the shipped rate, but the absolute effects are smaller
+than at higher rates, producing more uniform gap predictions that score
+better on canonical episode-count matching. See `research.md` for the
+sweep evidence and `model.py` for the current value.
 
 ## Circadian modulation: infrastructure only
 
-Research found circadian amplitude = 0.0 optimal for the
+Research found zero circadian amplitude optimal for the
 multiplicative model. Volume already correlates with time of day
 (bigger overnight feeds → longer predicted gaps), so explicit
 circadian modulation is redundant.
@@ -66,12 +64,12 @@ grid search.
 
 ## Lookback window and recency half-life
 
-The lookback window is 7 days. This balances having enough data points
-for a stable estimate against the need to track changing feeding pace.
+The model uses a configured lookback window that balances having enough
+data points for a stable estimate against the need to track changing
+feeding pace.
 
-The recency half-life is set to LOOKBACK_DAYS × 24 hours, giving 50%
-weight at the lookback boundary — roughly equal weighting across the
-full window with modest recency bias.
+The recency half-life is tied to that lookback horizon so weighting
+stays broad across the full window with only modest recency bias.
 
 This broad averaging works because the model operates on episode-level
 history, where all gaps are real inter-episode gaps. Without episode
@@ -124,10 +122,10 @@ volume) on the same footing.
 
 ## Breastfeed merge
 
-Uses the standard 45-minute breastfeed merge heuristic. In early data
-the impact was negligible (very few events affected, tiny volume
-additions), but the infrastructure is in place for when breastfeeding
-becomes more frequent. See `research_results.txt` for current counts.
+Uses the standard breastfeed merge heuristic defined in
+`feedcast.data`. The current impact on this dataset remains small, but
+the infrastructure is in place for when breastfeeding becomes more
+frequent. See `research_results.txt` for current counts.
 
 ## Volume-to-gap relationship
 

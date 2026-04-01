@@ -52,8 +52,8 @@ jointly via `tune_model()`. The current sweep is a mixed-resolution
 - `OVERNIGHT_SHAPE`: `3.0, 3.5, 4.0, 4.25, 4.5, 4.75, 5.0, 5.25, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0`
 - `DAYTIME_SHAPE`: `1.0, 1.25, 1.5, 1.625, 1.75, 1.875, 2.0, 2.5, 3.0, 3.5, 4.0`
 
-The original 40-candidate grid from Phase 3 bottomed out at the
-lowest-tested corner, so the wider grid is the authoritative search.
+The original 40-candidate grid bottomed out at the lowest-tested
+corner, so the wider grid is the authoritative search.
 Scale is still estimated at runtime; only the fixed shape parameters
 are tuned canonically.
 
@@ -105,9 +105,9 @@ The current production constants score:
 
 All 24 windows scored (100% availability).
 
-The production constants were updated in this phase from
-`OVERNIGHT_SHAPE=6.54`, `DAYTIME_SHAPE=3.04` to
-`OVERNIGHT_SHAPE=4.75`, `DAYTIME_SHAPE=1.75`. The reproduced canonical
+The production constants were updated from `OVERNIGHT_SHAPE=6.54`,
+`DAYTIME_SHAPE=3.04` to `OVERNIGHT_SHAPE=4.75`, `DAYTIME_SHAPE=1.75`
+(see `CHANGELOG.md` for provenance). The reproduced canonical
 comparison on the current export is:
 
 | Metric | Pre-update (`6.54`, `3.04`) | Current (`4.75`, `1.75`) |

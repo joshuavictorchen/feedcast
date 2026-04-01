@@ -51,7 +51,7 @@ def main() -> None:
             "%(prog)s MODEL [PARAM=VALUES | FILE.yaml ...] [--json] "
             "[--export-path PATH] [--output-dir DIR] [--lookback HOURS] "
             "[--half-life HOURS] [--cutoff-mode MODE] [--step-hours HOURS] "
-            "[--parallel]"
+            "[--parallel] [--parallel-candidates] [--candidate-workers N]"
         ),
     )
     parser.add_argument(
@@ -116,11 +116,22 @@ def main() -> None:
         action="store_true",
         help="Evaluate windows concurrently within each candidate.",
     )
+    parser.add_argument(
+        "--parallel-candidates",
+        action="store_true",
+        help="Evaluate tuning candidates concurrently in isolated worker processes.",
+    )
+    parser.add_argument(
+        "--candidate-workers",
+        type=int,
+        default=None,
+        help="Worker-process count for candidate-parallel tuning.",
+    )
 
     args = parser.parse_args()
 
     # Shared multi-window kwargs for both score and tune
-    window_kwargs: dict[str, Any] = {
+    replay_kwargs: dict[str, Any] = {
         "export_path": args.export_path,
         "output_dir": args.output_dir,
         "lookback_hours": args.lookback,
@@ -142,7 +153,9 @@ def main() -> None:
             payload = tune_model(
                 model_slug=args.model,
                 candidates_by_name=parsed,
-                **window_kwargs,
+                parallel_candidates=args.parallel_candidates,
+                candidate_workers=args.candidate_workers,
+                **replay_kwargs,
             )
         else:
             # Single value per key -> score with overrides
@@ -152,7 +165,7 @@ def main() -> None:
             payload = score_model(
                 model_slug=args.model,
                 overrides=overrides,
-                **window_kwargs,
+                **replay_kwargs,
             )
     except ValueError as error:
         parser.exit(status=2, message=f"error: {error}\n")

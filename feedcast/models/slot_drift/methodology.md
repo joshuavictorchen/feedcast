@@ -13,11 +13,11 @@ template of slot positions by taking the median hour-of-day for each
 ordinal position across days that match the canonical count. Each
 day's episodes are aligned to the template using the Hungarian
 algorithm with circular time-of-day distance. Episodes that exceed a
-cost threshold (1.5 hours) are left unmatched.
+cost threshold are left unmatched.
 
 After alignment, each slot has a position history across days. A
-recency-weighted linear regression (half-life 1 day) estimates the
-current position and drift rate for each slot. The forecast projects
+recency-weighted linear regression estimates the current position and
+drift rate for each slot. The forecast projects
 today's unfilled slots and tomorrow's full schedule, with one
 additional day of drift applied to tomorrow's positions. Volume is a
 recency-weighted per-slot average.
