@@ -2,6 +2,28 @@
 
 Tracks behavior-level changes to the Latent Hunger model. Add newest entries first.
 
+## Tune SATIETY_RATE from canonical multi-window sweep | 2026-03-31
+
+### Problem
+
+Production `SATIETY_RATE=0.257` was fitted on episode-level walk-forward
+`gap1_mae`. Canonical multi-window evaluation (the authoritative metric)
+had not been used for parameter selection.
+
+### Solution
+
+Ran 12-candidate canonical sweep via `tune_model()`. Best candidate
+`SATIETY_RATE=0.05` improves headline +0.550 (66.3→66.9), driven by
+count accuracy (+1.4). All 24 windows scored at 100% availability for
+all candidates. The tuning surface is shallow (top 5 span 0.5 points).
+
+The model retains meaningful volume sensitivity at sr=0.05 (satiety
+effect scales ~3.7x from 1oz to 4oz), but the lower rate produces more
+uniform gap predictions that score better on canonical episode-count
+matching. Internal diagnostics (gap1_MAE) prefer higher satiety rates
+(~0.6), but the canonical metric is authoritative. See `research.md`
+for the full analysis.
+
 ## Add canonical multi-window evaluation and tuning | 2026-03-28
 
 ### Problem

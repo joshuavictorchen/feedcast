@@ -107,11 +107,11 @@ class DiagnosticsTests(unittest.TestCase):
 
 
 class SatietyRateTests(unittest.TestCase):
-    """Verify the re-tuned satiety rate is in place."""
+    """Verify the canonically-tuned satiety rate is in place."""
 
-    def test_satiety_rate_is_episode_tuned(self) -> None:
-        """SATIETY_RATE should be 0.257 (re-tuned on episode-level data)."""
-        self.assertAlmostEqual(SATIETY_RATE, 0.257, places=3)
+    def test_satiety_rate_is_canonical_tuned(self) -> None:
+        """SATIETY_RATE should be 0.05 (canonical multi-window sweep)."""
+        self.assertAlmostEqual(SATIETY_RATE, 0.05, places=3)
 
 
 if __name__ == "__main__":

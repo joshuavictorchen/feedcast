@@ -41,10 +41,10 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 HUNGER_THRESHOLD = 1.0
 
 # Multiplicative satiety rate: hunger_after = threshold * exp(-rate * volume).
-# Fitted on episode-level data via grid search in research.py. With episode-
-# level volumes, a lower rate fits the real volume-gap relationship without
-# the upward bias from cluster-internal short gaps.
-SATIETY_RATE = 0.257
+# Selected by canonical multi-window tuning (tune_model sweep over 12
+# candidates). Canonical scoring prefers a lower rate than the internal
+# gap-MAE diagnostic (~0.6). See research.md for details.
+SATIETY_RATE = 0.05
 
 # How many days of recent history to use for growth rate estimation.
 LOOKBACK_DAYS = 7

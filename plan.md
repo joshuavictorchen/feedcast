@@ -17,6 +17,7 @@ and surfaces context that the plan text alone does not capture.
 | Phase 3 Implementation | 2026-03-28 | All five research scripts gain canonical multi-window evaluation. latent_hunger/survival_hazard gain canonical tuning. analog_trajectory gains two-stage validation and ALIGNMENT constant. consensus_blend migrates to shared infrastructure (Codex caught weighting divergence and availability bug). Plan restructured to Phases 4–6. 79 tests pass. | `.transcripts/bcc43b44-38db-44e7-8b68-513c05b7aac8.jsonl` |
 | Phase 4–5 Planning | 2026-03-29 | Merged old Phases 4+5 into per-model end-to-end sub-phases. Defined research.md template (canonical/diagnostic split, last-run staleness box), document relationship contract, advisory tuning pipeline. Codex review resolved: commit instruction conflict, readiness marker, consensus_blend dual-purpose framing. Old Phase 6 renamed to Phase 5 with system contract section. | `.transcripts/14689751-83e9-4d29-be6f-9c8b90bc90b7.jsonl` |
 | Phase 4.0–4.1 Implementation | 2026-03-29 | slot_drift research refresh and constant tuning. 128-candidate sweep updated DRIFT 3.0→1.0, LOOKBACK 7→5, THRESHOLD 2.0→1.5 (+9.2 headline). Codex caught overclaim about tuning surface and stale disposition guidance — resolved. Plan threshold normalized to "any improvement." | `.transcripts/e61917e0-0184-48b8-b7f9-29807ea6140a.jsonl` |
+| Phase 4.2 Implementation | 2026-03-31 | latent_hunger research refresh and constant tuning. 12-candidate SATIETY_RATE sweep updated 0.257→0.05 (+0.550 headline). Codex caught stale artifacts (research_results.txt generated before constant change) and overstated volume insensitivity (post-feed hunger framing vs correct satiety effect 3.7x ratio). Third review caught stale "adopted" label on diagnostic section. All resolved. 79 tests pass. | `.transcripts/b7826d26-7e2a-457c-b4d1-15a691aba5ce.jsonl` |
 
 ## Motivation
 
@@ -846,6 +847,42 @@ multiplicative design choice in `design.md`").
 **Deliverable:** Fresh `research_results.txt`,
 `feedcast/models/latent_hunger/research.md`, and any `model.py` /
 `CHANGELOG.md` updates if warranted.
+
+### Sub-phase 4.2 implementation notes (2026-03-31)
+
+- Canonical evaluation (pre-update, sr=0.257): headline=66.3,
+  count=92.6, timing=47.8. 24/24 windows (100% availability).
+- Canonical tuning: 12-candidate `SATIETY_RATE` sweep (0.05–0.8). Best
+  candidate sr=0.05, headline=66.9 (+0.550 vs baseline sr=0.257).
+  Improvement driven by count (+1.4), timing nearly unchanged (+0.1).
+  All candidates had 24/24 availability. Tuning surface is shallow —
+  top 5 span only 0.5 headline points.
+- Disposition: **Change.** `SATIETY_RATE` updated 0.257→0.05.
+  Post-update canonical evaluation confirms headline=66.9 with
+  baseline=best (research script re-run after constant change).
+- **Internal vs. canonical disagreement:** Episode-level walk-forward
+  grid search finds best sr=0.645, while canonical scoring finds best
+  sr=0.05. The metrics disagree on direction. The model retains
+  meaningful volume sensitivity at sr=0.05 (satiety effect scales 3.7x
+  from 1oz to 4oz), but the lower rate produces more uniform gap
+  predictions that improve canonical episode-count matching. Internal
+  gap-MAE rewards stronger per-feed differentiation; canonical headline
+  rewards consistent 24h trajectory quality.
+- `research.py` final summary updated to reflect canonical tuning
+  origin (replaced stale "re-tuned on episode-level data" narrative).
+  Research script re-run after both constant change and summary update
+  so `research_results.txt` matches current production state.
+- `research.md` written with canonical/diagnostic split, last-run
+  staleness box, and document-relationship header. Follows slot_drift
+  template structure. Distinguishes pre-update sweep evidence from
+  current production canonical score.
+- Methodology.md not updated — describes the multiplicative mechanism
+  generally without citing the specific rate value. The mechanism is
+  unchanged; only the constant changed.
+- Updated `test_latent_hunger.py` — `SatietyRateTests` asserts the new
+  production value (0.05). Test name and docstring updated to reflect
+  canonical tuning origin.
+- Focused verification: `.venv/bin/python -m pytest -q` → 79 passed.
 
 ### Sub-phase 4.3: survival_hazard
 

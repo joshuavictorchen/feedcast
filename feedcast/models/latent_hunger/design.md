@@ -30,17 +30,20 @@ search at forecast time, and directly tracks trends as the baby grows.
 
 ## Satiety rate
 
-The satiety rate is a fixed structural parameter chosen from the
-episode-level grid search in `research.py`. Growth rate is fit at
+The satiety rate is a fixed structural parameter selected by canonical
+multi-window tuning (`tune_model()` sweep). Growth rate is fit at
 runtime, so only the satiety rate needs to be stable across data
-windows. See `research_results.txt` for the current grid search
-results and the top parameter sets.
+windows. See `research.md` for the canonical sweep results.
 
-The surface is shallow — nearby satiety rates produce similar
-accuracy — but the episode-level optimal is a cleaner fit to the real
-volume-gap relationship than parameters fitted on raw
-(cluster-contaminated) data. The current value is recorded in
-`model.py`.
+The canonical sweep selects a lower satiety rate (0.05) than the
+internal walk-forward diagnostic prefers (~0.6). The tuning surface is
+shallow — nearby values produce similar accuracy. The model retains
+meaningful volume sensitivity at this rate (satiety effect scales ~3.7x
+from 1oz to 4oz), but the absolute effects are smaller than at higher
+rates, producing more uniform gap predictions that score better on
+canonical episode-count matching.
+
+The current value is recorded in `model.py`.
 
 ## Circadian modulation: infrastructure only
 
