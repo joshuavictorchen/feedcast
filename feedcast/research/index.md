@@ -1,24 +1,125 @@
 # Feedcast Research
 
-This directory holds cross-cutting research that may inform any model or
-agent. Models and agents may use these findings when they help, or ignore
-them when a different approach is better supported.
+This is the shared research hub for the Feedcast project. It tracks
+cross-cutting findings, hypotheses, open questions, and the conventions
+for conducting research. Start here before working on any model or
+research article.
 
-Each research article lives in its own folder and should include:
-
-- `findings.md` for the concise write-up
-- `analysis.py` for the rerunnable analysis
-- `artifacts/` for committed outputs used to support the write-up
-
-Re-run research when new exports arrive or when behavior appears to have
-changed.
+Research is advisory, not binding. Models and agents may use these
+findings when helpful, or ignore them when a different approach is
+better supported.
 
 ## Research Articles
 
-| Concept | Summary conclusion | Where |
-| ------- | ------------------ | ----- |
-| Feed volume vs. subsequent gap | Supported on the current dataset: larger feeds are usually followed by longer gaps, but the effect is modest and should be treated as one signal among several. | [`volume_gap_relationship/findings.md`](volume_gap_relationship/findings.md) |
-| Feed clustering (episodes) | Consecutive bottle feeds within 73 minutes (or 80 minutes if the later feed is ≤ 1.50 oz) belong to the same feeding episode. Derived from hand-labeled boundary data with zero errors on 96 boundaries. The shared rule lives in `feedcast/clustering.py`. | [`feed_clustering/findings.md`](feed_clustering/findings.md) |
+| Concept | Conclusion | Last updated | Where |
+| ------- | ---------- | ------------ | ----- |
+| Feed volume vs. subsequent gap | Supported: larger feeds → longer gaps, but the effect is modest | 2026-03-24 | [`volume_gap_relationship/`](volume_gap_relationship/) |
+| Feed clustering (episodes) | 73-min base / 80-min small-feed extension, zero errors on 96 boundaries | 2026-03-26 | [`feed_clustering/`](feed_clustering/) |
+
+## Conducting Research
+
+### Cross-cutting research articles
+
+**When to create a new article:** When an observation is repeated across
+multiple models or agents and backed by evidence. The Open Questions
+section below tracks candidates. When one is ready, create a
+subdirectory under `feedcast/research/` with the standard file set.
+
+**Article directory convention:**
+
+| File | Purpose |
+| ---- | ------- |
+| `findings.md` | Current conclusions. Written from first principles — describes current state, never accumulates history. |
+| `analysis.py` | Repeatable analysis. Run with `.venv/bin/python -m feedcast.research.<name>.analysis`. Uses shared data loading so results stay aligned with the repo's event construction. |
+| `artifacts/` | Committed outputs (tables, charts, CSVs) referenced by `findings.md`. |
+| `CHANGELOG.md` | Reverse-chronological log of conclusion and method changes. Captures evolution that `findings.md` intentionally does not carry. |
+
+**`findings.md` structure:**
+
+| Section | Content |
+| ------- | ------- |
+| `# Title` | Article title |
+| `## Last analysis` | Staleness box: date, export path, dataset fingerprint, re-run command. Include a staleness check note pointing the reader to re-run if the export has changed. |
+| `## Hypothesis` | Clear statement of the research question |
+| `## Methods` | Data source, analysis unit, approach, checks. Enough detail to evaluate without reading `analysis.py` |
+| `## Results` | Quantitative findings. Reference `artifacts/` for full data |
+| `## Conclusion` | Supported / Not supported / Inconclusive. Interpretation and caveats |
+| `## Artifacts` | Links to generated outputs in `artifacts/` |
+
+See the existing articles (`volume_gap_relationship/`, `feed_clustering/`)
+for reference implementations.
+
+**Updating existing research:**
+
+1. Re-run `analysis.py` on the latest export.
+2. Rewrite `findings.md` from first principles with the new results.
+   Do not append — replace.
+3. If the conclusion or methods changed, add a `CHANGELOG.md` entry
+   with: **Prior conclusion**, **New conclusion**, and **What changed**
+   (what drove the shift — new data, revised method, etc.).
+4. Update the Research Articles table above (conclusion summary and
+   last-updated date).
+5. If the change affects model assumptions or shared hypotheses, update
+   the relevant sections below and any affected model docs.
+
+### Model-specific research
+
+Each model directory contains its own research infrastructure. The
+full convention is in the project README under "Working with Models."
+Key files:
+
+| File | Purpose |
+| ---- | ------- |
+| `research.py` | Repeatable analysis. Run with `.venv/bin/python -m feedcast.models.<slug>.research`. Includes canonical evaluation, optional tuning sweeps, and model-specific diagnostics. |
+| `research.md` | Evidence document: current support for the model's design and constants. Standard template: overview, last canonical run box, methods (canonical + diagnostic), results (canonical + diagnostic), conclusions with disposition, labeled open questions (model-local + cross-cutting). |
+| `research_results.txt` | Saved output from `research.py`. |
+| `CHANGELOG.md` | Reverse-chronological behavior log. |
+
+**Model research workflow:**
+
+1. Run the model's research script.
+2. Review canonical output. Canonical sections use `score_model()` or
+   `tune_model()` from the shared replay infrastructure — results are
+   directly comparable across models.
+3. Decide on constants with an explicit disposition: **Keep** (current
+   constants are best), **Change** (update `model.py` and
+   `CHANGELOG.md`), or **Unresolved** (ambiguous results).
+4. Write or update `research.md` from first principles.
+
+### Shared evaluation infrastructure
+
+Canonical evaluation uses shared infrastructure so results are directly
+comparable across all models and research articles.
+
+**Key entry points:**
+
+| Function | Location | Purpose |
+| -------- | -------- | ------- |
+| `score_forecast()` | `feedcast/evaluation/scoring.py` | Single-window scorer. Episode-matched, horizon-weighted, geometric mean of count F1 and timing credit. |
+| `evaluate_multi_window()` | `feedcast/evaluation/windows.py` | Multi-window aggregation with recency weighting. |
+| `score_model()` | `feedcast/replay/runner.py` | Evaluate a model at production constants across multiple windows. |
+| `tune_model()` | `feedcast/replay/runner.py` | Sweep constant overrides and rank candidates by canonical score. |
+
+**Canonical defaults:**
+
+| Parameter | Default | Purpose |
+| --------- | ------- | ------- |
+| Lookback | 96 hours | How far back to generate replay windows |
+| Half-life | 36 hours | Recency decay for window weighting |
+| Cutoff mode | Episode boundary | Cutoffs placed at feeding episode boundaries |
+| Scoring events | Bottle-only | Actual events scored against predictions |
+
+**What "canonical" means:** Canonical evaluation uses bottle-only
+scoring events, the shared replay infrastructure, and production
+constants (or explicit overrides for tuning). Canonical results are the
+authoritative basis for production constant decisions. Internal
+diagnostics (gap MAE, MLE fits, trajectory error) inform understanding
+of model mechanics but do not override canonical results.
+
+See [`feedcast/replay/README.md`](../replay/README.md) for CLI usage
+and tuning examples. See
+[`feedcast/evaluation/methodology.md`](../evaluation/methodology.md)
+for scoring design rationale.
 
 ## Working Framing
 

@@ -1,5 +1,17 @@
 # Feed Clustering
 
+## Last analysis
+
+| Field | Value |
+|---|---|
+| Date | 2026-03-26 |
+| Export | `exports/export_narababy_silas_20260325.csv` |
+| Dataset | `sha256:eb791b625b6982da5b4e0d7d53e2b8ee4570b8b7db100ae3e063795cc54c5784` |
+| Command | `.venv/bin/python -m feedcast.research.feed_clustering.analysis` |
+
+> **Staleness check:** if the current export differs from the one
+> listed here, re-run the command above to refresh results.
+
 ## Hypothesis
 
 Some close-together bottle feeds are not independent hunger events. They are

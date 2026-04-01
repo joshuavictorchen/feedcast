@@ -1,5 +1,17 @@
 # Feed Volume vs. Subsequent Gap
 
+## Last analysis
+
+| Field | Value |
+|---|---|
+| Date | 2026-03-24 |
+| Export | `exports/export_narababy_silas_20260323.csv` |
+| Dataset | `sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0` |
+| Command | `.venv/bin/python -m feedcast.research.volume_gap_relationship.analysis` |
+
+> **Staleness check:** if the current export differs from the one
+> listed here, re-run the command above to refresh results.
+
 ## Hypothesis
 
 Larger bottle feeds tend to be followed by longer gaps before the next

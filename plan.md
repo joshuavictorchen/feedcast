@@ -1323,6 +1323,28 @@ Rewrite as an agent-usable guide for conducting research:
   `tune_model()` evaluates but does not apply, constants live in
   `model.py`, the decision to change is made by a human or agent
 
+### feedcast/research/index.md — research hub playbook
+
+Expand the research index into a centralized playbook that fresh agents
+can follow to conduct research systematically:
+
+- **Cross-cutting article workflow:** When to create articles, article
+  directory convention (including `CHANGELOG.md`), `findings.md`
+  structure template (staleness box + Hypothesis → Methods → Results →
+  Conclusion → Artifacts), update workflow
+- **Model-specific research workflow:** Model research convention
+  summary, `research.md` template reference, disposition workflow,
+  pointer to README for full convention
+- **Shared evaluation infrastructure:** Key entry points
+  (`score_forecast`, `evaluate_multi_window`, `score_model`,
+  `tune_model`), canonical defaults, what "canonical" means
+- **Research articles table:** Add last-updated column, change links to
+  folder names
+- **Evolution tracking:** `CHANGELOG.md` per research article to capture
+  conclusion and method changes. `findings.md` always describes current
+  state from first principles; `CHANGELOG.md` carries the evolution
+  narrative. Git provides full snapshots.
+
 ### README.md
 
 Update the project README:
@@ -1331,6 +1353,9 @@ Update the project README:
   bottle-only versus breastfeed-merged events are used, why those
   policies differ across layers
 - Add `research.md` to the model directory convention table
+- Add `CHANGELOG.md` to the research article directory convention table
+- Update research article convention to include staleness boxes and
+  evolution tracking
 - Note the advisory nature of the research-tuning pipeline in the
   "Working with Models" section
 
@@ -1353,6 +1378,43 @@ Each model's `research.md` (created in Phase 4) should already cover:
 Verify these are present and accurate after Phase 4 completes. Update
 `feedcast/research/index.md` if any model's research changed a shared
 conclusion.
+
+### Phase 5 partial implementation notes (2026-04-01): research hub playbook
+
+Scope expansion: research hub mechanics were originally planned for a
+subsequent effort but fit naturally into Phase 5's documentation scope.
+Implemented during the 4.6 session while the cross-model synthesis was
+fresh.
+
+- **`feedcast/research/index.md` rewritten** as a centralized research
+  playbook. New "Conducting Research" section covers three areas:
+  (1) Cross-cutting article workflow (when to create, directory
+  convention with `CHANGELOG.md`, `findings.md` template, update
+  workflow), (2) Model-specific research (workflow summary, key files,
+  disposition pattern, pointer to README), (3) Shared evaluation
+  infrastructure (key entry points, canonical defaults, what "canonical"
+  means, links to replay README and evaluation methodology). Research
+  Articles table gained a last-updated column and links now point to
+  folders rather than individual files. All existing content (Working
+  Framing through Open Questions) preserved unchanged.
+- **Evolution tracking:** `CHANGELOG.md` added to the research article
+  directory convention. `findings.md` always describes current state from
+  first principles. `CHANGELOG.md` carries the reverse-chronological
+  evolution narrative (prior conclusion, new conclusion, what changed).
+  Git provides full snapshots — no archive directory needed.
+- **Existing articles updated:**
+  `feedcast/research/volume_gap_relationship/findings.md` and
+  `feedcast/research/feed_clustering/findings.md` gained staleness boxes
+  (date, export, fingerprint, re-run command). Initial `CHANGELOG.md`
+  files created for both articles.
+- **README.md updated:** `CHANGELOG.md` added to research article
+  convention table (with staleness box note on `findings.md`).
+  `research.md` added to model directory convention table and repo
+  layout (all five models). "Update research" guidance updated to
+  reference the full workflow in `index.md`.
+- **Remaining Phase 5 items** (evaluation/methodology.md,
+  replay/README.md, tracker.py docstring, event-construction split in
+  README, advisory tuning pipeline note) are not yet implemented.
 
 Cross-model conclusion to carry forward from Sub-phase 4.4:
 - Episode-level local history is now the production choice for

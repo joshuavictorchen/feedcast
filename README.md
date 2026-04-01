@@ -159,10 +159,12 @@ feedcast/
     volume_gap_relationship/   Feed volume vs. subsequent gap
       analysis.py              Repeatable data analysis
       findings.md              Concise write-up with methods and conclusions
+      CHANGELOG.md             Conclusion and method evolution log
       artifacts/               Committed outputs used by the write-up
     feed_clustering/           Episode boundary rule derivation
       analysis.py              Repeatable data analysis
       findings.md              Concise write-up with methods and conclusions
+      CHANGELOG.md             Conclusion and method evolution log
       labels.yaml              Hand-labeled feed boundaries
       artifacts/               Committed outputs used by the write-up
   models/                      Scripted forecasters and consensus blend
@@ -173,6 +175,7 @@ feedcast/
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
+      research.md              Evidence and canonical evaluation results
       research_results.txt     Saved research output
     analog_trajectory/         Instance-based ML from similar states
       model.py                 Model implementation
@@ -180,6 +183,7 @@ feedcast/
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
+      research.md              Evidence and canonical evaluation results
       research_results.txt     Saved research output
     latent_hunger/             Mechanistic hidden hunger state
       model.py                 Model implementation
@@ -187,6 +191,7 @@ feedcast/
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
+      research.md              Evidence and canonical evaluation results
       research_results.txt     Saved research output
     survival_hazard/           Day-part Weibull survival model
       model.py                 Model implementation
@@ -194,6 +199,7 @@ feedcast/
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Repeatable data analysis
+      research.md              Evidence and canonical evaluation results
       research_results.txt     Saved research output
     consensus_blend/           Majority-vote ensemble across scripted models
       model.py                 Production exact selector
@@ -201,6 +207,7 @@ feedcast/
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
       research.py              Production evaluation and selector sweeps
+      research.md              Evidence and canonical evaluation results
       research_results.txt     Saved research output
   evaluation/                  Retrospective forecast scoring
     scoring.py                 Shared scorer (Hungarian matching, weighted F1 + timing)
@@ -243,13 +250,16 @@ subdirectory under `feedcast/research/` with a standard set of files:
 
 | File | Purpose |
 | ---- | ------- |
-| `findings.md` | Concise write-up with hypothesis, methods, results, and conclusion. |
+| `findings.md` | Concise write-up with hypothesis, methods, results, and conclusion. Includes a staleness box (date, export, fingerprint, re-run command) for mechanical freshness detection. |
 | `analysis.py` | Repeatable data analysis. Run with `.venv/bin/python -m feedcast.research.<name>.analysis`. Uses shared data loading so results stay aligned with the repo's current event construction. |
 | `artifacts/` | Committed outputs used to support the write-up. Keep them reproducible and easy to inspect. |
+| `CHANGELOG.md` | Reverse-chronological log of conclusion and method changes. Tracks evolution that `findings.md` intentionally does not carry. |
 
-**Update research:** Re-run the article's `analysis.py`, commit refreshed
-artifacts, and update `findings.md` and `index.md` if the conclusion
-changes.
+**Update research:** Re-run the article's `analysis.py`, rewrite
+`findings.md` from first principles with the new results, and add a
+`CHANGELOG.md` entry if the conclusion or methods changed. Update the
+Research Articles table in `index.md` if the conclusion summary changed.
+See `index.md` for the full update workflow.
 
 ## Working with Models
 
@@ -269,6 +279,7 @@ under `feedcast/models/` with a standard set of files:
 | `methodology.md` | Report-facing text. Content before the first `##` heading is loaded by `load_methodology()` and rendered into the forecast report. |
 | `design.md` | Design decisions and rationale. Documents why the model works the way it does. |
 | `research.py` | Repeatable data analysis. Run with `.venv/bin/python -m feedcast.models.<name>.research`. Uses the same export selection, data parsing, and constants as the model so its output matches what the model sees. |
+| `research.md` | Evidence document. Current support and challenges for the model's design and constants. Standard template: overview, last canonical run box, methods (canonical + diagnostic), results (canonical + diagnostic), conclusions with disposition, labeled open questions (model-local + cross-cutting). |
 | `research_results.txt` | Saved output from the research script. Committed for reproducibility. |
 
 **Update a model:** When you change a model's behavior, assumptions, or
