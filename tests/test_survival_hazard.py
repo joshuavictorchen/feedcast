@@ -127,12 +127,12 @@ class DiagnosticsTests(unittest.TestCase):
 class ShapeConstantsTests(unittest.TestCase):
     """Verify the re-tuned shape constants are in place."""
 
-    def test_shapes_are_episode_tuned(self) -> None:
-        """Shape constants should be re-fitted from episode-level data."""
-        # Episode-level overnight shape is higher (more regular) than the
-        # raw-gap fit because cluster-internal gaps no longer depress it.
-        self.assertAlmostEqual(OVERNIGHT_SHAPE, 6.54, places=2)
-        self.assertAlmostEqual(DAYTIME_SHAPE, 3.04, places=2)
+    def test_shapes_are_canonical_tuned(self) -> None:
+        """Shape constants should reflect canonical replay tuning."""
+        # The production shapes are chosen by canonical multi-window replay,
+        # not copied directly from the episode-level MLE fit.
+        self.assertAlmostEqual(OVERNIGHT_SHAPE, 4.75, places=2)
+        self.assertAlmostEqual(DAYTIME_SHAPE, 1.75, places=2)
 
 
 if __name__ == "__main__":

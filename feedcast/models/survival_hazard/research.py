@@ -1363,7 +1363,11 @@ def main() -> None:
     log("infrastructure as the replay CLI).")
     log()
 
-    canonical = score_model("survival_hazard", export_path=snapshot.export_path)
+    canonical = score_model(
+        "survival_hazard",
+        export_path=snapshot.export_path,
+        parallel=True,
+    )
     rw = canonical["replay_windows"]
     agg = rw["aggregate"]
     log(f"Aggregate:  headline={agg['headline']:.1f}  count={agg['count']:.1f}  "
@@ -1388,8 +1392,14 @@ def main() -> None:
     # CANONICAL PARAMETER TUNING
     # ================================================================
     # Sweep OVERNIGHT_SHAPE and DAYTIME_SHAPE jointly. These are the
-    # key structural parameters; scale is estimated at runtime. Ranges
-    # cover the research-derived MLE fits and production values.
+    # key structural parameters; scale is estimated at runtime.
+    #
+    # The original 8x5 grid (4.0-8.0 overnight, 2.0-4.0 daytime) hit the
+    # lowest-tested corner, so the canonical sweep now uses a wider,
+    # mixed-resolution grid with extra density around the replay-favored
+    # region. This keeps the research artifact self-contained: the final
+    # recommendation is reproducible from one recorded sweep, not from
+    # ad hoc follow-up probes.
     log("=== CANONICAL PARAMETER TUNING ===")
     log()
     log("Sweeps OVERNIGHT_SHAPE and DAYTIME_SHAPE via tune_model")
@@ -1399,10 +1409,17 @@ def main() -> None:
     tune_result = tune_model(
         "survival_hazard",
         candidates_by_name={
-            "OVERNIGHT_SHAPE": [4.0, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0],
-            "DAYTIME_SHAPE": [2.0, 2.5, 3.0, 3.5, 4.0],
+            "OVERNIGHT_SHAPE": [
+                3.0, 3.5, 4.0, 4.25, 4.5, 4.75, 5.0,
+                5.25, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0,
+            ],
+            "DAYTIME_SHAPE": [
+                1.0, 1.25, 1.5, 1.625, 1.75, 1.875, 2.0,
+                2.5, 3.0, 3.5, 4.0,
+            ],
         },
         export_path=snapshot.export_path,
+        parallel=True,
     )
     bl = tune_result["baseline"]
     be = tune_result["best"]
@@ -1442,18 +1459,24 @@ def main() -> None:
     log(f"  Day-part walk-forward gap1_MAE: {daypart_g1:.3f}h")
     log(f"  Volume significant: {'yes' if lr_stat > 3.84 else 'no'} (LR={lr_stat:.3f})")
     log()
-    log("--- Episode-level (research-best) ---")
+    log("--- Episode-level MLE (descriptive fit) ---")
     if "overnight" in ep_fit_results and "daytime" in ep_fit_results:
         log(f"  Overnight shape: {ep_fit_results['overnight']['shape']:.4f}  "
             f"Daytime shape: {ep_fit_results['daytime']['shape']:.4f}")
     log(f"  Volume significant: {'yes' if ep_lr_stat > 3.84 else 'no'} "
         f"(LR={ep_lr_stat:.3f})")
     log()
+    log("--- Canonical replay tuning ---")
+    log(f"  Baseline headline: {bl_agg['headline']:.3f}")
+    log(f"  Best headline:     {be_agg['headline']:.3f}")
+    log(f"  Baseline params:   {bl['params']}")
+    log(f"  Best params:       {be['params']}")
+    log()
     log("Model implementation uses:")
     log(f"  Episode-level history via episodes_as_events()")
     log(f"  Day-part split Weibull")
     log(f"    Adopted shapes: overnight={OVERNIGHT_SHAPE}, daytime={DAYTIME_SHAPE}")
-    log(f"    (replay-selected; research-best MLE differs — see design.md)")
+    log(f"    (canonical replay-selected; episode-level MLE differs — see design.md)")
     log(f"  Scale estimated at runtime from same-daypart episode gaps")
     log(f"  Recency half-life: {RECENCY_HALF_LIFE_HOURS}h")
     log(f"  Median survival time for point predictions")

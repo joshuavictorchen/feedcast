@@ -35,13 +35,15 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 
 # --- Tuning parameters (model-specific) ---
 
-# Weibull shape parameters by day-part, fitted on episode-level data.
+# Weibull shape parameters by day-part, chosen by canonical multi-window
+# replay rather than copied directly from the episode-level MLE fits.
 # Higher shape = more regular (tighter distribution around the median).
-# Overnight feeds are very regular; daytime feeds are more variable.
-# Episode-level fit removes cluster-internal gap contamination that
-# previously depressed these values. See research.py Section 9.
-OVERNIGHT_SHAPE = 6.54
-DAYTIME_SHAPE = 3.04
+# Episode-level fitting still establishes that overnight is more regular
+# than daytime, but canonical scoring prefers softer shapes that improve
+# full 24h forecast quality. See research.py Section 9 and the canonical
+# tuning section for the evidence chain.
+OVERNIGHT_SHAPE = 4.75
+DAYTIME_SHAPE = 1.75
 
 # Day-part boundaries (hour of day).
 # Overnight: 20:00 to 08:00. Daytime: 08:00 to 20:00.

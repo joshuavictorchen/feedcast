@@ -2,6 +2,49 @@
 
 Tracks behavior-level changes to the Survival Hazard model. Add newest entries first.
 
+## Re-tune shape parameters with wider canonical sweep | 2026-03-31
+
+### Problem
+
+The initial canonical tuning grid from Phase 3 was too narrow for the
+current export. A fresh Phase 4.3 replay run put the best candidate at
+the lowest-tested corner (`OVERNIGHT_SHAPE=4.0`, `DAYTIME_SHAPE=2.0`),
+which meant the evidence did not support stopping there. The production
+constants (`6.54`, `3.04`) were materially behind the canonical replay
+objective on the current dataset.
+
+### Research
+
+Re-ran `research.py` on `exports/export_narababy_silas_20260327.csv`
+with `parallel=True` enabled for canonical score/tune calls. Expanded
+the canonical sweep to a mixed-resolution 154-candidate grid:
+
+- `OVERNIGHT_SHAPE`: `3.0, 3.5, 4.0, 4.25, 4.5, 4.75, 5.0, 5.25, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0`
+- `DAYTIME_SHAPE`: `1.0, 1.25, 1.5, 1.625, 1.75, 1.875, 2.0, 2.5, 3.0, 3.5, 4.0`
+
+Best canonical result:
+
+- Baseline (`6.54`, `3.04`): headline `65.672`, count `92.810`, timing `47.417`
+- Winner (`4.75`, `1.75`): headline `72.653`, count `94.347`, timing `56.572`
+- Delta: `+6.981` headline, `+1.537` count, `+9.155` timing
+- Availability: unchanged at `24/24`
+
+The episode-level MLE fit remains much higher (`7.2296`, `3.4225` on
+the current export), so the direct gap-distribution fit and the
+canonical 24h forecast objective still diverge for this model.
+
+### Solution
+
+Updated production shapes:
+
+- `OVERNIGHT_SHAPE`: `6.54 → 4.75`
+- `DAYTIME_SHAPE`: `3.04 → 1.75`
+
+The day-part split stays intact — overnight remains more regular than
+daytime — but both regimes are softened because canonical replay favors
+better 24-hour trajectory matching over the sharper episode-level MLE
+fit.
+
 ## Add canonical multi-window evaluation and tuning | 2026-03-28
 
 ### Problem

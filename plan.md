@@ -18,6 +18,7 @@ and surfaces context that the plan text alone does not capture.
 | Phase 4–5 Planning | 2026-03-29 | Merged old Phases 4+5 into per-model end-to-end sub-phases. Defined research.md template (canonical/diagnostic split, last-run staleness box), document relationship contract, advisory tuning pipeline. Codex review resolved: commit instruction conflict, readiness marker, consensus_blend dual-purpose framing. Old Phase 6 renamed to Phase 5 with system contract section. | `.transcripts/14689751-83e9-4d29-be6f-9c8b90bc90b7.jsonl` |
 | Phase 4.0–4.1 Implementation | 2026-03-29 | slot_drift research refresh and constant tuning. 128-candidate sweep updated DRIFT 3.0→1.0, LOOKBACK 7→5, THRESHOLD 2.0→1.5 (+9.2 headline). Codex caught overclaim about tuning surface and stale disposition guidance — resolved. Plan threshold normalized to "any improvement." | `.transcripts/e61917e0-0184-48b8-b7f9-29807ea6140a.jsonl` |
 | Phase 4.2 Implementation | 2026-03-31 | latent_hunger research refresh and constant tuning. 12-candidate SATIETY_RATE sweep updated 0.257→0.05 (+0.550 headline). Codex caught stale artifacts (research_results.txt generated before constant change) and overstated volume insensitivity (post-feed hunger framing vs correct satiety effect 3.7x ratio). Third review caught stale "adopted" label on diagnostic section. All resolved. 79 tests pass. | `.transcripts/b7826d26-7e2a-457c-b4d1-15a691aba5ce.jsonl` |
+| Phase 4.3 Implementation | 2026-03-31 | survival_hazard research refresh and constant tuning. Initial 40-candidate canonical sweep hit the grid boundary, so the sweep was widened to a 154-candidate mixed-resolution grid; production shapes updated 6.54/3.04→4.75/1.75 (+6.981 headline, 24/24 availability). Follow-up discussion clarified descriptive episode-level MLE vs canonical replay tuning, added windowed-MLE and component-ablation follow-ups, and renamed the final-summary label to "Episode-level MLE (descriptive fit)". 79 tests pass. | `.transcripts/rollout-2026-03-31T22-25-05-019d46db-d72c-7c81-9bff-1af02fc6638b.jsonl` |
 
 ## Motivation
 
@@ -897,11 +898,13 @@ multiplicative design choice in `design.md`").
 
 **Per-model context:** Weibull fitting, day-part analysis, discrete
 hazard comparison, volume covariate testing, episode analysis. Canonical
-tune sweeps both shape parameters jointly (8 overnight × 5 daytime = 40
-candidates). Scale is runtime-estimated. `research.md` should clarify
-which sections are historical exploration (e.g., discrete hazard
-comparison was an early design alternative) vs current validation (e.g.,
-day-part Weibull fits confirm the overnight/daytime split).
+tune sweeps both shape parameters jointly. The original plan assumed an
+8 overnight × 5 daytime grid (40 candidates), but the executed 4.3 work
+expanded this after the initial canonical winner hit the lowest-tested
+corner. Scale is runtime-estimated. `research.md` should clarify which
+sections are historical exploration (e.g., discrete hazard comparison
+was an early design alternative) vs current validation (e.g., day-part
+Weibull fits confirm the overnight/daytime split).
 
 **Disposition guidance:** Same criteria as latent_hunger — any headline
 improvement warrants an update. Update both shape constants together
@@ -910,6 +913,45 @@ if the evidence supports it.
 **Deliverable:** Fresh `research_results.txt`,
 `feedcast/models/survival_hazard/research.md`, and any `model.py` /
 `CHANGELOG.md` updates if warranted.
+
+### Sub-phase 4.3 implementation notes (2026-03-31)
+
+- Activated `parallel=True` in `feedcast.models.survival_hazard.research`
+  for canonical `score_model()` and `tune_model()` calls. Full research
+  run time on `export_narababy_silas_20260327.csv`: `real 5.66s`.
+- Canonical evaluation with pre-update production constants
+  (`OVERNIGHT_SHAPE=6.54`, `DAYTIME_SHAPE=3.04`) scored
+  headline=`65.672`, count=`92.810`, timing=`47.417`, availability
+  `24/24`.
+- The original 40-candidate canonical grid bottomed out at the lowest
+  tested corner (`OVERNIGHT_SHAPE=4.0`, `DAYTIME_SHAPE=2.0`,
+  headline=`70.417`). Rather than document a boundary winner, the sweep
+  was widened to a mixed-resolution 154-candidate grid.
+- Disposition: **Change.** Expanded canonical sweep selected
+  `OVERNIGHT_SHAPE=4.75`, `DAYTIME_SHAPE=1.75`, improving headline to
+  `72.653` (`+6.981`). Count improved `92.810→94.347` (`+1.537`);
+  timing improved `47.417→56.572` (`+9.155`). Availability remained
+  `24/24`.
+- Post-update research script re-run confirms baseline=`best` on the
+  widened grid. `research_results.txt` is now in the final production
+  state (`72.653`, `24/24`).
+- Internal diagnostics and canonical replay disagree materially on
+  shape direction. Raw day-part fits are `4.4417 / 2.7987`; episode-
+  level MLE fits are `7.2296 / 3.4225`; canonical replay selects the
+  softer production pair `4.75 / 1.75`. The day-part split is still
+  supported; direct distribution fit is not authoritative for
+  production constants.
+- Episode-level history remains strongly supported (`121` raw bottle
+  events collapse to `103` episodes). Volume overlay remains rejected:
+  episode-level LR test is significant (`6.025`), but every positive
+  beta worsens walk-forward accuracy. Breastfeed merge still causes `0`
+  boundary differences, so bottle-only input policy stands.
+- Wrote `feedcast/models/survival_hazard/research.md`, updated
+  `model.py`, `design.md`, `CHANGELOG.md`, and
+  `tests/test_survival_hazard.py`. `methodology.md` was left unchanged
+  because the high-level mechanism is unchanged and it intentionally
+  avoids frozen parameter values.
+- Focused verification: `.venv/bin/python -m pytest -q` → `79 passed`.
 
 ### Sub-phase 4.4: analog_trajectory
 

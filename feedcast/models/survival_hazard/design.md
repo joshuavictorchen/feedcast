@@ -41,21 +41,41 @@ variable.
 
 The exact current shapes are intentionally not duplicated here. The
 current production constants live in `model.py`. The episode-level fit,
-walk-forward comparison, and any replay-selected deviation from the
-research-best fit are recorded in `research_results.txt` under
-`EPISODE-LEVEL ANALYSIS` and `FINAL SUMMARY`.
+walk-forward comparison, and canonical replay tuning are recorded in
+`research_results.txt` under `EPISODE-LEVEL ANALYSIS`,
+`CANONICAL PARAMETER TUNING`, and `FINAL SUMMARY`.
 
-**Evidence separation:** The research-best episode fit and the adopted
-production constants are tracked separately whenever replay favors
-nearby values. That provenance belongs in the research artifact and
-changelog, not as frozen numbers in this document.
+**Descriptive fit vs production tuning:** The episode-level MLE fit
+and the canonical replay-tuned production constants serve different
+purposes and are tracked separately:
+
+- *Episode-level fit (descriptive):* Fits Weibull shapes directly to
+  observed episode gaps across the full export history. Answers: "Is
+  the Weibull family appropriate? Is the day-part split structurally
+  real? What does the gap distribution actually look like?"
+- *Canonical replay (production):* Sweeps shape parameters through
+  the actual production forecaster across recent retrospective windows.
+  Answers: "Which constants make the shipped system forecast best?"
+
+For this model, replay prefers materially softer shapes than the
+episode-level MLE. The divergence is expected — the production
+forecaster adds runtime scale estimation, conditional survival, and
+deterministic median chaining, so its optimal shapes depend on those
+mechanics, not just the raw gap distribution. The episode-level fit
+remains valuable as a structural diagnostic and as a reference point
+for measuring how far replay is compensating. If the gap keeps growing
+with future exports, that signals the model structure may need
+rethinking, not just re-tuning.
+
+Provenance details belong in the research artifact and changelog, not
+as frozen numbers in this document.
 
 ## Fixed shape, runtime scale
 
 Shape reflects structural regularity (changes slowly as the baby
 grows). Scale reflects current pace (changes as feeding frequency
-shifts). The model fixes shapes from research and estimates scale at
-runtime using the closed-form weighted MLE:
+shifts). The model fixes shapes from canonical replay tuning and
+estimates scale at runtime using the closed-form weighted MLE:
 
     λ_hat = (Σ w_i × t_i^k / Σ w_i)^(1/k)
 
@@ -65,7 +85,9 @@ uses the configured half-life from `model.py`. The current lookback and
 half-life choices are justified by the episode-level walk-forward sweep
 in `research_results.txt`. Broad averaging works because episode-level
 history is clean — all gaps are real inter-episode gaps, not cluster
-noise.
+noise. The fixed shapes are not copied directly from those same local
+fits; canonical replay chooses the shape pair that produces the best
+full-horizon forecasts once runtime scale estimation is in the loop.
 
 ## Conditional survival for the first feed
 
