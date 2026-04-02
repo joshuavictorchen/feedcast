@@ -20,11 +20,10 @@ better supported.
 
 Cross-cutting research articles (in `feedcast/research/`) and model-
 specific research (in each model directory under `feedcast/models/`)
-share the same file names, high-level document structure, and workflow.
-The details differ — model research has canonical evaluation sections
-and a "Last canonical run" staleness box, while cross-cutting articles
-have bespoke methods and a "Last analysis" staleness box. Variations
-are noted inline below.
+share the same file names, document structure, and workflow. The content
+within each section varies — model research has canonical evaluation
+sections, cross-cutting articles have bespoke methods — but the section
+headers and overall flow are identical.
 
 ### Directory convention
 
