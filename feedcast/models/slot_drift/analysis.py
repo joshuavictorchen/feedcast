@@ -1,7 +1,7 @@
 """Slot Drift research: analyze daily feeding patterns for slot count and template.
 
 Run from the repo root:
-    .venv/bin/python -m feedcast.models.slot_drift.research
+    .venv/bin/python -m feedcast.models.slot_drift.analysis
 
 This script reproduces the data analysis that informed the Slot Drift
 design. It uses the same export selection, data parsing, lookback window,
@@ -347,7 +347,9 @@ def main() -> None:
     log()
 
     # Save results alongside the script.
-    results_path = OUTPUT_DIR / "research_results.txt"
+    artifacts_dir = OUTPUT_DIR / "artifacts"
+    artifacts_dir.mkdir(exist_ok=True)
+    results_path = artifacts_dir / "research_results.txt"
     results_path.write_text(output_capture.getvalue())
     log(f"\nResults saved to {results_path}")
 

@@ -19,7 +19,7 @@ from getting inflated credit for predicting them separately.
 The cluster boundary rule: two consecutive feeds belong to the same
 episode if the gap is ≤ 73 minutes, or ≤ 80 minutes when the later
 feed is ≤ 1.50 oz. Chaining is transitive. Full derivation:
-[`feedcast/research/feed_clustering/findings.md`](../research/feed_clustering/findings.md).
+[`feedcast/research/feed_clustering/research.md`](../research/feed_clustering/research.md).
 
 **Cross-cutoff clusters.** Actuals are grouped using pre-cutoff context
 so that a post-cutoff attachment correctly joins its pre-cutoff anchor.

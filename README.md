@@ -158,12 +158,12 @@ feedcast/
     index.md                   Research hub and table of contents
     volume_gap_relationship/   Feed volume vs. subsequent gap
       analysis.py              Repeatable data analysis
-      findings.md              Concise write-up with methods and conclusions
+      research.md              Current conclusions and evidence
       CHANGELOG.md             Conclusion and method evolution log
       artifacts/               Committed outputs used by the write-up
     feed_clustering/           Episode boundary rule derivation
       analysis.py              Repeatable data analysis
-      findings.md              Concise write-up with methods and conclusions
+      research.md              Current conclusions and evidence
       CHANGELOG.md             Conclusion and method evolution log
       labels.yaml              Hand-labeled feed boundaries
       artifacts/               Committed outputs used by the write-up
@@ -174,41 +174,41 @@ feedcast/
       CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
-      research.py              Repeatable data analysis
+      analysis.py              Repeatable data analysis
       research.md              Evidence and canonical evaluation results
-      research_results.txt     Saved research output
+      artifacts/               Committed analysis outputs
     analog_trajectory/         Instance-based ML from similar states
       model.py                 Model implementation
       CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
-      research.py              Repeatable data analysis
+      analysis.py              Repeatable data analysis
       research.md              Evidence and canonical evaluation results
-      research_results.txt     Saved research output
+      artifacts/               Committed analysis outputs
     latent_hunger/             Mechanistic hidden hunger state
       model.py                 Model implementation
       CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
-      research.py              Repeatable data analysis
+      analysis.py              Repeatable data analysis
       research.md              Evidence and canonical evaluation results
-      research_results.txt     Saved research output
+      artifacts/               Committed analysis outputs
     survival_hazard/           Day-part Weibull survival model
       model.py                 Model implementation
       CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
-      research.py              Repeatable data analysis
+      analysis.py              Repeatable data analysis
       research.md              Evidence and canonical evaluation results
-      research_results.txt     Saved research output
+      artifacts/               Committed analysis outputs
     consensus_blend/           Majority-vote ensemble across scripted models
       model.py                 Production exact selector
       CHANGELOG.md             Reverse-chronological behavior changes
       methodology.md           Report methodology text
       design.md                Design decisions and rationale
-      research.py              Production evaluation and selector sweeps
+      analysis.py              Production evaluation and selector sweeps
       research.md              Evidence and canonical evaluation results
-      research_results.txt     Saved research output
+      artifacts/               Committed analysis outputs
   evaluation/                  Retrospective forecast scoring
     scoring.py                 Shared scorer (Hungarian matching, weighted F1 + timing)
     methodology.md             Scoring design rationale and parameter choices
@@ -245,21 +245,16 @@ Research is advisory, not binding. Models and agents may use these
 findings when helpful, but they are free to ignore them if a different
 approach is better supported.
 
-**Research directory convention:** Each research article lives in its own
-subdirectory under `feedcast/research/` with a standard set of files:
+**Research directory convention:** Both cross-cutting and model research
+use the same file set. See `index.md` for the full convention, document
+template, and workflow. The core files are:
 
 | File | Purpose |
 | ---- | ------- |
-| `findings.md` | Concise write-up with hypothesis, methods, results, and conclusion. Includes a staleness box (date, export, fingerprint, re-run command) for mechanical freshness detection. |
-| `analysis.py` | Repeatable data analysis. Run with `.venv/bin/python -m feedcast.research.<name>.analysis`. Uses shared data loading so results stay aligned with the repo's current event construction. |
-| `artifacts/` | Committed outputs used to support the write-up. Keep them reproducible and easy to inspect. |
-| `CHANGELOG.md` | Reverse-chronological log of conclusion and method changes. Tracks evolution that `findings.md` intentionally does not carry. |
-
-**Update research:** Re-run the article's `analysis.py`, rewrite
-`findings.md` from first principles with the new results, and add a
-`CHANGELOG.md` entry if the conclusion or methods changed. Update the
-Research Articles table in `index.md` if the conclusion summary changed.
-See `index.md` for the full update workflow.
+| `research.md` | Current conclusions. Written from first principles with a staleness box for mechanical freshness detection. |
+| `analysis.py` | Repeatable analysis. Run as a Python module (see `index.md` for exact commands). |
+| `artifacts/` | Committed outputs (tables, charts, CSVs) referenced by `research.md`. |
+| `CHANGELOG.md` | Reverse-chronological log of hypothesis, method, and conclusion changes. |
 
 ## Working with Models
 
@@ -267,7 +262,7 @@ See `index.md` for the full update workflow.
 findings and open questions now live in
 [`feedcast/research/index.md`](feedcast/research/index.md). After that,
 read the specific model's `design.md`, `methodology.md`, and
-`research.py` if you are changing that model.
+`analysis.py` if you are changing that model.
 
 **Model directory convention:** Each model lives in its own subdirectory
 under `feedcast/models/` with a standard set of files:
@@ -278,9 +273,9 @@ under `feedcast/models/` with a standard set of files:
 | `CHANGELOG.md` | Reverse-chronological behavior log. Update it whenever the model's behavior, assumptions, or tuning changes. Use a one-line summary with `Problem` and `Solution` sections. |
 | `methodology.md` | Report-facing text. Content before the first `##` heading is loaded by `load_methodology()` and rendered into the forecast report. |
 | `design.md` | Design decisions and rationale. Documents why the model works the way it does. |
-| `research.py` | Repeatable data analysis. Run with `.venv/bin/python -m feedcast.models.<name>.research`. Uses the same export selection, data parsing, and constants as the model so its output matches what the model sees. |
+| `analysis.py` | Repeatable data analysis. Run with `.venv/bin/python -m feedcast.models.<name>.analysis`. Uses the same export selection, data parsing, and constants as the model so its output matches what the model sees. |
 | `research.md` | Evidence document. Current support and challenges for the model's design and constants. Standard template: overview, last canonical run box, methods (canonical + diagnostic), results (canonical + diagnostic), conclusions with disposition, labeled open questions (model-local + cross-cutting). |
-| `research_results.txt` | Saved output from the research script. Committed for reproducibility. |
+| `artifacts/` | Committed outputs (`research_results.txt` and any other generated files) referenced by `research.md`. |
 
 **Update a model:** When you change a model's behavior, assumptions, or
 tuning, add a new top entry to that model's `CHANGELOG.md`. If the change

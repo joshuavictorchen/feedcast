@@ -5,7 +5,7 @@ feeding episode (e.g., a large feed followed by a small top-up). This module
 provides a deterministic rule for collapsing such feeds into episodes.
 
 The rule was derived from hand-labeled boundary data:
-    feedcast/research/feed_clustering/findings.md
+    feedcast/research/feed_clustering/research.md
 
 Two consecutive feeds belong to the same episode if:
     gap <= 73 minutes, OR

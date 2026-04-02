@@ -2,7 +2,7 @@
 discrete-time hazard baselines, and the effect of volume/day-part covariates.
 
 Run from the repo root:
-    .venv/bin/python -m feedcast.models.survival_hazard.research
+    .venv/bin/python -m feedcast.models.survival_hazard.analysis
 
 This script reproduces the data analysis that informs the Survival / Hazard
 model design. It uses the same export selection and data parsing as the model,
@@ -1484,7 +1484,9 @@ def main() -> None:
     log(f"  Bottle-only events (no breastfeed merge)")
 
     # Save results.
-    results_path = OUTPUT_DIR / "research_results.txt"
+    artifacts_dir = OUTPUT_DIR / "artifacts"
+    artifacts_dir.mkdir(exist_ok=True)
+    results_path = artifacts_dir / "research_results.txt"
     results_path.write_text(output_capture.getvalue())
     log(f"\nResults saved to {results_path}")
 

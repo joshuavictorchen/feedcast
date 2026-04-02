@@ -25,4 +25,4 @@ survival function.
 
 This methodology intentionally stays at the level of mechanism. Current
 fitted values, empirical comparisons, and replay evidence live in
-`research_results.txt`. Current production constants live in `model.py`.
+`artifacts/research_results.txt`. Current production constants live in `model.py`.

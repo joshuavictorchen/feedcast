@@ -1,7 +1,7 @@
 """Consensus Blend research: evaluate the production exact selector.
 
 Run from the repo root:
-    .venv/bin/python -m feedcast.models.consensus_blend.research
+    .venv/bin/python -m feedcast.models.consensus_blend.analysis
 
 This script evaluates the production immutable-candidate selector on
 recent retrospective cutoffs and sweeps nearby selector constants.
@@ -121,7 +121,9 @@ def main() -> None:
         scoring_events, events, snapshot.activities, cutoffs, cutoff, log,
     )
 
-    results_path = OUTPUT_DIR / "research_results.txt"
+    artifacts_dir = OUTPUT_DIR / "artifacts"
+    artifacts_dir.mkdir(exist_ok=True)
+    results_path = artifacts_dir / "research_results.txt"
     results_path.write_text(output_capture.getvalue())
     log(f"\nResults saved to {results_path}")
 

@@ -13,7 +13,7 @@ Two satiety mechanisms were compared:
 Multiplicative wins on both accuracy and prediction diversity. The
 additive model is a dressed-up constant-gap predictor; the
 multiplicative model produces real volume-dependent variation. See
-`research.py` and `research_results.txt` for current numbers.
+`analysis.py` and `artifacts/research_results.txt` for current numbers.
 
 ## Fixed threshold, fitted growth rate
 
@@ -125,13 +125,13 @@ volume) on the same footing.
 Uses the standard breastfeed merge heuristic defined in
 `feedcast.data`. The current impact on this dataset remains small, but
 the infrastructure is in place for when breastfeeding becomes more
-frequent. See `research_results.txt` for current counts.
+frequent. See `artifacts/research_results.txt` for current counts.
 
 ## Volume-to-gap relationship
 
 This model depends on the shared cross-cutting finding that larger
 feeds tend to be followed by longer gaps. See
-[`feedcast/research/volume_gap_relationship/findings.md`](../../research/volume_gap_relationship/findings.md)
+[`feedcast/research/volume_gap_relationship/research.md`](../../research/volume_gap_relationship/research.md)
 for the current evidence.
 
 The multiplicative satiety mechanism encodes that relationship
@@ -139,7 +139,7 @@ directly: a small feed produces a modest hunger reset, a large feed
 produces a deep reset. At episode level, the volume-gap correlation
 is weaker than at the raw-feed level because some of the apparent
 signal in raw data came from cluster artifacts. See
-`research_results.txt` for current correlation values.
+`artifacts/research_results.txt` for current correlation values.
 
 ## What this model is (and isn't)
 

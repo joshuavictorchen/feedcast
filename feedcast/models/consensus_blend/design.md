@@ -23,7 +23,7 @@ copy of each forecast — the caller's forecasts are not mutated. The
 research sweep also collapses before generating candidates so that
 sweep results match production behavior.
 
-See `feedcast/research/feed_clustering/findings.md` for the boundary
+See `feedcast/research/feed_clustering/research.md` for the boundary
 rule derivation.
 
 ## How candidates are built
@@ -64,7 +64,7 @@ set subject to two hard rules:
 ## Why a bounded search radius?
 
 Models often disagree by significant margins about the same real
-episode (see the spread percentiles in `research_results.txt`). A
+episode (see the spread percentiles in `artifacts/research_results.txt`). A
 narrow radius misses legitimate agreement. A wide radius pulls in
 outlier predictions too, but the median timestamp naturally reflects
 the majority position — one outlier barely moves the median of a

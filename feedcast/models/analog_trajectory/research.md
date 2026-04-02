@@ -26,10 +26,10 @@ questions are:
 | Run date | 2026-04-01 |
 | Export | `exports/export_narababy_silas_20260327.csv` |
 | Dataset | `sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d` |
-| Command | `.venv/bin/python -m feedcast.models.analog_trajectory.research` |
+| Command | `.venv/bin/python -m feedcast.models.analog_trajectory.analysis` |
 | Canonical headline | 69.9 |
 | Availability | 24/24 windows (100%) |
-| Full output | [`research_results.txt`](research_results.txt) |
+| Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Research integrity note:** the final recorded sweep is post-fix for a
 > bug in `_state_features()` where `LOOKBACK_HOURS` had been captured as

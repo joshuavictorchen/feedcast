@@ -1,7 +1,7 @@
 """Analog Trajectory research: diagnostics plus full canonical tuning.
 
 Run from the repo root:
-    .venv/bin/python -m feedcast.models.analog_trajectory.research
+    .venv/bin/python -m feedcast.models.analog_trajectory.analysis
 
 This script keeps the local retrieval/blending diagnostics that explain
 how the analog model behaves, but production constants are selected by
@@ -282,7 +282,9 @@ def main() -> None:
         "retrieval quality and history-mode tradeoffs, but they do not ship constants."
     )
 
-    results_path = OUTPUT_DIR / "research_results.txt"
+    artifacts_dir = OUTPUT_DIR / "artifacts"
+    artifacts_dir.mkdir(exist_ok=True)
+    results_path = artifacts_dir / "research_results.txt"
     results_path.write_text(output_capture.getvalue())
     log(f"\nResults saved to {results_path}")
 

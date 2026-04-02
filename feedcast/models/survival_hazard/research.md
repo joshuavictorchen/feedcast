@@ -26,10 +26,10 @@ day-part-specific Weibull hazards. The key research questions are:
 | Run date | 2026-03-31 |
 | Export | `exports/export_narababy_silas_20260327.csv` |
 | Dataset | `sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d` |
-| Command | `.venv/bin/python -m feedcast.models.survival_hazard.research` |
+| Command | `.venv/bin/python -m feedcast.models.survival_hazard.analysis` |
 | Canonical headline | 72.7 |
 | Availability | 24/24 windows (100%) |
-| Full output | [`research_results.txt`](research_results.txt) |
+| Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Staleness check:** if the current export differs from the one
 > listed here, re-run the command above to refresh results.

@@ -2,7 +2,7 @@
 
 ## Tunable parameters
 
-All production constants are tuned in `research.py`. The shipping gate
+All production constants are tuned in `analysis.py`. The shipping gate
 is a full canonical replay sweep through `tune_model()`. The local
 `full_traj_MAE` sweeps remain diagnostic only. Current values are in
 `model.py`; see `research.md` for the evidence behind each choice.

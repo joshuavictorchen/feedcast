@@ -7,7 +7,7 @@ The scoring model intentionally separates two questions:
 
 Both actuals and predictions are collapsed into episodes before matching,
 so cluster feeds are scored as single feeding events. See
-feedcast/research/feed_clustering/findings.md for the boundary rule.
+feedcast/research/feed_clustering/research.md for the boundary rule.
 
 This keeps the metric diagnosable while still producing one headline score.
 """

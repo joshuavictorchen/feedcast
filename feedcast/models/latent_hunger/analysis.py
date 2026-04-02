@@ -3,7 +3,7 @@ structure, and compare additive vs. multiplicative satiety models with
 constant and circadian-modulated growth rates.
 
 Run from the repo root:
-    .venv/bin/python -m feedcast.models.latent_hunger.research
+    .venv/bin/python -m feedcast.models.latent_hunger.analysis
 
 This script reproduces the data analysis that informs the Latent Hunger
 State design. It uses the same export selection, data parsing, and
@@ -914,7 +914,9 @@ def main() -> None:
     log("  7. Breastfeed merge has negligible impact on current data")
 
     # Save results.
-    results_path = OUTPUT_DIR / "research_results.txt"
+    artifacts_dir = OUTPUT_DIR / "artifacts"
+    artifacts_dir.mkdir(exist_ok=True)
+    results_path = artifacts_dir / "research_results.txt"
     results_path.write_text(output_capture.getvalue())
     log(f"\nResults saved to {results_path}")
 

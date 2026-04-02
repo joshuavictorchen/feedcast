@@ -26,10 +26,10 @@ are:
 | Run date | 2026-03-31 |
 | Export | `exports/export_narababy_silas_20260327.csv` |
 | Dataset | `sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d` |
-| Command | `.venv/bin/python -m feedcast.models.latent_hunger.research` |
+| Command | `.venv/bin/python -m feedcast.models.latent_hunger.analysis` |
 | Canonical headline | 66.9 |
 | Availability | 24/24 windows (100%) |
-| Full output | [`research_results.txt`](research_results.txt) |
+| Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Staleness check:** if the current export differs from the one
 > listed here, re-run the command above to refresh results.
@@ -114,7 +114,7 @@ All 24 windows scored (100% availability) for all 12 candidates.
 Production was updated to sr=0.05 based on this sweep (see
 `CHANGELOG.md`). The current production canonical score is headline
 66.9, confirmed by re-running the research script after the update
-(baseline=best in `research_results.txt`).
+(baseline=best in `artifacts/research_results.txt`).
 
 The top 5 candidates form a monotonic sequence from sr=0.05 to sr=0.25,
 all within 0.5 headline points of each other — the surface is shallow.

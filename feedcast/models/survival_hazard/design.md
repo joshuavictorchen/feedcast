@@ -1,8 +1,8 @@
 # Survival Hazard Design Decisions
 
 This document records stable design choices. Current fitted values,
-replay metrics, and dataset-specific measurements live in `research.py`
-and `research_results.txt`. Current production constants live in
+replay metrics, and dataset-specific measurements live in `analysis.py`
+and `artifacts/research_results.txt`. Current production constants live in
 `model.py`. The goal here is to explain why the model is shaped this
 way, not to duplicate a moving numerical snapshot.
 
@@ -42,7 +42,7 @@ variable.
 The exact current shapes are intentionally not duplicated here. The
 current production constants live in `model.py`. The episode-level fit,
 walk-forward comparison, and canonical replay tuning are recorded in
-`research_results.txt` under `EPISODE-LEVEL ANALYSIS`,
+`artifacts/research_results.txt` under `EPISODE-LEVEL ANALYSIS`,
 `CANONICAL PARAMETER TUNING`, and `FINAL SUMMARY`.
 
 **Descriptive fit vs production tuning:** The episode-level MLE fit
@@ -83,7 +83,7 @@ Scale is estimated separately for each day-part from same-period
 episode gaps within the configured lookback window. Recency weighting
 uses the configured half-life from `model.py`. The current lookback and
 half-life choices are justified by the episode-level walk-forward sweep
-in `research_results.txt`. Broad averaging works because episode-level
+in `artifacts/research_results.txt`. Broad averaging works because episode-level
 history is clean — all gaps are real inter-episode gaps, not cluster
 noise. The fixed shapes are not copied directly from those same local
 fits; canonical replay chooses the shape pair that produces the best
@@ -117,7 +117,7 @@ clustering rule's extension arm checks the later feed's
 `volume_oz`, so breastfeed merge could theoretically change episode
 boundaries. This model keeps a bottle-only local input policy. The
 current bottle-only vs breastfeed-merged comparison is documented in
-`research_results.txt` under `BREASTFEED MERGE POLICY COMPARISON`,
+`artifacts/research_results.txt` under `BREASTFEED MERGE POLICY COMPARISON`,
 which is the right place for the dataset-specific counts and boundary
 comparison.
 
@@ -137,7 +137,7 @@ estimation overfits — it pushes predictions away from the well-
 calibrated base scale without adding useful signal. That is enough to
 reject this overlay for production. It does not rule out every future
 use of volume under a different model structure. The current LR result
-and walk-forward sweep live in `research_results.txt` under the
+and walk-forward sweep live in `artifacts/research_results.txt` under the
 episode-level volume sections.
 
 ## Day-part boundaries
@@ -146,5 +146,5 @@ Circadian analysis shows a clear transition: overnight has longer,
 more regular gaps while daytime has shorter, more variable gaps. The
 model uses a single configured overnight/daytime boundary pair defined
 in `model.py`. The current boundary choice and supporting measurements
-are recorded in `research_results.txt`; this document keeps the
+are recorded in `artifacts/research_results.txt`; this document keeps the
 behavioral rationale rather than duplicating the current cutoff values.
