@@ -246,15 +246,16 @@ findings when helpful, but they are free to ignore them if a different
 approach is better supported.
 
 **Research directory convention:** Both cross-cutting and model research
-use the same file set. See `index.md` for the full convention, document
-template, and workflow. The core files are:
+use the same file names. See `index.md` for the full convention,
+document structure, and workflow — including where cross-cutting and
+model research differ. The core files are:
 
 | File | Purpose |
 | ---- | ------- |
 | `research.md` | Current conclusions. Written from first principles with a staleness box for mechanical freshness detection. |
 | `analysis.py` | Repeatable analysis. Run as a Python module (see `index.md` for exact commands). |
 | `artifacts/` | Committed outputs (tables, charts, CSVs) referenced by `research.md`. |
-| `CHANGELOG.md` | Reverse-chronological log of hypothesis, method, and conclusion changes. |
+| `CHANGELOG.md` | Reverse-chronological evolution log. See `index.md` for format details by research type. |
 
 ## Working with Models
 

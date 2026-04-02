@@ -20,8 +20,11 @@ better supported.
 
 Cross-cutting research articles (in `feedcast/research/`) and model-
 specific research (in each model directory under `feedcast/models/`)
-share the same core file set, document template, and workflow. Where
-they differ is noted below.
+share the same file names, high-level document structure, and workflow.
+The details differ — model research has canonical evaluation sections
+and a "Last canonical run" staleness box, while cross-cutting articles
+have bespoke methods and a "Last analysis" staleness box. Variations
+are noted inline below.
 
 ### Directory convention
 
@@ -32,18 +35,23 @@ they differ is noted below.
 | `artifacts/` | Committed outputs (tables, charts, CSVs, `research_results.txt`) referenced by `research.md`. |
 | `CHANGELOG.md` | Reverse-chronological evolution log. Cross-cutting articles log hypothesis, method, and conclusion changes. Model CHANGELOGs log behavior changes (constants, logic) — see the README for model CHANGELOG conventions. |
 
-### `research.md` template
+### `research.md` structure
 
-| Section | Content |
-| ------- | ------- |
-| `# Title` | Article title |
-| `## Last analysis` | Staleness box: date, export path, dataset fingerprint, re-run command. Include a staleness check note pointing the reader to re-run if the export has changed. |
-| `## Overview` | Research questions (numbered). What this article investigates and why. Cross-cutting articles may use `## Hypothesis` instead. |
-| `## Methods` | How the questions were investigated. Model research typically splits into "Canonical evaluation and tuning" + "Model-specific diagnostics." Cross-cutting research describes its own methodology. |
-| `## Results` | What the analysis found. Structure mirrors Methods. |
-| `## Conclusions` | Interpretation and caveats. Model research ends with a disposition: **Keep** / **Change** / **Unresolved**. Cross-cutting ends with a verdict: **Supported** / **Not supported** / **Inconclusive**. |
-| `## Open questions` | What remains unknown. Label as **Model-local** or **Cross-cutting** where applicable. |
-| `## Artifacts` | Links to generated outputs in `artifacts/`. |
+Both cross-cutting and model `research.md` files follow this high-level
+flow. Section names and internal structure vary by context — see the
+reference implementations linked below for the actual format in each
+case.
+
+| Section | Cross-cutting | Model |
+| ------- | ------------- | ----- |
+| Title | `# [Article Title]` | `# [Model Name] Research` |
+| Staleness box | `## Last analysis` — date, export, fingerprint, re-run command | `## Last canonical run` — same fields, plus canonical headline and availability |
+| Framing | `## Hypothesis` — clear research question | `## Overview` — numbered research questions |
+| Methods | `## Methods` — bespoke methodology | `## Methods` — "Canonical evaluation and tuning" + "Model-specific diagnostics" |
+| Results | `## Results` — quantitative findings | `## Results` — "Canonical findings" + "Diagnostic findings" |
+| Conclusions | `## Conclusion` — Supported / Not supported / Inconclusive | `## Conclusions` — disposition: Keep / Change / Unresolved |
+| Open questions | `## Open questions` (if applicable) | `## Open questions` — Model-local + Cross-cutting sub-sections |
+| Artifacts | `## Artifacts` — links to `artifacts/` | Referenced inline from staleness box and body |
 
 See the existing articles for reference implementations:
 - Cross-cutting: [`volume_gap_relationship/`](volume_gap_relationship/),
