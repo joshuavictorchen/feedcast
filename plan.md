@@ -21,6 +21,7 @@ and surfaces context that the plan text alone does not capture.
 | Phase 4.3 Implementation | 2026-03-31 | survival_hazard research refresh and constant tuning. Initial 40-candidate canonical sweep hit the grid boundary, so the sweep was widened to a 154-candidate mixed-resolution grid; production shapes updated 6.54/3.04→4.75/1.75 (+6.981 headline, 24/24 availability). Follow-up discussion clarified descriptive episode-level MLE vs canonical replay tuning, added windowed-MLE and component-ablation follow-ups, and renamed the final-summary label to "Episode-level MLE (descriptive fit)". 79 tests pass. | `.transcripts/rollout-2026-03-31T22-25-05-019d46db-d72c-7c81-9bff-1af02fc6638b.jsonl` |
 | Phase 4.3.5–4.4 Implementation | 2026-04-01 | Implemented replay candidate parallelism via process isolation, passing the analog benchmark gate, then completed analog_trajectory retuning under a full canonical sweep. Found and fixed the LOOKBACK_HOURS default-argument override bug, added HISTORY_MODE to the canonical search space, updated analog production constants to the corrected winner (episode history, recent_only, k=5, 72h half-life), completed Claude review convergence, and did a repo-wide docs cleanup to remove phase-framed or quickly stale numbers from design/methodology files. 84 tests pass. | `.transcripts/rollout-2026-04-01T00-04-38-019d4736-f7f2-77b3-b0c8-69db397bf39d.jsonl` |
 | Phase 4.5 Implementation | 2026-04-01 | consensus_blend selector sweep and retune. Initial 48-config sweep hit grid boundaries on all three geometric parameters; widened to 384 configs (4 radii × 4 spread caps × 6 conflict windows × 4 penalties). Winner moved to radius=120, spread=150, conflict=135 — all interior. Production updated 72.020→72.996 headline, 24/24 availability. Claude review caught boundary hit, artifact truncation, CHANGELOG reversal narrative, and sharp conflict peak at 135 (±15 min costs 0.765–1.406). Codex fixed all: full table at 3-decimal precision, supersession note, quantified peak in research.md, boundary-region test added. 85 tests pass. | `.transcripts/7dae7abe-764c-448b-b6aa-f31be9c5afec.jsonl` |
+| Phase 4.6 + Phase 5 (partial) | 2026-04-01–02 | Cross-model synthesis: promoted timing-bottleneck and internal-vs-canonical-divergence to index.md, added episode-level history convergence. Sharpened metric-divergence framing (questions the models, not the methodology). Research hub playbook: centralized research convention in index.md, evolution tracking via CHANGELOG.md, staleness boxes, unified naming (findings.md→research.md, research.py→analysis.py, research_results.txt→artifacts/), standardized section headers across all seven research.md files. Multiple Codex review rounds resolved convention consistency. Phase 5 remaining: evaluation/methodology.md, replay/README.md, tracker.py docstring, README event-construction split. 85 tests pass. | `.transcripts/692ce868-a943-4e20-b40c-75bbf48917c8.jsonl` |
 
 ## Motivation
 
@@ -1323,38 +1324,66 @@ Rewrite as an agent-usable guide for conducting research:
   `tune_model()` evaluates but does not apply, constants live in
   `model.py`, the decision to change is made by a human or agent
 
-### feedcast/research/index.md — research hub playbook
+### feedcast/research/index.md — research hub playbook ✅
 
-Expand the research index into a centralized playbook that fresh agents
-can follow to conduct research systematically:
+Complete. The research index is a centralized playbook with a unified
+research convention (one directory convention, one `research.md`
+template, one workflow), evolution tracking via `CHANGELOG.md`, shared
+evaluation infrastructure reference, and standardized naming
+(`research.md`, `analysis.py`, `artifacts/`). See implementation notes
+below for the full history.
 
-- **Unified research convention:** One directory convention, document
-  template (`research.md`), and workflow for both cross-cutting and
-  model research. Context-dependent sections (canonical evaluation for
-  models, bespoke methods for cross-cutting) are noted as variations
-  within the shared template.
-- **Evolution tracking:** `CHANGELOG.md` per research article to capture
-  hypothesis, method, and conclusion changes.
-- **Shared evaluation infrastructure:** Key entry points
-  (`score_forecast`, `evaluate_multi_window`, `score_model`,
-  `tune_model`), canonical defaults, what "canonical" means
-- **Research articles table:** Add last-updated column, change links to
-  folder names
-- **Naming:** `research.md` for documents, `analysis.py` for scripts,
-  `artifacts/` for outputs — consistent across cross-cutting and model
-  research.
+### README.md (partially complete)
 
-### README.md
+Done:
+- Convention tables aligned with unified research naming
+- `research.md` added to model directory convention and repo layout
+- Reading order updated to include `research.md`
 
-Update the project README:
+Remaining:
 - Make the event-construction split explicit: which parts of the system
   use canonical evaluation inputs versus model-local inputs, when
   bottle-only versus breastfeed-merged events are used, why those
   policies differ across layers
-- Align convention tables with unified research naming (`research.md`,
-  `analysis.py`, `artifacts/`)
 - Note the advisory nature of the research-tuning pipeline in the
   "Working with Models" section
+
+### feedcast/evaluation/methodology.md
+
+Update to serve as an agent-usable methodology guide (no separate
+README.md exists in this directory; methodology.md serves that role).
+Should cover:
+- What `score_forecast()` measures and why (episode matching, horizon
+  weighting, geometric mean)
+- What event stream evaluation operates on by default (currently
+  bottle-only actual events) and why that is distinct from model-local
+  input construction
+- Multi-window evaluation: rationale, window generation modes, recency
+  weighting math, episode-boundary frequency bias
+- Unavailable window handling and availability reporting
+- How to call the API for a canonical evaluation
+- Distinction from tracker (multi-window estimates capability; tracker
+  measures realized accuracy)
+
+### feedcast/replay/README.md
+
+Rewrite as an agent-usable guide for conducting research:
+- What replay does (rewind, run, score across windows)
+- What input policy replay uses for canonical evaluation and how that
+  may differ from a model's local event-building policy
+- How to use it for parameter tuning (score mode, tune mode)
+- Default configuration and what each parameter controls
+- Operational note for candidate-parallel tuning: replay uses process
+  isolation with `spawn`, so prefer normal file-backed entrypoints
+  (`scripts/run_replay.py`, model `analysis.py`) over ad hoc stdin
+  snippets when running cross-candidate sweeps
+- How to interpret results (aggregate vs per-window, availability,
+  what a good score looks like)
+- Relationship to evaluation (replay uses evaluation, not the other
+  way around)
+- The research-tuning-production pipeline: research is advisory,
+  `tune_model()` evaluates but does not apply, constants live in
+  `model.py`, the decision to change is made by a human or agent
 
 ### feedcast/tracker.py documentation
 
@@ -1363,99 +1392,35 @@ Add a docstring or comment block explicitly stating:
 - This is intentional — it measures realized production accuracy
 - Multi-window evaluation is for replay/research (estimated capability)
 
-### Model research documentation verification
+### Model research documentation verification ✅
 
-Each model's `research.md` (created in Phase 4) should already cover:
-- Which metric drives parameter selection (canonical headline score)
-- Which input policy the model uses locally (bottle-only or
-  breastfeed-merged) and why
-- What internal diagnostics are reported and why
-- Date of last canonical evaluation run
+Complete. All five `research.md` files verified during Phase 4.6
+(same export, same fingerprint, consistent template, cross-cutting
+questions promoted to `index.md`).
 
-Verify these are present and accurate after Phase 4 completes. Update
-`feedcast/research/index.md` if any model's research changed a shared
-conclusion.
+### Phase 5 implementation notes
 
-### Phase 5 partial implementation notes (2026-04-01): research hub playbook
+**2026-04-01 — Research hub playbook.** Scope expansion: research hub
+mechanics were originally planned for a subsequent effort but fit
+naturally into Phase 5. Index.md rewritten as centralized playbook.
+Evolution tracking via CHANGELOG.md added. Staleness boxes added to
+both cross-cutting articles. Initial CHANGELOGs created. README
+convention tables updated.
 
-Scope expansion: research hub mechanics were originally planned for a
-subsequent effort but fit naturally into Phase 5's documentation scope.
-Implemented during the 4.6 session while the cross-model synthesis was
-fresh.
+**2026-04-02 — Unified research convention.** After Codex review and
+user feedback: naming standardized (`findings.md` → `research.md`,
+`research.py` → `analysis.py`, `research_results.txt` → `artifacts/`).
+Template unified — one set of section headers (`Last run`, `Overview`,
+`Methods`, `Results`, `Conclusions`, `Open questions`, `Artifacts`)
+works for both cross-cutting and model research. Workflow refined
+(assess motivation first, CHANGELOG at end). All stale references
+updated across model docs, source code comments, evaluation docs,
+README, and analysis scripts. Multiple Codex review rounds resolved
+convention consistency issues (CHANGELOG semantics, playbook scope,
+model.py comments, README reading order, template overstatement).
+85 tests pass throughout.
 
-- **`feedcast/research/index.md` rewritten** as a centralized research
-  playbook. New "Conducting Research" section covers three areas:
-  (1) Cross-cutting article workflow (when to create, directory
-  convention with `CHANGELOG.md`, `findings.md` template, update
-  workflow), (2) Model-specific research (workflow summary, key files,
-  disposition pattern, pointer to README), (3) Shared evaluation
-  infrastructure (key entry points, canonical defaults, what "canonical"
-  means, links to replay README and evaluation methodology). Research
-  Articles table gained a last-updated column and links now point to
-  folders rather than individual files. All existing content (Working
-  Framing through Open Questions) preserved unchanged.
-- **Evolution tracking:** `CHANGELOG.md` added to the research article
-  directory convention. `findings.md` always describes current state from
-  first principles. `CHANGELOG.md` carries the reverse-chronological
-  evolution narrative (prior conclusion, new conclusion, what changed).
-  Git provides full snapshots — no archive directory needed.
-- **Existing articles updated:**
-  `feedcast/research/volume_gap_relationship/findings.md` and
-  `feedcast/research/feed_clustering/findings.md` gained staleness boxes
-  (date, export, fingerprint, re-run command). Initial `CHANGELOG.md`
-  files created for both articles.
-- **README.md updated:** `CHANGELOG.md` added to research article
-  convention table (with staleness box note on `findings.md`).
-  `research.md` added to model directory convention table and repo
-  layout (all five models). "Update research" guidance updated to
-  reference the full workflow in `index.md`.
-- **Remaining Phase 5 items** (evaluation/methodology.md,
-  replay/README.md, tracker.py docstring, event-construction split in
-  README, advisory tuning pipeline note) are not yet implemented.
-
-### Phase 5 continued implementation notes (2026-04-02): unified research convention
-
-After Codex review of the initial playbook and user feedback, the
-research convention was unified across cross-cutting and model research:
-
-- **Naming standardized.** Cross-cutting `findings.md` renamed to
-  `research.md`. Model `research.py` renamed to `analysis.py`.
-  `research_results.txt` moved into `artifacts/` for all five models.
-  One document name (`research.md`), one script name (`analysis.py`),
-  one output directory (`artifacts/`).
-- **Unified template and workflow** in `index.md`. One "Conducting
-  Research" section covers both cross-cutting and model research with
-  the same directory convention, document template, and workflow.
-  Context-dependent sections (canonical evaluation for models, bespoke
-  methods for cross-cutting) are noted as variations within the shared
-  template, not as separate workflows.
-- **Workflow refined.** Step 1 is now "assess motivation" (consider
-  whether hypothesis, methodology, or analysis script needs to change
-  before running). `CHANGELOG.md` updates moved to the end of the
-  workflow. "Write from first principles" softened — `research.md` may
-  reference `CHANGELOG.md` entries for evolution context where that
-  adds value.
-- **Codex review findings addressed.** (1) Canonical scope in index.md
-  narrowed from "all research" to "model research" — cross-cutting
-  articles use bespoke analysis methods. (2) Update workflow now says
-  "conclusion summary and last-updated date" (date updates on every
-  rerun, not just on conclusion change). (3) Dense open questions and
-  cross-cutting considerations split into sub-bullets.
-- **Stale references cleaned up.** All `findings.md`, `research.py`,
-  and `research_results.txt` references updated across model docs
-  (research.md, design.md, methodology.md), source code comments
-  (clustering.py, scoring.py), evaluation docs (methodology.md),
-  README (convention tables, repo layout), and analysis script output
-  paths. Plan.md Phase 5 description updated to reflect unified naming.
-- **Model analysis scripts updated.** Output path changed from
-  `OUTPUT_DIR / "research_results.txt"` to
-  `OUTPUT_DIR / "artifacts" / "research_results.txt"` with
-  `mkdir(exist_ok=True)` for all five models.
-- **Remaining Phase 5 items** unchanged: evaluation/methodology.md,
-  replay/README.md, tracker.py docstring, event-construction split in
-  README, advisory tuning pipeline note.
-
-Cross-model conclusion to carry forward from Sub-phase 4.4:
+Cross-model conclusion to carry forward:
 - Episode-level local history is now the production choice for
   slot_drift, latent_hunger, survival_hazard, and analog_trajectory.
   Analog had previously been the outlier. Phase 5 should reflect that
@@ -1465,18 +1430,18 @@ Cross-model conclusion to carry forward from Sub-phase 4.4:
 
 ## Implementation Notes
 
-### Ordering
+### Current state
 
-Phases 1–3 are complete. Phase 4 is next. Sub-phase 4.0 must complete
-before any model sub-phase. Sub-phases 4.1–4.3 are independent.
-Sub-phase 4.3.5 completed before 4.4. Sub-phase 4.4 used that
-benchmark result to replace the old analog two-stage fallback with a
-full canonical sweep.
-Sub-phase 4.5 (consensus_blend) must run after 4.1–4.4 because its
-research script calls `run_all_models()` with current production
-constants. Sub-phase 4.6 must wait until all model sub-phases are done.
-Phase 5 can partially overlap with Phase 4 model sub-phases but should
-finalize after 4.6.
+Phases 1–4 are complete. Phase 5 is partially complete: the research
+hub playbook and unified research convention are done (including
+naming standardization and all Codex review rounds). The remaining
+Phase 5 items are pure documentation tasks — no code changes, no
+ordering dependencies between them:
+
+- `feedcast/evaluation/methodology.md` rewrite
+- `feedcast/replay/README.md` rewrite
+- `feedcast/tracker.py` docstring
+- README: event-construction split, advisory tuning pipeline note
 
 ### What NOT to do
 
