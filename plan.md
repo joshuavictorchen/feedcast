@@ -21,7 +21,8 @@ and surfaces context that the plan text alone does not capture.
 | Phase 4.3 Implementation | 2026-03-31 | survival_hazard research refresh and constant tuning. Initial 40-candidate canonical sweep hit the grid boundary, so the sweep was widened to a 154-candidate mixed-resolution grid; production shapes updated 6.54/3.04→4.75/1.75 (+6.981 headline, 24/24 availability). Follow-up discussion clarified descriptive episode-level MLE vs canonical replay tuning, added windowed-MLE and component-ablation follow-ups, and renamed the final-summary label to "Episode-level MLE (descriptive fit)". 79 tests pass. | `.transcripts/rollout-2026-03-31T22-25-05-019d46db-d72c-7c81-9bff-1af02fc6638b.jsonl` |
 | Phase 4.3.5–4.4 Implementation | 2026-04-01 | Implemented replay candidate parallelism via process isolation, passing the analog benchmark gate, then completed analog_trajectory retuning under a full canonical sweep. Found and fixed the LOOKBACK_HOURS default-argument override bug, added HISTORY_MODE to the canonical search space, updated analog production constants to the corrected winner (episode history, recent_only, k=5, 72h half-life), completed Claude review convergence, and did a repo-wide docs cleanup to remove phase-framed or quickly stale numbers from design/methodology files. 84 tests pass. | `.transcripts/rollout-2026-04-01T00-04-38-019d4736-f7f2-77b3-b0c8-69db397bf39d.jsonl` |
 | Phase 4.5 Implementation | 2026-04-01 | consensus_blend selector sweep and retune. Initial 48-config sweep hit grid boundaries on all three geometric parameters; widened to 384 configs (4 radii × 4 spread caps × 6 conflict windows × 4 penalties). Winner moved to radius=120, spread=150, conflict=135 — all interior. Production updated 72.020→72.996 headline, 24/24 availability. Claude review caught boundary hit, artifact truncation, CHANGELOG reversal narrative, and sharp conflict peak at 135 (±15 min costs 0.765–1.406). Codex fixed all: full table at 3-decimal precision, supersession note, quantified peak in research.md, boundary-region test added. 85 tests pass. | `.transcripts/7dae7abe-764c-448b-b6aa-f31be9c5afec.jsonl` |
-| Phase 4.6 + Phase 5 (partial) | 2026-04-01–02 | Cross-model synthesis: promoted timing-bottleneck and internal-vs-canonical-divergence to index.md, added episode-level history convergence. Sharpened metric-divergence framing (questions the models, not the methodology). Research hub playbook: centralized research convention in index.md, evolution tracking via CHANGELOG.md, staleness boxes, unified naming (findings.md→research.md, research.py→analysis.py, research_results.txt→artifacts/), standardized section headers across all seven research.md files. Multiple Codex review rounds resolved convention consistency. Phase 5 remaining: evaluation/methodology.md, replay/README.md, tracker.py docstring, README event-construction split. 85 tests pass. | `.transcripts/692ce868-a943-4e20-b40c-75bbf48917c8.jsonl` |
+| Phase 4.6 + Phase 5 (partial) | 2026-04-01–02 | Cross-model synthesis: promoted timing-bottleneck and internal-vs-canonical-divergence to index.md, added episode-level history convergence. Sharpened metric-divergence framing (questions the models, not the methodology). Research hub playbook: centralized research convention in README.md, evolution tracking via CHANGELOG.md, staleness boxes, unified naming (findings.md→research.md, research.py→analysis.py, research_results.txt→artifacts/), standardized section headers across all seven research.md files. Multiple Codex review rounds resolved convention consistency. Phase 5 remaining: evaluation/methodology.md, replay/README.md, tracker.py docstring, README event-construction split. 85 tests pass. | `.transcripts/692ce868-a943-4e20-b40c-75bbf48917c8.jsonl` |
+| Phase 5 completion | 2026-04-02 | Completed remaining Phase 5 documentation: evaluation/methodology.md rewritten as unified guide (single-window + multi-window + tracker distinction), replay/README.md rewritten as agent-usable research guide (multi-window, input policy, score/tune, candidate parallelism, result interpretation, pipeline), tracker.py docstring strengthened, README updated (Event Construction section, advisory pipeline note, corrected replay descriptions). Renamed feedcast/research/index.md→README.md with all references updated. Codex review caught stale single-window language, overstated bottle-only scope, wrong tune result path, incomplete index.md cleanup — all resolved. Plan closed. 85 tests pass. | `.transcripts/20753d9d-23dc-411f-9a24-1b83d172b198.jsonl` |
 
 ## Motivation
 
@@ -700,7 +701,7 @@ Each `research.md` follows this structure:
 | **Methods** | Two structural subsections: **Canonical evaluation and tuning** first (shared replay infrastructure, cross-model comparable), then **Model-specific diagnostics** (internal metrics, model mechanics). Within each subsection, follow script section order. |
 | **Results** | Lead with **Canonical findings** (do current production constants win?), then **Diagnostic findings**. Summarize — do not mirror raw output. Reference `research_results.txt` for full tables. |
 | **Conclusions** | What results mean for current constants and design. Frame as recommendations. Note which findings informed production parameters and which are informational. |
-| **Open questions** | Labeled as **Model-local** or **Cross-cutting**. Cross-cutting questions include enough local context to be useful but point to `feedcast/research/index.md` for shared discussion rather than duplicating analysis across five files. |
+| **Open questions** | Labeled as **Model-local** or **Cross-cutting**. Cross-cutting questions include enough local context to be useful but point to `feedcast/research/README.md` for shared discussion rather than duplicating analysis across five files. |
 
 **Last run format:**
 
@@ -1208,14 +1209,14 @@ After all five model sub-phases are complete:
 3. **Cross-cutting question dedup:** Review the Open Questions sections
    across all five `research.md` files. If the same cross-cutting
    question appears in multiple models, promote it to
-   `feedcast/research/index.md` and replace the duplicates with
+   `feedcast/research/README.md` and replace the duplicates with
    pointers.
 
 4. **Shared research update:** If any canonical run or constant change
    alters a cross-model conclusion (e.g., episode clustering
    effectiveness, volume-gap relationship strength), update the
    relevant article in `feedcast/research/` and
-   `feedcast/research/index.md`.
+   `feedcast/research/README.md`.
 
 5. **Disposition summary:** Produce a brief summary of all five model
    dispositions (keep / change / unresolved) and present it to the
@@ -1237,18 +1238,18 @@ After all five model sub-phases are complete:
   Analog Trajectory was missing `Model-local` / `Cross-cutting`
   sub-headings under Open Questions — fixed.
 - **Cross-cutting question dedup:** Two shared patterns promoted to
-  `feedcast/research/index.md`:
+  `feedcast/research/README.md`:
   (1) Timing as shared bottleneck — count >> timing across all five
   models, with enough context to start a dedicated research article.
   (2) Internal vs canonical metric divergence — at least three models
   show local diagnostics and canonical replay preferring different
-  constants. Added as open questions in index.md with model-specific
+  constants. Added as open questions in README.md with model-specific
   evidence cited. All five model `research.md` cross-cutting sections
-  replaced with concise pointers to index.md. Consensus Blend gained a
+  replaced with concise pointers to README.md. Consensus Blend gained a
   new timing pointer that had been implicit in its diagnostic findings
   but absent from its open questions.
 - **Shared research update:** Added episode-level history convergence to
-  `Cross-Cutting Considerations` in index.md. All four scripted models
+  `Cross-Cutting Considerations` in README.md. All four scripted models
   independently produce better canonical scores with episode-collapsed
   history — noted as a cross-cutting observation, not a research article
   (the evidence is established).
@@ -1287,44 +1288,25 @@ this contract in their respective locations. The contract:
   in `windows.py` aggregates across windows. Both are reused by replay
   and research — no component reimplements scoring.
 
-### feedcast/evaluation/methodology.md
+### feedcast/evaluation/methodology.md ✅
 
-Update to serve as an agent-usable methodology guide (no separate
-README.md exists in this directory; methodology.md serves that role).
-Should cover:
-- What `score_forecast()` measures and why (episode matching, horizon
-  weighting, geometric mean)
-- What event stream evaluation operates on by default (currently
-  bottle-only actual events) and why that is distinct from model-local
-  input construction
-- Multi-window evaluation: rationale, window generation modes, recency
-  weighting math, episode-boundary frequency bias
-- Unavailable window handling and availability reporting
-- How to call the API for a canonical evaluation
-- Distinction from tracker (multi-window estimates capability; tracker
-  measures realized accuracy)
+Complete. Rewritten as a unified evaluation guide: single-window
+scoring (episode collapsing, count F1, timing credit, Hungarian
+matching, horizon weighting, partial horizons), then multi-window
+evaluation (rationale, window generation modes, recency weighting math,
+frequency bias, unavailable windows, API usage, default parameters),
+then tracker-vs-replay distinction.
 
-### feedcast/replay/README.md
+### feedcast/replay/README.md ✅
 
-Rewrite as an agent-usable guide for conducting research:
-- What replay does (rewind, run, score across windows)
-- What input policy replay uses for canonical evaluation and how that
-  may differ from a model's local event-building policy
-- How to use it for parameter tuning (score mode, tune mode)
-- Default configuration and what each parameter controls
-- Operational note for candidate-parallel tuning: replay uses process
-  isolation with `spawn`, so prefer normal file-backed entrypoints
-  (`scripts/run_replay.py`, model `analysis.py`) over ad hoc stdin
-  snippets when running cross-candidate sweeps
-- How to interpret results (aggregate vs per-window, availability,
-  what a good score looks like)
-- Relationship to evaluation (replay uses evaluation, not the other
-  way around)
-- The research-tuning-production pipeline: research is advisory,
-  `tune_model()` evaluates but does not apply, constants live in
-  `model.py`, the decision to change is made by a human or agent
+Complete. Rewritten as an agent-usable research guide: what replay
+does, input policy (bottle-only canonical, scoped to model research),
+score and tune modes, all parameters, candidate-parallel tuning
+(process isolation with `spawn`), result interpretation (ranking,
+availability, score ranges), evaluation relationship, and the
+research-tuning-production pipeline.
 
-### feedcast/research/index.md — research hub playbook ✅
+### feedcast/research/README.md — research hub playbook ✅
 
 Complete. The research index is a centralized playbook with a unified
 research convention (one directory convention, one `research.md`
@@ -1333,33 +1315,24 @@ evaluation infrastructure reference, and standardized naming
 (`research.md`, `analysis.py`, `artifacts/`). See implementation notes
 below for the full history.
 
-### README.md (partially complete)
+### README.md ✅
 
-Done:
-- Convention tables aligned with unified research naming
-- `research.md` added to model directory convention and repo layout
-- Reading order updated to include `research.md`
+Complete. Event-construction split added as a dedicated section between
+Pipeline and Evaluation. Advisory tuning pipeline note added to Working
+with Models. Convention tables and reading order updated in earlier
+sessions.
 
-Remaining:
-- Make the event-construction split explicit: which parts of the system
-  use canonical evaluation inputs versus model-local inputs, when
-  bottle-only versus breastfeed-merged events are used, why those
-  policies differ across layers
-- Note the advisory nature of the research-tuning pipeline in the
-  "Working with Models" section
+### feedcast/tracker.py documentation ✅
 
-### feedcast/tracker.py documentation
-
-Add a docstring or comment block explicitly stating:
-- Tracker uses single-window evaluation: one prediction, one score
-- This is intentional — it measures realized production accuracy
-- Multi-window evaluation is for replay/research (estimated capability)
+Complete. Module docstring explicitly states single-window evaluation
+is intentional (realized production accuracy) and that multi-window
+evaluation is for replay/research (estimated capability).
 
 ### Model research documentation verification ✅
 
 Complete. All five `research.md` files verified during Phase 4.6
 (same export, same fingerprint, consistent template, cross-cutting
-questions promoted to `index.md`).
+questions promoted to `README.md`).
 
 ### Phase 5 implementation notes
 
@@ -1391,20 +1364,26 @@ Cross-model conclusion to carry forward:
   internal diagnostics can still diverge from canonical replay on the
   final tuned constant values.
 
+**2026-04-02 — Phase 5 completion.** Remaining documentation items
+completed: `evaluation/methodology.md` rewritten as unified evaluation
+guide (single-window + multi-window + tracker distinction),
+`replay/README.md` rewritten as agent-usable research guide (multi-window,
+input policy, score/tune modes, candidate parallelism, result
+interpretation, research-tuning-production pipeline), `tracker.py`
+module docstring strengthened (single-window intentional, multi-window
+for replay/research), README updated (event-construction split section,
+advisory tuning pipeline note, corrected replay descriptions).
+`feedcast/research/index.md` renamed to `README.md` with all references
+updated. Codex review caught four issues: stale single-window language in
+two README locations, overstated bottle-only scope (narrowed to model
+research), wrong tune result path in methodology API example, and
+incomplete plan.md index.md cleanup — all resolved. 85 tests pass.
+
 ## Implementation Notes
 
 ### Current state
 
-Phases 1–4 are complete. Phase 5 is partially complete: the research
-hub playbook and unified research convention are done (including
-naming standardization and all Codex review rounds). The remaining
-Phase 5 items are pure documentation tasks — no code changes, no
-ordering dependencies between them:
-
-- `feedcast/evaluation/methodology.md` rewrite
-- `feedcast/replay/README.md` rewrite
-- `feedcast/tracker.py` docstring
-- README: event-construction split, advisory tuning pipeline note
+All five phases are complete. The plan is closed.
 
 ### What NOT to do
 

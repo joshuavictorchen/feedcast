@@ -220,8 +220,8 @@ but also to the current behavior of the base scripted models it blends.
 
 - **Timing as shared bottleneck:** Count (95.4) is strong while timing
   (56.2) is the weaker component. This pattern persists across all five
-  models — see `feedcast/research/index.md`.
+  models — see `feedcast/research/README.md`.
 - **Upstream-model sensitivity:** Consensus constants can move when the
   four base scripted models change. Whether selector retunes track
   upstream timing sharpness is an open question — see
-  `feedcast/research/index.md` for cross-model patterns.
+  `feedcast/research/README.md` for cross-model patterns.

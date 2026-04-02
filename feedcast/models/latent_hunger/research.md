@@ -202,7 +202,7 @@ gaps is smaller than at the internal diagnostic optimum.
 
 - **Timing as shared bottleneck:** Timing (47.9) is substantially weaker
   than count (94.0). This pattern persists across all five models — see
-  `feedcast/research/index.md`.
+  `feedcast/research/README.md`.
 - **Internal vs. canonical metric divergence:** The gap-MAE (sr≈0.6) vs
   canonical (sr=0.05) disagreement is part of a broader cross-model
-  pattern — see `feedcast/research/index.md`.
+  pattern — see `feedcast/research/README.md`.

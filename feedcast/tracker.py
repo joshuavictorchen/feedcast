@@ -1,8 +1,15 @@
 """Persist run history and evaluate prior predictions against new actuals.
 
-This module intentionally avoids historical cutoff replay. The only accuracy
-signal tracked here is retrospective performance: how the previous run's
-predictions compared to the next export's observed bottle feeds.
+The tracker uses single-window evaluation: one prediction scored against one
+set of observed actuals. This is intentional — the tracker measures realized
+production accuracy ("how did the last forecast actually do?"), not estimated
+capability across scenarios.
+
+Multi-window evaluation (scoring a model from many retrospective cutoff
+points with recency weighting) is handled by the replay and research
+infrastructure in ``feedcast.evaluation`` and ``feedcast.replay``. Those
+tools answer a different question: "how well does this model forecast in
+general?" The tracker and replay are complementary, not interchangeable.
 """
 
 from __future__ import annotations

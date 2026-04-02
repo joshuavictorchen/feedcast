@@ -257,7 +257,7 @@ improves the model without resolving that structural gap.
 
 - **Internal vs. canonical metric divergence:** Episode-level MLE prefers
   shapes 7.2/3.4 while canonical replay selects 4.75/1.75. This is part
-  of a broader cross-model pattern — see `feedcast/research/index.md`.
+  of a broader cross-model pattern — see `feedcast/research/README.md`.
 - **Timing as shared bottleneck:** Timing (56.6) lags count (94.3). This
   pattern persists across all five models — see
-  `feedcast/research/index.md`.
+  `feedcast/research/README.md`.

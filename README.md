@@ -83,6 +83,33 @@ never auto-featured.
 | Render Report | Generate the markdown report, charts, and diagnostics |
 | Save Tracker | Persist predictions and retrospective to `tracker.json` |
 
+## Event Construction
+
+Feedcast separates **model-local event construction** from **canonical
+evaluation inputs**. The distinction matters because models are free to
+shape their inputs however they want, but they are all scored against
+the same ground truth.
+
+**Canonical evaluation inputs** (used by the scorer, tracker, replay,
+and model research scripts): Bottle-only feed events built with
+`build_feed_events(activities, merge_window_minutes=None)`. Breastfeed
+volume is excluded because breastfeed volume estimates are too noisy to
+anchor timing accuracy measurements against. Both actuals and
+predictions are collapsed into feeding episodes before matching (see
+[Feeds vs. Episodes](#feeds-vs-episodes)).
+
+**Model-local inputs** (built independently by each model): Each model
+receives raw `list[Activity]` and constructs its own feed events. Some
+models merge nearby breastfeed volume into bottle feeds (using a
+non-`None` merge window) to inform their predictions. Others use
+bottle-only events. This choice affects what the model sees as input —
+it does not affect what the model is scored against.
+
+The separation is intentional. Models choose the input representation
+that helps them forecast best, but evaluation holds them all to the
+same standard: bottle-only actuals, episode-collapsed, scored with the
+shared methodology.
+
 ## Evaluation
 
 When a new export arrives, Feedcast scores the previous run's predicted
@@ -135,11 +162,12 @@ Each run updates these artifacts:
 
 ## Replay And Tuning
 
-Feedcast includes a replay-based tuning tool for scripted models. It tests
-parameter values against the latest 24 hours of known actuals and ranks them
-by forecast accuracy, so model developers can make data-driven parameter
-choices. Define sweep candidates in a YAML file, run replay against a model,
-and use the ranked results to decide whether to change its constants.
+Feedcast includes a replay-based evaluation and tuning tool for scripted
+models. It generates retrospective cutoff points across recent history,
+reruns a model at each cutoff, scores each forecast against the now-known
+actuals, and aggregates results with recency weighting. Define sweep
+candidates in a YAML file, run replay against a model, and use the
+ranked results to decide whether to change its constants.
 
 Replay is a directional tool for recent-pattern fitting, not robust
 out-of-sample validation. Full usage and examples:
@@ -155,7 +183,7 @@ feedcast/
   data.py                      CSV parsing, domain types, fingerprinting
   clustering.py                Episode grouping rule and FeedEpisode type
   research/                    Cross-cutting research for models and agents
-    index.md                   Research hub and table of contents
+    README.md                  Research hub and table of contents
     volume_gap_relationship/   Feed volume vs. subsequent gap
       analysis.py              Repeatable data analysis
       research.md              Current conclusions and evidence
@@ -212,8 +240,8 @@ feedcast/
   evaluation/                  Retrospective forecast scoring
     scoring.py                 Shared scorer (Hungarian matching, weighted F1 + timing)
     methodology.md             Scoring design rationale and parameter choices
-  replay/                      Latest-24h replay scoring and tuning
-    runner.py                  Replay and tune models against the latest 24 hours
+  replay/                      Multi-window replay scoring and tuning
+    runner.py                  Replay and tune models across retrospective windows
     results.py                 Local replay artifact persistence
     README.md                  Usage, tuning examples, and Python API
   agents/                      LLM agent workspaces, prompt, and runner
@@ -237,7 +265,7 @@ tracker.json                   Run history with predictions and retrospectives
 ## Working with Research
 
 **Start here for cross-cutting context:** Read
-[`feedcast/research/index.md`](feedcast/research/index.md). It is the
+[`feedcast/research/README.md`](feedcast/research/README.md). It is the
 shared research hub for repo-wide findings, current hypotheses, and open
 questions.
 
@@ -246,22 +274,22 @@ findings when helpful, but they are free to ignore them if a different
 approach is better supported.
 
 **Research directory convention:** Both cross-cutting and model research
-use the same file names. See `index.md` for the full convention,
+use the same file names. See the research hub README for the full convention,
 document structure, and workflow — including where cross-cutting and
 model research differ. The core files are:
 
 | File | Purpose |
 | ---- | ------- |
 | `research.md` | Current conclusions. Written from first principles with a staleness box for mechanical freshness detection. |
-| `analysis.py` | Repeatable analysis. Run as a Python module (see `index.md` for exact commands). |
+| `analysis.py` | Repeatable analysis. Run as a Python module (see the research hub README for exact commands). |
 | `artifacts/` | Committed outputs (tables, charts, CSVs) referenced by `research.md`. |
-| `CHANGELOG.md` | Reverse-chronological evolution log. See `index.md` for format details by research type. |
+| `CHANGELOG.md` | Reverse-chronological evolution log. See the research hub README for format details by research type. |
 
 ## Working with Models
 
 **Start with the research hub, then read model-local docs:** Shared
 findings and open questions now live in
-[`feedcast/research/index.md`](feedcast/research/index.md). After that,
+[`feedcast/research/README.md`](feedcast/research/README.md). After that,
 read the specific model's `research.md`, `design.md`, `methodology.md`,
 and `analysis.py` if you are changing that model.
 
@@ -282,7 +310,7 @@ under `feedcast/models/` with a standard set of files:
 tuning, add a new top entry to that model's `CHANGELOG.md`. If the change
 updates cross-cutting evidence, shared hypotheses, or open questions
 across models, update the relevant article under `feedcast/research/`
-and `feedcast/research/index.md` too.
+and `feedcast/research/README.md` too.
 
 **Add a model:** Create the subdirectory with the files above, then add a
 `ModelSpec` entry to `feedcast/models/__init__.py`. See `slot_drift/` or
@@ -293,14 +321,18 @@ delete the directory.
 
 **Tune parameters:** Keep model-specific constants in the model file that
 uses them. Reserve `feedcast/models/shared.py` for reusable utilities that
-are not model concepts.
+are not model concepts. The research-tuning pipeline is advisory:
+`analysis.py` and `tune_model()` produce evidence and recommendations,
+but they do not modify production constants automatically. Updating
+`model.py` is a deliberate step with a `CHANGELOG.md` entry explaining
+what changed and why.
 
-**Replay a model against the latest observed 24 hours:** Run
+**Replay a model across retrospective windows:** Run
 `.venv/bin/python scripts/run_replay.py <slug>`. Add `KEY=VALUE` args
 to test with overridden constants.
 
-**Tune a model against the latest observed 24 hours:** Define candidates
-in a YAML file and run `.venv/bin/python scripts/run_replay.py <slug> sweep.yaml`.
+**Tune a model with a parameter sweep:** Define candidates in a YAML
+file and run `.venv/bin/python scripts/run_replay.py <slug> sweep.yaml`.
 See [`feedcast/replay/README.md`](feedcast/replay/README.md) for details.
 
 **Change the featured default:** Set `FEATURED_DEFAULT` in

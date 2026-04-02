@@ -161,4 +161,4 @@ structural limits of the fixed-slot approach.
 
 - **Timing as shared bottleneck:** Count (90.8) substantially outperforms
   timing (51.9). This pattern persists across all five models — see
-  `feedcast/research/index.md`.
+  `feedcast/research/README.md`.

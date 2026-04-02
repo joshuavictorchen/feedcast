@@ -203,4 +203,4 @@ the script only as diagnostic evidence.
 
 - **Timing as shared bottleneck:** Count is `93.8`; timing is `52.8`.
   Timing drift remains the main quality constraint. This pattern persists
-  across all five models — see `feedcast/research/index.md`.
+  across all five models — see `feedcast/research/README.md`.
