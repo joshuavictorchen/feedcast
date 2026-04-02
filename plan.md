@@ -1348,43 +1348,6 @@ Remaining:
 - Note the advisory nature of the research-tuning pipeline in the
   "Working with Models" section
 
-### feedcast/evaluation/methodology.md
-
-Update to serve as an agent-usable methodology guide (no separate
-README.md exists in this directory; methodology.md serves that role).
-Should cover:
-- What `score_forecast()` measures and why (episode matching, horizon
-  weighting, geometric mean)
-- What event stream evaluation operates on by default (currently
-  bottle-only actual events) and why that is distinct from model-local
-  input construction
-- Multi-window evaluation: rationale, window generation modes, recency
-  weighting math, episode-boundary frequency bias
-- Unavailable window handling and availability reporting
-- How to call the API for a canonical evaluation
-- Distinction from tracker (multi-window estimates capability; tracker
-  measures realized accuracy)
-
-### feedcast/replay/README.md
-
-Rewrite as an agent-usable guide for conducting research:
-- What replay does (rewind, run, score across windows)
-- What input policy replay uses for canonical evaluation and how that
-  may differ from a model's local event-building policy
-- How to use it for parameter tuning (score mode, tune mode)
-- Default configuration and what each parameter controls
-- Operational note for candidate-parallel tuning: replay uses process
-  isolation with `spawn`, so prefer normal file-backed entrypoints
-  (`scripts/run_replay.py`, model `analysis.py`) over ad hoc stdin
-  snippets when running cross-candidate sweeps
-- How to interpret results (aggregate vs per-window, availability,
-  what a good score looks like)
-- Relationship to evaluation (replay uses evaluation, not the other
-  way around)
-- The research-tuning-production pipeline: research is advisory,
-  `tune_model()` evaluates but does not apply, constants live in
-  `model.py`, the decision to change is made by a human or agent
-
 ### feedcast/tracker.py documentation
 
 Add a docstring or comment block explicitly stating:
