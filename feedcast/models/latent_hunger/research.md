@@ -19,7 +19,7 @@ are:
 4. Does the evidence still support the multiplicative satiety design
    over the additive alternative?
 
-## Last canonical run
+## Last run
 
 | Field | Value |
 |---|---|

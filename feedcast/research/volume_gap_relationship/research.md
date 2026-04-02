@@ -1,6 +1,6 @@
 # Feed Volume vs. Subsequent Gap
 
-## Last analysis
+## Last run
 
 | Field | Value |
 |---|---|
@@ -12,7 +12,7 @@
 > **Staleness check:** if the current export differs from the one
 > listed here, re-run the command above to refresh results.
 
-## Hypothesis
+## Overview
 
 Larger bottle feeds tend to be followed by longer gaps before the next
 bottle-centered feed.
@@ -45,7 +45,7 @@ bottle-centered feed.
   only 2 analyzed pairs receive added volume, and the overall correlation
   moves from `0.357` to `0.351`.
 
-## Conclusion
+## Conclusions
 
 Supported on the current dataset. Larger feeds are followed by longer gaps
 often enough to treat volume as a real input signal, but the effect is modest

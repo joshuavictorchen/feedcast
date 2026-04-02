@@ -695,13 +695,13 @@ Each `research.md` follows this structure:
 |---|---|
 | **Header** | One-line document-relationship note: `design.md` is the why, `methodology.md` is the report-facing how, `research.md` is the evidence. |
 | **Overview** | What question(s) this research answers. Why the model needs its own research beyond canonical scoring. |
-| **Last canonical run** | Metadata box (see format below). Hard staleness signals so readers know when results are outdated. |
+| **Last run** | Metadata box (see format below). Hard staleness signals so readers know when results are outdated. |
 | **Methods** | Two structural subsections: **Canonical evaluation and tuning** first (shared replay infrastructure, cross-model comparable), then **Model-specific diagnostics** (internal metrics, model mechanics). Within each subsection, follow script section order. |
 | **Results** | Lead with **Canonical findings** (do current production constants win?), then **Diagnostic findings**. Summarize — do not mirror raw output. Reference `research_results.txt` for full tables. |
 | **Conclusions** | What results mean for current constants and design. Frame as recommendations. Note which findings informed production parameters and which are informational. |
 | **Open questions** | Labeled as **Model-local** or **Cross-cutting**. Cross-cutting questions include enough local context to be useful but point to `feedcast/research/index.md` for shared discussion rather than duplicating analysis across five files. |
 
-**Last canonical run format:**
+**Last run format:**
 
 ```markdown
 | Field | Value |
@@ -1201,7 +1201,7 @@ After all five model sub-phases are complete:
    the agreed structure template (header, overview, last canonical run,
    methods with canonical/diagnostic split, results with
    canonical/diagnostic split, conclusions, labeled open questions).
-   Verify all "Last canonical run" boxes reference the same export and
+   Verify all "Last run" boxes reference the same export and
    dataset fingerprint.
 
 3. **Cross-cutting question dedup:** Review the Open Questions sections

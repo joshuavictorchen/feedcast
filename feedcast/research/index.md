@@ -35,23 +35,18 @@ are noted inline below.
 | `artifacts/` | Committed outputs (tables, charts, CSVs, `research_results.txt`) referenced by `research.md`. |
 | `CHANGELOG.md` | Reverse-chronological evolution log. Cross-cutting articles log hypothesis, method, and conclusion changes. Model CHANGELOGs log behavior changes (constants, logic) — see the README for model CHANGELOG conventions. |
 
-### `research.md` structure
+### `research.md` template
 
-Both cross-cutting and model `research.md` files follow this high-level
-flow. Section names and internal structure vary by context — see the
-reference implementations linked below for the actual format in each
-case.
-
-| Section | Cross-cutting | Model |
-| ------- | ------------- | ----- |
-| Title | `# [Article Title]` | `# [Model Name] Research` |
-| Staleness box | `## Last analysis` — date, export, fingerprint, re-run command | `## Last canonical run` — same fields, plus canonical headline and availability |
-| Framing | `## Hypothesis` — clear research question | `## Overview` — numbered research questions |
-| Methods | `## Methods` — bespoke methodology | `## Methods` — "Canonical evaluation and tuning" + "Model-specific diagnostics" |
-| Results | `## Results` — quantitative findings | `## Results` — "Canonical findings" + "Diagnostic findings" |
-| Conclusions | `## Conclusion` — Supported / Not supported / Inconclusive | `## Conclusions` — disposition: Keep / Change / Unresolved |
-| Open questions | `## Open questions` (if applicable) | `## Open questions` — Model-local + Cross-cutting sub-sections |
-| Artifacts | `## Artifacts` — links to `artifacts/` | Referenced inline from staleness box and body |
+| Section | Content |
+| ------- | ------- |
+| `# Title` | Article title |
+| `## Last run` | Staleness box: date, export path, dataset fingerprint, re-run command. Include additional fields as relevant (e.g., canonical headline, availability for model research). |
+| `## Overview` | What this research investigates and why. Can be a hypothesis statement, numbered research questions, or a framing paragraph. |
+| `## Methods` | How the investigation was conducted. Organize into subsections as the content requires (e.g., canonical + diagnostic for model research, bespoke sections for cross-cutting). |
+| `## Results` | What the analysis found. Structure mirrors Methods. |
+| `## Conclusions` | What the results mean. End with a clear outcome: a disposition (Keep / Change / Unresolved) for model research, or a verdict (Supported / Not supported / Inconclusive) for cross-cutting research. |
+| `## Open questions` | What remains unknown. Sub-sections as appropriate (e.g., Model-local + Cross-cutting). |
+| `## Artifacts` | Links to outputs in `artifacts/`. May be omitted when artifacts are referenced inline. |
 
 See the existing articles for reference implementations:
 - Cross-cutting: [`volume_gap_relationship/`](volume_gap_relationship/),

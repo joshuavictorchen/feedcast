@@ -1,6 +1,6 @@
 # Feed Clustering
 
-## Last analysis
+## Last run
 
 | Field | Value |
 |---|---|
@@ -12,7 +12,7 @@
 > **Staleness check:** if the current export differs from the one
 > listed here, re-run the command above to refresh results.
 
-## Hypothesis
+## Overview
 
 Some close-together bottle feeds are not independent hunger events. They are
 continuations of the same feeding episode and should be collapsed before
@@ -110,7 +110,7 @@ false collapses).
   but misses a confirmed cluster at 72.1 min / 2.60 oz that no small-feed
   extension can recover.
 
-## Conclusion
+## Conclusions
 
 Supported on the current labeled dataset.
 

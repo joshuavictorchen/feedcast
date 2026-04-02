@@ -19,7 +19,7 @@ day-part-specific Weibull hazards. The key research questions are:
 4. Do the volume-covariate and breastfeed-merge checks justify any
    change to the current production design?
 
-## Last canonical run
+## Last run
 
 | Field | Value |
 |---|---|

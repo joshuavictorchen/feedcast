@@ -18,7 +18,7 @@ episode slots and tracks their drift. The key research questions are:
 3. Is the episode-level template stable enough to justify a fixed-slot
    approach?
 
-## Last canonical run
+## Last run
 
 | Field | Value |
 |---|---|

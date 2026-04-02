@@ -19,7 +19,7 @@ questions are:
 4. Does gap alignment still beat time-offset alignment on the current
    export?
 
-## Last canonical run
+## Last run
 
 | Field | Value |
 |---|---|

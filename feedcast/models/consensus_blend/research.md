@@ -21,7 +21,7 @@ The research questions are therefore different from the base models:
 4. Which selector levers actually matter on the current export:
    candidate geometry, conflict handling, or utility weighting?
 
-## Last canonical run
+## Last run
 
 | Field | Value |
 |---|---|
