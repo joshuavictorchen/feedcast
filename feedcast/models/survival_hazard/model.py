@@ -40,7 +40,7 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 # Higher shape = more regular (tighter distribution around the median).
 # Episode-level fitting still establishes that overnight is more regular
 # than daytime, but canonical scoring prefers softer shapes that improve
-# full 24h forecast quality. See research.py Section 9 and the canonical
+# full 24h forecast quality. See analysis.py Section 9 and the canonical
 # tuning section for the evidence chain.
 OVERNIGHT_SHAPE = 4.75
 DAYTIME_SHAPE = 1.75

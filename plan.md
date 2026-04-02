@@ -565,7 +565,7 @@ No new test files for research scripts — they are analysis tools, not
 library code. The shared infrastructure is tested in Phase 1. Verify each
 script runs without error after modification:
 ```bash
-python -m feedcast.models.<slug>.research
+python -m feedcast.models.<slug>.analysis
 ```
 
 ### Phase 3 implementation notes (2026-03-28)
@@ -671,8 +671,8 @@ sub-phases may apply constant changes directly when evidence warrants:
 
 1. **Research scripts produce evidence.** Canonical scores, parameter
    recommendations, diagnostic analysis. The scripts themselves do not
-   modify production behavior — `research.py` writes
-   `research_results.txt`, not `model.py`.
+   modify production behavior — `analysis.py` writes to
+   `artifacts/research_results.txt`, not `model.py`.
 2. **Tuning constants live in `model.py`.** Each model's tunable
    constants are module-level variables. `tune_model()` evaluates
    candidates using temporary overrides (`override_constants`) that
@@ -709,10 +709,10 @@ Each `research.md` follows this structure:
 | Run date | YYYY-MM-DD |
 | Export | `exports/export_narababy_silas_YYYYMMDD.csv` |
 | Dataset | `sha256:...` |
-| Command | `.venv/bin/python -m feedcast.models.<slug>.research` |
+| Command | `.venv/bin/python -m feedcast.models.<slug>.analysis` |
 | Canonical headline | XX.X |
 | Availability | N/N windows (100%) |
-| Full output | [`research_results.txt`](research_results.txt) |
+| Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Staleness check:** if the current export differs from the one
 > listed here, re-run the command above to refresh results.
@@ -1313,7 +1313,7 @@ Rewrite as an agent-usable guide for conducting research:
 - Default configuration and what each parameter controls
 - Operational note for candidate-parallel tuning: replay uses process
   isolation with `spawn`, so prefer normal file-backed entrypoints
-  (`scripts/run_replay.py`, model `research.py`) over ad hoc stdin
+  (`scripts/run_replay.py`, model `analysis.py`) over ad hoc stdin
   snippets when running cross-candidate sweeps
 - How to interpret results (aggregate vs per-window, availability,
   what a good score looks like)

@@ -18,10 +18,10 @@ better supported.
 
 ## Conducting Research
 
-The same conventions apply to cross-cutting research articles (in
-`feedcast/research/`) and model-specific research (in each model
-directory under `feedcast/models/`). Both use the same file set,
-document template, and workflow.
+Cross-cutting research articles (in `feedcast/research/`) and model-
+specific research (in each model directory under `feedcast/models/`)
+share the same core file set, document template, and workflow. Where
+they differ is noted below.
 
 ### Directory convention
 
@@ -30,7 +30,7 @@ document template, and workflow.
 | `research.md` | Current conclusions. Written from first principles — may reference `CHANGELOG.md` entries for evolution context where that adds value. |
 | `analysis.py` | Repeatable analysis. Cross-cutting: `.venv/bin/python -m feedcast.research.<name>.analysis`. Model: `.venv/bin/python -m feedcast.models.<slug>.analysis`. |
 | `artifacts/` | Committed outputs (tables, charts, CSVs, `research_results.txt`) referenced by `research.md`. |
-| `CHANGELOG.md` | Reverse-chronological log of changes to hypotheses, methods, or conclusions. Captures evolution that `research.md` intentionally does not carry. |
+| `CHANGELOG.md` | Reverse-chronological evolution log. Cross-cutting articles log hypothesis, method, and conclusion changes. Model CHANGELOGs log behavior changes (constants, logic) — see the README for model CHANGELOG conventions. |
 
 ### `research.md` template
 
@@ -65,17 +65,21 @@ See the existing articles for reference implementations:
      **Inconclusive**.
 4. **Update `research.md`.** Write from first principles. May reference
    `CHANGELOG.md` entries for evolution context where it adds value.
-5. **Update `CHANGELOG.md`.** Log any changes to hypotheses, methods,
-   data, or conclusions that occurred during this research cycle:
-   - **Prior conclusion** — what the finding was before.
-   - **New conclusion** — what it is now.
-   - **What changed** — what drove the shift (new data, revised
-     method, updated hypothesis, etc.).
-   - For initial analyses, record the conclusion and export.
-6. **Update shared docs.** Update the Research Articles table above
-   (conclusion summary and last-updated date). If the change affects
-   model assumptions or shared hypotheses, update the relevant sections
-   below and any affected model docs.
+5. **Update `CHANGELOG.md`.**
+   - Cross-cutting articles: log changes to hypotheses, methods, or
+     conclusions using **Prior conclusion**, **New conclusion**, and
+     **What changed**. For initial analyses, record the conclusion and
+     export.
+   - Model research: log behavior changes (constants, logic) using the
+     model CHANGELOG convention (one-line summary with Problem/Solution
+     sections). See the README for the format.
+6. **Update shared docs.**
+   - Cross-cutting: update the Research Articles table above (conclusion
+     summary and last-updated date).
+   - Model: update this file only if the change affects a cross-model
+     conclusion in the sections below.
+   - Either: update any affected model or cross-cutting docs if the
+     change alters shared hypotheses or assumptions.
 
 **When to create a new cross-cutting article:** When an observation is
 repeated across multiple models or agents and backed by evidence. The

@@ -261,8 +261,8 @@ template, and workflow. The core files are:
 **Start with the research hub, then read model-local docs:** Shared
 findings and open questions now live in
 [`feedcast/research/index.md`](feedcast/research/index.md). After that,
-read the specific model's `design.md`, `methodology.md`, and
-`analysis.py` if you are changing that model.
+read the specific model's `research.md`, `design.md`, `methodology.md`,
+and `analysis.py` if you are changing that model.
 
 **Model directory convention:** Each model lives in its own subdirectory
 under `feedcast/models/` with a standard set of files:

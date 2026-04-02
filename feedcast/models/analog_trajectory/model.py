@@ -31,7 +31,7 @@ MODEL_SLUG = "analog_trajectory"
 MODEL_METHODOLOGY = load_methodology(__file__)
 
 # --- Tuning parameters (model-specific) ---
-# All parameters below are tunable via research.py. Run the research
+# All parameters below are tunable via analysis.py. Run the analysis
 # script after new exports to validate or update these values.
 
 # Per-feature weights for weighted Euclidean distance.
@@ -40,18 +40,18 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 # "recent_only" profile: the latest gap and volume dominate similarity,
 # rolling means are deemphasized, and hour-of-day remains informative
 # but secondary. Selected via the full canonical replay sweep in
-# research.py.
+# analysis.py.
 FEATURE_WEIGHTS = np.array([2.0, 0.5, 2.0, 0.5, 1.0, 1.0])
 
 # Lookback window for rolling mean features (hours).
 # Events within this window contribute to mean_gap and mean_volume.
 # 12h focuses the means on the most recent feeding rhythm. Selected via
-# the full canonical replay sweep in research.py.
+# the full canonical replay sweep in analysis.py.
 LOOKBACK_HOURS = 12
 
 # Number of nearest neighbors to retrieve.
 # k=5 gives the best count/timing balance on episode-level state
-# history. Selected via the full canonical replay sweep in research.py.
+# history. Selected via the full canonical replay sweep in analysis.py.
 K_NEIGHBORS = 5
 
 # Minimum number of historical states with complete trajectories.
@@ -62,7 +62,7 @@ MIN_PRIOR_EVENTS = 3
 
 # Half-life for recency weighting of neighbor states (hours).
 # 72h means a state from 3 days ago gets half the weight of an
-# equivalent state right now. Selected via research.py canonical sweep.
+# equivalent state right now. Selected via analysis.py canonical sweep.
 RECENCY_HALF_LIFE_HOURS = 72
 
 # Trajectory length aggregation method: "median" or "mean".
