@@ -355,6 +355,58 @@ Lead with what makes this repo unique:
 - Keep existing model and research documentation, reframed as components
   of the agent-maintained system
 
+**Read the current README first.** The existing README is comprehensive
+and well-structured. Most of it survives with targeted updates. Do not
+start from scratch — edit what's there.
+
+**Stale content to fix:**
+
+- Intro paragraph: "using an ensemble of scripted forecasting models" is
+  now incomplete. Agents are part of the pipeline.
+- "LLM agent inference" paragraph under Forecast Sources: says "pipeline
+  integration planned" — this is now complete. Rewrite to describe the
+  implemented agent inference (what it does, that it's excluded from
+  consensus, scored by retrospective). Also mention that agents now
+  analyze trends and tune scripted models.
+- Pipeline table: shows the old 8-step sequential flow. Replace with the
+  new agentic flow (pre-flight → branch → insights → tuning → tuning
+  commit → execute → blend → finalize → results commit). The ASCII
+  diagram from the plan's Pipeline Flow section is a good starting point
+  but should be adapted for README audience (less implementation detail,
+  more "what happens and why").
+- Quick Start: add `--agent`, `--skip-tuning`, `--skip-insights`,
+  `--skip-agent-inference` flags. Note that `run_forecast.py` creates a
+  review branch and commits automatically.
+- Repo Layout: add `skills/` (with `trend_insights/` and
+  `model_tuning/`), `feedcast/agent_runner.py`. Note
+  `scripts/run_forecast.py` now owns argparse.
+- Working with Agents: expand to cover the full pipeline integration
+  (agents analyze trends, assess models, produce forecasts — all on a
+  review branch). The current section only describes the workspace.
+- Design Decisions: add rows for branch-per-run workflow, tuning commit
+  provenance, agent steps skippable, and parallel tuning.
+
+**New section needed:**
+
+- "Working with Skills" — the skill convention (`skills/<name>/prompt.md`
+  with `{{variable}}` placeholders), how to add a skill, reference to
+  `feedcast/agent_runner.py` for invocation. Keep it short.
+
+**Keep as-is (or light edits only):**
+
+- Latest Forecast section and chart embed
+- The Forecasting Challenge (feeds vs. episodes subsection)
+- Event Construction
+- Evaluation
+- Replay And Tuning
+- Working with Research
+- Working with Models
+- Principles
+
+**Tone note:** The README currently mixes personal narrative (the intro
+about the tired dad) with technical reference. Preserve both voices.
+The personal context is part of what makes the repo distinctive.
+
 ### Phase 6 · Research Review Skill (deferred)
 
 - `skills/research_review/prompt.md`: assess a model against latest research
