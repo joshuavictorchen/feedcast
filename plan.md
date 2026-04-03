@@ -223,7 +223,7 @@ Replaced placeholder prompts with full skill instructions:
   Context variables: `{{model_slug}}`, `{{model_dir}}`,
   `{{export_path}}`, `{{last_retro_scores}}`, `{{research_hub_path}}`
 
-### Phase 4 · Pipeline Orchestration
+### Phase 4 · Pipeline Orchestration ✓
 
 Depends on Phases 1–3 (all complete).
 

@@ -1,13 +1,17 @@
-"""Tests for episode-aware report diagnostics."""
+"""Tests for report diagnostics and agent-insights rendering."""
 
 from __future__ import annotations
 
+import shutil
+import tempfile
 import unittest
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from feedcast.clustering import BASE_GAP_MINUTES
-from feedcast.data import Forecast, ForecastPoint
-from feedcast.report import _forecast_diagnostics_entry
+from feedcast.data import ExportSnapshot, Forecast, ForecastPoint
+from feedcast.report import _forecast_diagnostics_entry, _render_report
+from feedcast.tracker import Retrospective
 
 
 def _point(cutoff: datetime, offset_hours: float, volume: float = 3.0) -> ForecastPoint:
@@ -78,6 +82,78 @@ class DiagnosticsEntryTests(unittest.TestCase):
         self.assertEqual(entry["raw_point_count"], 0)
         self.assertEqual(entry["episode_count"], 0)
         self.assertEqual(entry["collapsed_attachments"], 0)
+
+
+# ---------------------------------------------------------------------------
+# Agent insights rendering
+# ---------------------------------------------------------------------------
+
+_RENDER_SNAPSHOT = ExportSnapshot(
+    export_path=Path("exports/fake.csv"),
+    activities=[],
+    latest_activity_time=CUTOFF,
+    dataset_id="sha256:fake",
+    source_hash="sha256:fake",
+)
+_RENDER_FORECAST = Forecast(
+    name="Test Model",
+    slug="test_model",
+    points=[_point(CUTOFF, 3.0)],
+    methodology="Test methodology.",
+    diagnostics={},
+)
+_RENDER_META = {"git_commit": "abc1234", "git_dirty": False}
+
+
+def _render_to_tmpdir(agent_insights: str | None = None) -> Path:
+    """Render a minimal report into a temp directory and return it."""
+    output_dir = Path(tempfile.mkdtemp(prefix="test-report-"))
+    _render_report(
+        output_dir=output_dir,
+        snapshot=_RENDER_SNAPSHOT,
+        all_forecasts=[_RENDER_FORECAST],
+        featured_slug="test_model",
+        cutoff=CUTOFF,
+        retrospective=Retrospective(available=False),
+        historical_accuracy=[],
+        tracker_meta=_RENDER_META,
+        agent_insights=agent_insights,
+    )
+    return output_dir
+
+
+class AgentInsightsRenderTests(unittest.TestCase):
+    """Agent insights integration in report rendering."""
+
+    def _render(self, agent_insights: str | None = None) -> Path:
+        output_dir = _render_to_tmpdir(agent_insights)
+        self.addCleanup(shutil.rmtree, output_dir)
+        return output_dir
+
+    def test_insights_file_written(self) -> None:
+        """agent-insights.md is published when insights are provided."""
+        output_dir = self._render("Test trend content here.")
+        insights_path = output_dir / "agent-insights.md"
+        self.assertTrue(insights_path.exists())
+        self.assertIn("Test trend content here.", insights_path.read_text())
+
+    def test_insights_rendered_in_report(self) -> None:
+        """Template includes the insights section."""
+        output_dir = self._render("Test trend content here.")
+        report_text = (output_dir / "report.md").read_text()
+        self.assertIn("## Trend Insights", report_text)
+        self.assertIn("Test trend content here.", report_text)
+
+    def test_no_file_when_none(self) -> None:
+        """agent-insights.md is NOT published when insights are None."""
+        output_dir = self._render(None)
+        self.assertFalse((output_dir / "agent-insights.md").exists())
+
+    def test_no_section_when_none(self) -> None:
+        """Template omits the insights section when None."""
+        output_dir = self._render(None)
+        report_text = (output_dir / "report.md").read_text()
+        self.assertNotIn("## Trend Insights", report_text)
 
 
 if __name__ == "__main__":

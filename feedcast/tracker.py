@@ -108,8 +108,18 @@ def build_run_entry(
     featured_slug: str,
     retrospective: Retrospective,
     prompt_hashes: dict[str, str] | None = None,
+    git_commit: str | None = None,
+    git_dirty: bool | None = None,
 ) -> dict[str, Any]:
-    """Build the tracker manifest for one completed pipeline run."""
+    """Build the tracker manifest for one completed pipeline run.
+
+    Args:
+        git_commit: Explicit commit SHA to record as provenance. When
+            provided, overrides the auto-detected worktree HEAD. Use this
+            after a tuning commit to capture the correct provenance before
+            the worktree becomes dirty with pipeline outputs.
+        git_dirty: Explicit dirty flag. Paired with ``git_commit``.
+    """
     predictions: dict[str, list[dict[str, str | float]]] = {}
     model_names = {forecast.slug: forecast.name for forecast in forecasts}
 
@@ -120,8 +130,8 @@ def build_run_entry(
     return {
         "run_id": run_id,
         "timestamp": datetime.now().isoformat(timespec="seconds"),
-        "git_commit": _git_commit(),
-        "git_dirty": _git_dirty(),
+        "git_commit": git_commit if git_commit is not None else _git_commit(),
+        "git_dirty": git_dirty if git_dirty is not None else _git_dirty(),
         "dataset_id": snapshot.dataset_id,
         "source_file": snapshot.export_path.name,
         "source_hash": snapshot.source_hash,

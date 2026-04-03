@@ -10,6 +10,12 @@
 
 ![Forecast Trajectories](spaghetti.png)
 
+{% if agent_insights %}
+## Trend Insights
+
+{{ agent_insights }}
+
+{% endif %}
 ## Prior Run Retrospective
 
 {% if not retrospective.available -%}

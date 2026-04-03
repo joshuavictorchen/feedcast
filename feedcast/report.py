@@ -39,6 +39,7 @@ def generate_report(
     tracker_meta: dict[str, Any],
     output_dir: Path = Path("report"),
     archive_dir: Path = Path(".report-archive"),
+    agent_insights: str | None = None,
 ) -> Path:
     """Render and publish the latest report atomically."""
     featured = _find_forecast(all_forecasts, featured_slug)
@@ -62,6 +63,7 @@ def generate_report(
             retrospective=retrospective,
             historical_accuracy=historical_accuracy,
             tracker_meta=tracker_meta,
+            agent_insights=agent_insights,
         )
         write_schedule_plot(
             events=events,
@@ -111,6 +113,7 @@ def _render_report(
     retrospective: Retrospective,
     historical_accuracy: list[HistoricalAccuracySummary],
     tracker_meta: dict[str, Any],
+    agent_insights: str | None = None,
 ) -> None:
     """Render `report.md` from the package template."""
     template_dir = Path(__file__).resolve().parent / "templates"
@@ -143,6 +146,7 @@ def _render_report(
             }
             for row in historical_accuracy
         ],
+        "agent_insights": agent_insights,
         "source_file": snapshot.export_path.name,
         "dataset_id_short": snapshot.dataset_id[:15] + "...",
         "git_commit_display": _git_commit_display(tracker_meta),
@@ -150,6 +154,14 @@ def _render_report(
     }
     rendered = template.render(context)
     (output_dir / "report.md").write_text(rendered, encoding="utf-8")
+
+    # Publish agent insights as a standalone report artifact during the
+    # atomic swap. The renderer never reads this from disk — it flows
+    # through the template context above.
+    if agent_insights:
+        (output_dir / "agent-insights.md").write_text(
+            agent_insights + "\n", encoding="utf-8",
+        )
 
 
 def _prepare_methodology_row(forecast: Forecast, featured_slug: str) -> dict[str, str]:
