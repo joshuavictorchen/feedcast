@@ -82,12 +82,17 @@ On this DGP, canonical replay prefers
 production values `1.0` and `5`. The production half-life decays
 observation weight by 50% per day, which over-reacts to jitter when
 the true drift is stationary — longer smoothing recovers the linear
-trend more reliably. This is **pipeline-structural divergence**: the
-production constants are suboptimal even when the model's hypothesis
-is exactly true. On real data, the shorter half-life and lookback may
-compensate for non-stationary drift (template reorganization, slot
-appearance or disappearance), but that compensation is a
-hypothesis-fit effect, not a property of the pipeline.
+trend more reliably. The **pipeline is sound** — it correctly
+optimizes for whichever data it sees. On synthetic data with
+stationary drift, it picks parameters that exploit the clean trend.
+On real data where drift is non-stationary (template reorganization,
+slot appearance or disappearance), it picks parameters that react
+quickly to recent changes. The production constants are not optimal
+for the synthetic DGP, but that is because they were tuned for real
+data that does not fully conform to the stationary drift hypothesis.
+See the
+[cross-model synthesis](../../research/simulation_study/research.md)
+for the full classification across all four models.
 
 ## Results
 

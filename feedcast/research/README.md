@@ -15,7 +15,7 @@ better supported.
 | ------- | ---------- | ------------ | ----- |
 | Feed volume vs. subsequent gap | Supported: larger feeds → longer gaps, but the effect is modest | 2026-03-24 | [`volume_gap_relationship/`](volume_gap_relationship/) |
 | Feed clustering (episodes) | 73-min base / 80-min small-feed extension, zero errors on 96 boundaries | 2026-03-26 | [`feed_clustering/`](feed_clustering/) |
-| Simulation study | Methodology established; model-specific tests in progress | 2026-04-02 | [`simulation_study/`](simulation_study/) |
+| Simulation study | Pipeline sound; hypothesis-fit divergence confirmed for 3 of 4 models | 2026-04-03 | [`simulation_study/`](simulation_study/) |
 
 ## Conducting Research
 
@@ -33,7 +33,7 @@ headers and overall flow are identical.
 | `research.md` | Current conclusions. Written from first principles — may reference `CHANGELOG.md` entries for evolution context where that adds value. |
 | `analysis.py` | Repeatable analysis. Cross-cutting: `.venv/bin/python -m feedcast.research.<name>.analysis`. Model: `.venv/bin/python -m feedcast.models.<slug>.analysis`. |
 | `artifacts/` | Committed outputs (tables, charts, CSVs, `research_results.txt`) referenced by `research.md`. |
-| `CHANGELOG.md` | Reverse-chronological evolution log. Cross-cutting articles log hypothesis, method, and conclusion changes. Model CHANGELOGs log behavior changes (constants, logic) — see the README for model CHANGELOG conventions. |
+| `CHANGELOG.md` | Reverse-chronological evolution log. All CHANGELOGs use the same format: one-line summary with date, `Problem`/`Solution` sections, and an optional `Research` section for substantive supporting evidence. Include the export path. |
 
 ### `research.md` template
 
@@ -68,14 +68,12 @@ See the existing articles for reference implementations:
      **Inconclusive**.
 4. **Update `research.md`.** Write from first principles. May reference
    `CHANGELOG.md` entries for evolution context where it adds value.
-5. **Update `CHANGELOG.md`.**
-   - Cross-cutting articles: log changes to hypotheses, methods, or
-     conclusions using **Prior conclusion**, **New conclusion**, and
-     **What changed**. For initial analyses, record the conclusion and
-     export.
-   - Model research: log behavior changes (constants, logic) using the
-     model CHANGELOG convention (one-line summary with Problem/Solution
-     sections). See the README for the format.
+5. **Update `CHANGELOG.md`.** All CHANGELOGs (cross-cutting and
+   model-specific) use the same format: a one-line summary with date,
+   then `### Problem` and `### Solution` sections. Add a `### Research`
+   section when there is substantive supporting evidence (sweeps,
+   measurements, comparisons). Include the export path. See any
+   model's `CHANGELOG.md` for examples.
 6. **Update shared docs.**
    - Cross-cutting: update the Research Articles table above (conclusion
      summary and last-updated date).
@@ -227,29 +225,31 @@ the data richer than it is.
     counts equally. Stacked generalization requires the level-1
     meta-learner to learn differential model trust, so the blend
     architecture would need to change.
-  - **Proposed investigation sequence:**
-    1. **Simulation study** (prerequisite, separate plan): run
-       synthetic hypothesis-conformance tests to decompose the
-       canonical/internal divergence into pipeline-structural vs.
-       data-fit components. This answers *why* internal and canonical
-       objectives disagree before deciding what to do about it.
-    2. **Diagnostic experiment**: re-tune models to
-       internal-diagnostic optima, score the resulting blend
-       canonically without changing blend architecture. This tests
-       whether unweighted majority voting alone can exploit increased
-       diversity.
-    3. **Architecture decision**: if step 2 shows improvement (or
-       holds steady), design model-specific weighting into the blend.
-       If performance degrades, the end-to-end approach is validated
-       — or the blend architecture is the bottleneck and must change
-       first.
+  - **Simulation study findings.** The canonical replay pipeline is
+    sound for all four models — no pipeline-structural distortion
+    detected on synthetic data. Three models (Latent Hunger, Survival
+    Hazard, Analog Trajectory) show confirmed hypothesis-fit
+    divergence: internal and canonical agree on synthetic data but
+    disagree on real data. Slot Drift's pipeline is sound, but its
+    full decomposition is incomplete because the model lacks a scalar
+    internal diagnostic for real-data comparison. These results
+    establish that internal tuning is a coherent intervention for the
+    three confirmed models. See
+    [`simulation_study/research.md`](simulation_study/research.md)
+    for the full analysis, per-model evidence, and caveats.
+  - **Next investigation: diagnostic experiment.** Re-tune the three
+    confirmed models to their internal-diagnostic optima, score the
+    resulting blend canonically without changing blend architecture.
+    This tests whether unweighted majority voting alone can exploit
+    increased diversity. If the blend improves (or holds steady),
+    design model-specific weighting into the blend. If performance
+    degrades, the end-to-end approach is validated — or the blend
+    architecture is the bottleneck and must change first.
   - **Relationship to existing evidence.** The "internal diagnostics
     vs. canonical replay" item below documents the divergence itself
     (three models, specific parameter values). This item asks whether
     that divergence is a deficiency to accept or an opportunity to
     exploit through architectural change.
-  - The simulation study (step 1) is tracked as a separate
-    implementation plan.
 
 - How stable is daily episode count once more complete days accumulate?
 

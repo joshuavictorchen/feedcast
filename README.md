@@ -207,7 +207,9 @@ feedcast/
       labels.yaml              Hand-labeled feed boundaries
       artifacts/               Committed outputs used by the write-up
     simulation_study/          Simulation study for hypothesis-conformance testing
+      research.md              Cross-model findings and divergence classification
       methodology.md           Shared DGP design, validation protocols, canonical diagnostic
+      CHANGELOG.md             Conclusion and method evolution log
   models/                      Scripted forecasters and consensus blend
     shared.py                  Shared utilities used across models
     slot_drift/                Daily template with per-slot drift
@@ -296,7 +298,7 @@ model research differ. The core files are:
 | `research.md` | Current conclusions. Written from first principles with a staleness box for mechanical freshness detection. |
 | `analysis.py` | Repeatable analysis. Run as a Python module (see the research hub README for exact commands). |
 | `artifacts/` | Committed outputs (tables, charts, CSVs) referenced by `research.md`. |
-| `CHANGELOG.md` | Reverse-chronological evolution log. See the research hub README for format details by research type. |
+| `CHANGELOG.md` | Reverse-chronological evolution log. One-line summary with date, Problem/Solution sections, optional Research section. Same format for all CHANGELOGs. |
 
 ## Working with Models
 

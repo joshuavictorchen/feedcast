@@ -1,6 +1,6 @@
 # Simulation Study for Hypothesis-Conformance Testing
 
-**Status**: Planning (post peer review, ready for implementation)
+**Status**: Complete
 
 **Methodology**: This is a **simulation study** — a standard statistical
 validation technique where a method is evaluated against data generated
