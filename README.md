@@ -57,6 +57,17 @@ events and decide independently how to handle episodes in their logic.
 | Survival Hazard | Day-part Weibull hazard: feeding probability increases with elapsed time |
 | Consensus Blend | Exact majority-vote selector across the scripted models |
 
+Each scripted model encodes a distinct hypothesis about the
+data-generating process. Production constants are currently tuned
+end-to-end: canonical replay selects every model's constants by
+optimizing the same forecast-quality objective. An open research
+question ([research hub](feedcast/research/README.md)) asks whether a
+**stacked generalization** design (Wolpert, 1992) — models tuned to
+their own native objectives, ensemble tuned to the end-to-end
+objective — would produce a stronger ensemble by preserving
+hypothesis-specific model diversity rather than homogenizing toward a
+shared optimum.
+
 **LLM agents** get the export CSV, a shared prompt, and a persistent workspace:
 
 | Agent | Model |
@@ -364,6 +375,7 @@ and add a corresponding case to `feedcast/agents/run.sh`.
 | Episode grouping | Shared rule, model-local handling | Deterministic boundary rule in `clustering.py`; evaluation and consensus collapse both sides; models decide independently how to use episodes |
 | Model inputs | Raw activities, model-owned shaping | Each model receives `list[Activity]` and builds its own events (breastfeed merge, episode collapse) locally |
 | Scripted models | Distinct conceptual frames | Template, instance-based ML, mechanistic, and gap-regression approaches for ensemble diversity |
+| Model tuning | End-to-end canonical (under review) | Each model's constants are selected by canonical replay (same end-to-end objective). Stacked generalization — models on native objectives, blend on the canonical objective — is an [open investigation](feedcast/research/README.md) |
 | Ensemble | Consensus uses scripted models only | Agents excluded until retrospectives demonstrate consistent value |
 | Featured forecast | Consensus > static tiebreaker | Simple default; manually overridable via `FEATURED_DEFAULT` |
 | Agent failure | Fail fast | Use `--skip-agents` to work around; no silent fallback |

@@ -197,6 +197,59 @@ the data richer than it is.
 
 ## Open Questions
 
+*Highest-priority item first.*
+
+- **Should models optimize their own native objectives while the
+  ensemble optimizes the end-to-end objective (stacked
+  generalization)?** Currently, all scripted models are tuned
+  end-to-end: canonical replay selects each model's production
+  constants by optimizing the same full-day forecast-quality metric.
+  The alternative is a **stacked generalization** design (Wolpert,
+  1992) — a two-stage ensemble architecture where level-0 learners
+  (the scripted models) each optimize their own native loss function
+  (gap-MAE, maximum likelihood estimation, trajectory error, template
+  drift), and a level-1 meta-learner (the consensus blend) learns how
+  to weight and combine their outputs for the canonical objective.
+  - **Motivation — ensemble diversity and the bias-variance
+    decomposition of ensemble error.** Ensemble error decomposes into
+    average member error and member disagreement (Krogh & Vedelsby,
+    1994). End-to-end canonical tuning reduces individual member error
+    on the shared objective but risks **homogenizing** models —
+    shrinking the disagreement term that makes ensembling valuable.
+    Evidence of convergence: base-model count scores cluster tightly
+    (90.8–94.3), and canonical-optimal constants neutralize the
+    distinguishing hypothesis in at least three of four models (see
+    the divergence evidence below).
+  - **Current architectural constraint.** The consensus blend uses
+    unweighted majority voting with MILP sequence selection. It has no
+    model-specific weights or context-dependent trust — every model
+    counts equally. Stacked generalization requires the level-1
+    meta-learner to learn differential model trust, so the blend
+    architecture would need to change.
+  - **Proposed investigation sequence:**
+    1. **Simulation study** (prerequisite, separate plan): run
+       synthetic hypothesis-conformance tests to decompose the
+       canonical/internal divergence into pipeline-structural vs.
+       data-fit components. This answers *why* internal and canonical
+       objectives disagree before deciding what to do about it.
+    2. **Diagnostic experiment**: re-tune models to
+       internal-diagnostic optima, score the resulting blend
+       canonically without changing blend architecture. This tests
+       whether unweighted majority voting alone can exploit increased
+       diversity.
+    3. **Architecture decision**: if step 2 shows improvement (or
+       holds steady), design model-specific weighting into the blend.
+       If performance degrades, the end-to-end approach is validated
+       — or the blend architecture is the bottleneck and must change
+       first.
+  - **Relationship to existing evidence.** The "internal diagnostics
+    vs. canonical replay" item below documents the divergence itself
+    (three models, specific parameter values). This item asks whether
+    that divergence is a deficiency to accept or an opportunity to
+    exploit through architectural change.
+  - The simulation study (step 1) is tracked as a separate
+    implementation plan.
+
 - How stable is daily episode count once more complete days accumulate?
 
 - Does recent trend direction or acceleration improve forecasts more
@@ -276,3 +329,16 @@ the data richer than it is.
   - Tracking the size and direction of this gap across exports would
     reveal whether it is structural (inherent to each model's
     architecture) or transient (a property of the current data window).
+  - See also: the stacked generalization item at the top of this
+    section, which asks what to *do* about this divergence.
+
+- **Is formula more satiating than breast milk?** Most feeds are blends
+  of formula and breast milk, so the question is about feed composition
+  rather than feed type. Hypothesis: feeds with a higher formula
+  fraction are followed by longer subsequent gaps. Testing this requires
+  looking at the formula/breast-milk ratio within each feed (or episode)
+  and correlating with the following inter-episode gap, controlling for
+  total volume. If supported, feed composition becomes a useful
+  predictor variable — models currently treat volume as the only
+  feed-level input, but composition could carry independent signal for
+  satiety duration.
