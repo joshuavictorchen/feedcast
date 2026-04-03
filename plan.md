@@ -178,7 +178,7 @@ Everything else unchanged: `models/`, `evaluation/`, `replay/`, `research/`,
 Build order reflects dependencies: foundation first, then parallel tracks
 for workspace restructuring and skill authoring, then pipeline integration.
 
-### Phase 1 · Foundation
+### Phase 1 · Foundation ✓ `163c068`
 
 **1.1 Agent runner** — `feedcast/agent_runner.py`
 - `invoke_agent()`: read prompt.md, substitute `{{context}}` vars, dispatch
@@ -194,12 +194,24 @@ for workspace restructuring and skill authoring, then pipeline integration.
 - Git-clean assertion: `git status --porcelain`, refuse if non-empty
 - Existing export resolution logic stays as-is
 
+**Also done**: `prompt_hash` plumbing removed from pipeline (tracker param
+defaults to `{}`). Tests: `tests/test_agent_runner.py`, `tests/test_pipeline.py`.
+
 ### Phase 2 · Agent Inference Restructuring
 
 Can proceed in parallel with Phase 3.
 
+**Dependency warning**: `feedcast/pipeline.py:15` imports `run_all_agents`
+from `feedcast.agents`. Before deleting `__init__.py`, either remove that
+import (the old agent path is being replaced) or stub it. The pipeline will
+be fully rewritten in Phase 4, so a minimal stub or guarded import is fine
+for now — just don't break `import feedcast.pipeline`.
+
+Also: `feedcast/agents/run.sh` exists and is listed for deletion in the
+repo layout. Delete it alongside `__init__.py`.
+
 **2.1 Flatten `feedcast/agents/`**
-- Delete: `__init__.py`, `prompt/` directory, `claude/`, `codex/`
+- Delete: `__init__.py`, `run.sh`, `prompt/` directory, `claude/`, `codex/`
 - Create: `prompt.md` (agent inference prompt), `design.md`, `methodology.md`
 - Preserve or recreate `CHANGELOG.md`
 - `forecast.json` written at runtime, deleted before each invocation
