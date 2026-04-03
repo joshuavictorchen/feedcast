@@ -1,9 +1,9 @@
 # Feedcast
 
 Feedcast predicts the next 24 hours of bottle feeds for a newborn from
-Nara Baby app exports, using an ensemble of scripted forecasting models
-and LLM agents. Feed timing is the primary target. Each run scores the
-prior run's predictions against what actually happened.
+Nara Baby app exports, using an ensemble of scripted forecasting models.
+Feed timing is the primary target. Each run scores the prior run's
+predictions against what actually happened.
 
 *Built by a tired dad with Claude and Codex between bottle feedings.
 Coordinated via [claodex](https://github.com/joshuavictorchen/claodex).
@@ -68,17 +68,12 @@ objective — would produce a stronger ensemble by preserving
 hypothesis-specific model diversity rather than homogenizing toward a
 shared optimum.
 
-**LLM agents** get the export CSV, a shared prompt, and a persistent workspace:
-
-| Agent | Model |
-| ----- | ----- |
-| Claude Forecast | claude-opus-4-6 (effort: max) |
-| Codex Forecast | gpt-5.4 (reasoning: xhigh) |
-
-Each agent writes `forecast.json` and `methodology.md` to its workspace.
-Stale outputs are deleted before each invocation so a failed run cannot
-reuse prior results. Agents are excluded from the consensus blend and are
-never auto-featured.
+**LLM agent inference** (pipeline integration planned — see
+`feedcast/agents/`): An agent workspace exists for Claude or Codex to
+produce an independent forecast using freeform reasoning. The agent
+receives the export CSV, a persistent workspace, and full read access to
+the repo. Agent forecasts will be excluded from the consensus blend and
+scored by the same retrospective evaluation as scripted models.
 
 ## Pipeline
 
@@ -89,7 +84,6 @@ never auto-featured.
 | Run Models | Execute scripted models independently |
 | Consensus Blend | Exact majority-vote selector across scripted models |
 | Select Featured | Choose the consensus blend, or fall back to a static tiebreaker |
-| Run Agents | Claude and Codex produce independent forecasts (optional) |
 | Retrospective | Score the prior run's predictions against newly observed actuals |
 | Render Report | Generate the markdown report, charts, and diagnostics |
 | Save Tracker | Persist predictions and retrospective to `tracker.json` |
@@ -149,19 +143,12 @@ python3 -m venv .venv
 3. Read the report at `report/report.md`.
 
 ```bash
-# Full pipeline (scripted models + LLM agents):
+# Run the pipeline:
 .venv/bin/python scripts/run_forecast.py
 
 # Specific export:
 .venv/bin/python scripts/run_forecast.py --export-path exports/export_narababy_silas_YYYYMMDD.csv
-
-# Scripted models only (skip LLM agents):
-.venv/bin/python scripts/run_forecast.py --skip-agents
 ```
-
-LLM agent forecasts run `claude` and `codex` as local CLI tools with
-working auth (cheaper and easier than invoking API calls).
-Use `--skip-agents` if they're unavailable.
 
 Each run updates these artifacts:
 
@@ -259,14 +246,11 @@ feedcast/
     runner.py                  Replay and tune models across retrospective windows
     results.py                 Local replay artifact persistence
     README.md                  Usage, tuning examples, and Python API
-  agents/                      LLM agent workspaces, prompt, and runner
-    __init__.py                Agent orchestration and output validation
-    run.sh                     Shell dispatcher for Claude/Codex CLIs
-    prompt/prompt.md           Shared agent prompt
-    claude/                    Claude persistent workspace
-      CHANGELOG.md             Reverse-chronological behavior changes
-    codex/                     Codex persistent workspace
-      CHANGELOG.md             Reverse-chronological behavior changes
+  agents/                      LLM agent inference workspace
+    prompt.md                  Agent inference prompt
+    design.md                  Design decisions and rationale
+    methodology.md             Report-facing methodology text
+    CHANGELOG.md               Reverse-chronological behavior changes
   tracker.py                   Run persistence and retrospectives
   report.py                    Markdown rendering and atomic report swap
   plots.py                     Schedule and trajectory chart generation
@@ -355,22 +339,19 @@ See [`feedcast/replay/README.md`](feedcast/replay/README.md) for details.
 
 ## Working with Agents
 
-**Edit the shared prompt:** Modify `feedcast/agents/prompt/prompt.md`. Both
-agents receive the same prompt, prepended with the resolved export path and
-workspace path.
+**Edit the prompt:** Modify `feedcast/agents/prompt.md`. The prompt uses
+`{{variable}}` placeholders that the pipeline substitutes at runtime.
 
-**Iterate on one agent's strategy:** Each agent's workspace persists across
-runs. Agents can keep durable strategy notes in separate workspace files.
+**Iterate on strategy:** The agent workspace (`feedcast/agents/`) persists
+across runs. The agent can keep durable strategy notes, helper scripts,
+or model code in the workspace.
 
 **Use shared research if helpful:** Agents may inspect
 `feedcast/research/` as optional reference material. Its findings can
 inform an approach, but they are not requirements.
 
-**Update an agent:** When you change an agent's behavior or instructions,
-add a new top entry to that agent's `CHANGELOG.md`.
-
-**Add or swap an agent:** Edit the `AGENTS` list in `feedcast/agents/__init__.py`
-and add a corresponding case to `feedcast/agents/run.sh`.
+**Update the agent:** When the agent's behavior or instructions change,
+add a new top entry to `feedcast/agents/CHANGELOG.md`.
 
 ## Design Decisions
 
@@ -382,7 +363,7 @@ and add a corresponding case to `feedcast/agents/run.sh`.
 | Model tuning | End-to-end canonical (under review) | Each model's constants are selected by canonical replay (same end-to-end objective). Stacked generalization — models on native objectives, blend on the canonical objective — is an [open investigation](feedcast/research/README.md) |
 | Ensemble | Consensus uses scripted models only | Agents excluded until retrospectives demonstrate consistent value |
 | Featured forecast | Consensus > static tiebreaker | Simple default; manually overridable via `FEATURED_DEFAULT` |
-| Agent failure | Fail fast | Use `--skip-agents` to work around; no silent fallback |
+| Agent failure | Fail fast | No silent fallback |
 | Model registration | Explicit `MODELS` list | No auto-discovery; you see what runs by reading one list |
 | Report tracking | `report/` and `tracker.json` committed | One workspace; latest report always accessible; tracker keeps the latest run per dataset rather than every retry |
 | Exports | Untracked raw drops | Reproducibility via `tracker.json` dataset fingerprints |

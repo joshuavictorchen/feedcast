@@ -12,7 +12,6 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from feedcast.agents import run_all_agents
 from feedcast.data import (
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     HORIZON_HOURS,
@@ -48,11 +47,6 @@ def main() -> None:
         default=None,
         help="Optional explicit export CSV. Defaults to the latest matching file.",
     )
-    parser.add_argument(
-        "--skip-agents",
-        action="store_true",
-        help="Skip Claude/Codex agent forecasts and run scripted models only.",
-    )
     args = parser.parse_args()
 
     _assert_clean_git_worktree()
@@ -77,11 +71,7 @@ def main() -> None:
     )
     featured_slug = select_featured_forecast([*base_forecasts, consensus_forecast])
 
-    agent_forecasts: list[Forecast] = []
-    if not args.skip_agents:
-        agent_forecasts = run_all_agents(snapshot)
-
-    all_forecasts = [*base_forecasts, consensus_forecast, *agent_forecasts]
+    all_forecasts = [*base_forecasts, consensus_forecast]
     retrospective = compute_retrospective(TRACKER_PATH, snapshot)
     historical_accuracy = summarize_retrospective_history(
         TRACKER_PATH,
