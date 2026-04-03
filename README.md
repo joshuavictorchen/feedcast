@@ -206,6 +206,8 @@ feedcast/
       CHANGELOG.md             Conclusion and method evolution log
       labels.yaml              Hand-labeled feed boundaries
       artifacts/               Committed outputs used by the write-up
+    simulation_study/          Simulation study for hypothesis-conformance testing
+      methodology.md           Shared DGP design, validation protocols, canonical diagnostic
   models/                      Scripted forecasters and consensus blend
     shared.py                  Shared utilities used across models
     slot_drift/                Daily template with per-slot drift

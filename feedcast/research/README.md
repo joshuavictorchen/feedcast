@@ -15,6 +15,7 @@ better supported.
 | ------- | ---------- | ------------ | ----- |
 | Feed volume vs. subsequent gap | Supported: larger feeds → longer gaps, but the effect is modest | 2026-03-24 | [`volume_gap_relationship/`](volume_gap_relationship/) |
 | Feed clustering (episodes) | 73-min base / 80-min small-feed extension, zero errors on 96 boundaries | 2026-03-26 | [`feed_clustering/`](feed_clustering/) |
+| Simulation study | Methodology established; model-specific tests in progress | 2026-04-02 | [`simulation_study/`](simulation_study/) |
 
 ## Conducting Research
 

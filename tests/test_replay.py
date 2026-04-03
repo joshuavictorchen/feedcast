@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import csv
 import json
 import sys
 import tempfile
@@ -12,20 +11,8 @@ from pathlib import Path
 
 from feedcast.replay import score_model, tune_model
 
-
-CSV_HEADERS = [
-    "Type",
-    "Start Date/time",
-    "Start Date/time (Epoch)",
-    "[Bottle Feed] Breast Milk Volume",
-    "[Bottle Feed] Breast Milk Volume Unit",
-    "[Bottle Feed] Formula Volume",
-    "[Bottle Feed] Formula Volume Unit",
-    "[Bottle Feed] Volume",
-    "[Bottle Feed] Volume Unit",
-    "[Breastfeed] Left Duration (Seconds)",
-    "[Breastfeed] Right Duration (Seconds)",
-]
+from tests.simulation.export import write_nara_export
+from tests.simulation.factories import bottle_activities_from_schedule
 
 
 def _write_export(path: Path) -> None:
@@ -36,26 +23,13 @@ def _write_export(path: Path) -> None:
     cutoff lands at 2026-03-19 21:00 with 8 actuals in the last 24 hours.
     """
     base_time = datetime(2026, 3, 15, 0, 0, 0)
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=CSV_HEADERS)
-        writer.writeheader()
-        for index in range(48):
-            timestamp = base_time + timedelta(hours=3 * index)
-            writer.writerow(
-                {
-                    "Type": "Bottle Feed",
-                    "Start Date/time": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                    "Start Date/time (Epoch)": str(int(timestamp.timestamp())),
-                    "[Bottle Feed] Breast Milk Volume": "4.0",
-                    "[Bottle Feed] Breast Milk Volume Unit": "oz",
-                    "[Bottle Feed] Formula Volume": "",
-                    "[Bottle Feed] Formula Volume Unit": "",
-                    "[Bottle Feed] Volume": "",
-                    "[Bottle Feed] Volume Unit": "",
-                    "[Breastfeed] Left Duration (Seconds)": "",
-                    "[Breastfeed] Right Duration (Seconds)": "",
-                }
-            )
+    activities = bottle_activities_from_schedule(
+        [
+            (base_time + timedelta(hours=3 * index), 4.0)
+            for index in range(48)
+        ]
+    )
+    write_nara_export(path, activities)
 
 
 class ReplayScoreTests(unittest.TestCase):
