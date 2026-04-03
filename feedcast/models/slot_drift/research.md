@@ -67,6 +67,28 @@ feeding pattern.
 statistics side by side, confirming the episode collapsing decision
 documented in `design.md`.
 
+### Simulation study
+
+Synthetic validation uses two fixtures. Deterministic linear-drift
+histories verify slot count recovery, template construction, and
+next-day drift extrapolation. Canonical replay needs a different
+fixture: materially non-zero per-slot drift plus bounded Gaussian
+jitter so `LOOKBACK_DAYS`, `MATCH_COST_THRESHOLD_HOURS`, and
+`DRIFT_WEIGHT_HALF_LIFE_DAYS` are meaningfully distinguishable (zero
+jitter or small drift lets many parameter combinations tie).
+
+On this DGP, canonical replay prefers
+`DRIFT_WEIGHT_HALF_LIFE_DAYS=7.0` and `LOOKBACK_DAYS=7` over the
+production values `1.0` and `5`. The production half-life decays
+observation weight by 50% per day, which over-reacts to jitter when
+the true drift is stationary — longer smoothing recovers the linear
+trend more reliably. This is **pipeline-structural divergence**: the
+production constants are suboptimal even when the model's hypothesis
+is exactly true. On real data, the shorter half-life and lookback may
+compensate for non-stationary drift (template reorganization, slot
+appearance or disappearance), but that compensation is a
+hypothesis-fit effect, not a property of the pipeline.
+
 ## Results
 
 ### Canonical findings
