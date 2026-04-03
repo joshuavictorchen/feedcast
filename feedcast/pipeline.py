@@ -8,10 +8,11 @@ tracker.
 from __future__ import annotations
 
 import argparse
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from feedcast.agents import prompt_hash, run_all_agents
+from feedcast.agents import run_all_agents
 from feedcast.data import (
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
     HORIZON_HOURS,
@@ -29,8 +30,8 @@ from feedcast.report import generate_report
 from feedcast.tracker import (
     build_run_entry,
     compute_retrospective,
-    summarize_retrospective_history,
     save_run,
+    summarize_retrospective_history,
 )
 
 TRACKER_PATH = Path("tracker.json")
@@ -54,6 +55,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    _assert_clean_git_worktree()
+
     snapshot = load_export_snapshot(export_path=args.export_path)
     cutoff = snapshot.latest_activity_time
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -75,13 +78,8 @@ def main() -> None:
     featured_slug = select_featured_forecast([*base_forecasts, consensus_forecast])
 
     agent_forecasts: list[Forecast] = []
-    prompt_hashes: dict[str, str] = {}
     if not args.skip_agents:
         agent_forecasts = run_all_agents(snapshot)
-        shared_prompt_hash = prompt_hash()
-        prompt_hashes = {
-            forecast.slug: shared_prompt_hash for forecast in agent_forecasts
-        }
 
     all_forecasts = [*base_forecasts, consensus_forecast, *agent_forecasts]
     retrospective = compute_retrospective(TRACKER_PATH, snapshot)
@@ -96,7 +94,6 @@ def main() -> None:
         forecasts=all_forecasts,
         featured_slug=featured_slug,
         retrospective=retrospective,
-        prompt_hashes=prompt_hashes,
     )
 
     report_dir = generate_report(
@@ -147,3 +144,33 @@ def _print_summary(
         )
     print(f"Report:      {report_dir / 'report.md'}")
     print(f"Tracker:     {tracker_path}")
+
+
+def _assert_clean_git_worktree() -> None:
+    """Refuse to run when the repository has local changes."""
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=_repo_root(),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError as error:
+        raise RuntimeError("git is required to run the forecast pipeline.") from error
+    except subprocess.CalledProcessError as error:
+        stderr = error.stderr.strip()
+        raise RuntimeError(
+            f"Failed to inspect git worktree: {stderr or 'no stderr'}"
+        ) from error
+
+    if result.stdout.strip():
+        raise RuntimeError(
+            "Refusing to run with a dirty git worktree. Commit or stash changes "
+            "first."
+        )
+
+
+def _repo_root() -> Path:
+    """Return the repository root used for git commands."""
+    return Path(__file__).resolve().parent.parent
