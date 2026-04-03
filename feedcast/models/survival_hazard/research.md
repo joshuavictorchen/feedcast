@@ -76,6 +76,14 @@ is real and helpful.
 **24h holdout replay** (Section 8) is a sanity check that the shipped
 model can forecast the most recent full day from only prior data.
 
+**Simulation-study constraint:** The analysis MLE and the shipped
+forecaster validate different objects. Shape-recovery tests are
+cleanest on direct day-part gap samples drawn from known Weibull
+distributions. Shipped-forecast and replay tests should use
+chronological histories and compare against the deterministic
+median-path target, with the first forecast gap anchored to the last
+feed's day-part rather than the cutoff wall clock.
+
 **Episode-level analysis** (Section 9) re-runs the key fitting and
 walk-forward logic on cluster-collapsed episodes. This is the evidence
 for the episode-history design choice in `design.md`.
