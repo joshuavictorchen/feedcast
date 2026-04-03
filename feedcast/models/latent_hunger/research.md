@@ -91,6 +91,13 @@ beyond simple heuristics.
 **Volume prediction strategy** (Section 9) compares global vs.
 recency-weighted median volumes. Informs the simulation volume choice.
 
+**Simulation-study constraint:** Synthetic recovery tests must include
+varying observed volumes; otherwise the growth-rate estimator can absorb
+the satiety effect and make `SATIETY_RATE` unidentifiable. Synthetic
+forecast and canonical checks should end in a constant-volume tail,
+because the production forecaster simulates future gaps at the recent
+median volume rather than a varying future volume sequence.
+
 **Episode-level comparison** (Section 10) contrasts raw-event and
 episode-collapsed performance. This is the evidence for the episode-
 level history design decision in `design.md` — the most impactful
