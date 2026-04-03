@@ -16,7 +16,7 @@ A fresh agent should internalize these points before starting work.
 | 3 | **Forward-looking tuning**: Model tuning is about anticipating where the baby's patterns are heading, not fitting historical data. The baby is growing fast — patterns shift week to week. Canonical replay is the production authority, but it is one signal, not the objective function for the agent's judgment. |
 | 4 | **Simplicity**: The plan was deliberately simplified. No `run.sh` in agents/, no `prompt_hash()`, no bookkeeping abstractions. Simple `{{var}}` substitution for prompts (not Jinja2). `--allow-empty` commits instead of conditional logic. Don't re-add complexity. |
 | 5 | **Write isolation**: Parallel tuning agents must write only to their own model directory (`feedcast/models/<slug>/`). Cross-cutting research updates go in the model's `research.md` and are promoted manually. This is a hard boundary, not a suggestion. |
-| 6 | **Provenance**: The tracker records the tuning commit (step 3), not the results commit. The tuning commit is the code state that generated the forecasts. The results commit just packages outputs and cannot be recorded because it doesn't exist yet when the tracker is written. |
+| 6 | **Provenance**: The tracker records the tuning commit SHA, captured explicitly after the tuning commit via `git rev-parse HEAD`. Do not infer provenance from ambient worktree state later — the worktree will be dirty between the tuning and results commits. The tuning commit is the code state that generated the forecasts; the results commit packages outputs but is not itself provenance. |
 | 7 | **Artifact flow**: `agent-insights.md` is ephemeral — the pipeline captures its content into memory after the agent writes it, then publishes it to `report/` during the atomic report swap. The renderer never reads it from disk. `methodology.md` in `agents/` is persistent and agent-maintained across runs. |
 | 8 | **Existing code reuse**: `run_all_models()`, `select_featured_forecast()`, scoring, retrospective, tracker persistence, and report rendering all survive. The refactor is orchestration and sequencing, not reimplementation. Read the existing code before writing new code. |
 | 9 | **Read README.md and its references first**: The README links to the research hub, evaluation methodology, replay docs, and model conventions. These are essential context for writing skill prompts and understanding what the pipeline does. |
@@ -50,7 +50,7 @@ updates as new data arrives; the human decides what ships.
 | Tuning authority | Canonical replay is the production authority; native diagnostics are evidence, not the objective |
 | Tuning write scope | Model-local only (`feedcast/models/<slug>/`); cross-cutting research updates are noted in model's `research.md` and promoted manually |
 | Tracker compaction | Retained; same-dataset reruns overwrite the previous entry to prevent tracker bloat |
-| Tracker commit | Records the tuning commit (step 3) — the code state that generated the forecasts. The results commit packages outputs but is not itself provenance |
+| Tracker commit | Records the tuning commit SHA, captured explicitly after the tuning commit — not inferred from ambient worktree state later. The tuning commit is the code state that generated the forecasts; the results commit packages outputs but is not itself provenance |
 | Artifact lifecycles | `report/agent-insights.md` is ephemeral (regenerated each run); `feedcast/agents/methodology.md` is persistent (agent-maintained across runs) |
 
 ## Pipeline Flow
@@ -64,7 +64,7 @@ Pre-flight
 
 Step 1 · Trend Insights                         [agent, skippable]
   └── Agent + skills/trend_insights
-      → report/agent-insights.md
+      → staging temp file → read into memory (published in Step 5)
 
 Step 2 · Model Assessment & Tuning              [agent ×4 parallel, skippable]
   └── For each scripted model:
@@ -72,8 +72,9 @@ Step 2 · Model Assessment & Tuning              [agent ×4 parallel, skippable]
         → may modify feedcast/models/<slug>/{model.py, CHANGELOG.md, ...}
         (writes scoped to model directory only)
 
-Step 3 · Commit
-  └── git commit --allow-empty (tuning changes + insights)
+Step 3 · Tuning Commit
+  ├── git commit --allow-empty (tuning changes only)
+  └── Capture tuning commit SHA (provenance for tracker/report)
 
                     ┌──────────────────────────────┐
 Step 4 · Execute    │         parallel              │
@@ -89,8 +90,9 @@ Step 4 · Execute    │         parallel              │
 Step 5 · Finalize
   ├── Retrospective (score prior run's predictions vs. new actuals)
   ├── Historical accuracy aggregation
-  ├── Render report (includes agent-insights + agent forecast)
-  ├── Save tracker.json
+  ├── Render report (includes agent-insights from memory + agent forecast)
+  │   └── Publishes report/agent-insights.md during atomic report swap
+  ├── Save tracker.json (uses captured tuning commit SHA as provenance)
   └── git commit (results)
 ```
 
@@ -197,99 +199,51 @@ for workspace restructuring and skill authoring, then pipeline integration.
 **Also done**: `prompt_hash` plumbing removed from pipeline (tracker param
 defaults to `{}`). Tests: `tests/test_agent_runner.py`, `tests/test_pipeline.py`.
 
-### Phase 2 · Agent Inference Restructuring
+### Phase 2 · Agent Inference Restructuring ✓ `39944fa`
 
-Can proceed in parallel with Phase 3.
+Flattened `feedcast/agents/` to a single shared workspace: `prompt.md`
+(with `{{var}}` placeholders), `design.md`, `methodology.md`,
+`CHANGELOG.md`. Deleted `__init__.py`, `run.sh`, `prompt/`, `claude/`,
+`codex/`. Removed `run_all_agents` import and `--skip-agents` from
+`pipeline.py` (clean break). README correctness pass for deleted paths
+and removed CLI flags.
 
-**Dependency warning**: `feedcast/pipeline.py:15` imports `run_all_agents`
-from `feedcast.agents`. Before deleting `__init__.py`, either remove that
-import (the old agent path is being replaced) or stub it. The pipeline will
-be fully rewritten in Phase 4, so a minimal stub or guarded import is fine
-for now — just don't break `import feedcast.pipeline`.
+### Phase 3 · Skills ✓ (uncommitted, staged with Phase 4)
 
-Also: `feedcast/agents/run.sh` exists and is listed for deletion in the
-repo layout. Delete it alongside `__init__.py`.
+Replaced placeholder prompts with full skill instructions:
 
-**2.1 Flatten `feedcast/agents/`**
-- Delete: `__init__.py`, `run.sh`, `prompt/` directory, `claude/`, `codex/`
-- Create: `prompt.md` (agent inference prompt), `design.md`, `methodology.md`
-- Preserve or recreate `CHANGELOG.md`
-- `forecast.json` written at runtime, deleted before each invocation
-
-**2.2 `agents/prompt.md`** — initial agent inference prompt
-- Task: produce a 24-hour feeding forecast from the CSV
-- Required output: `forecast.json` with
-  `{"feeds": [{"time": "ISO8601", "volume_oz": float}, ...]}`
-- Update `methodology.md` if the approach changes (persistent living doc,
-  like scripted models' methodology files — not regenerated each run)
-- May reference `feedcast/research/`, model design docs
-- May create/update `model.py`, notes, or other workspace artifacts
-- Freeform: no prescribed approach
-
-Context variables: `{{export_path}}`, `{{workspace_path}}`,
-`{{cutoff_time}}`, `{{horizon_hours}}`
-
-### Phase 3 · Skills
-
-Can proceed in parallel with Phase 2.
-
-**3.1 `skills/trend_insights/prompt.md`**
-
-The agent reads feeding data, identifies recent trends, and writes a
-concise summary.
-
-Key prompt elements:
-- Analyze the last 7–14 days of feeding history
-- Report on: feed spacing trends (closer or further apart?), episode
-  clustering changes, volume trends, day/night pattern shifts
-- Any interesting or unique observations
-- Output: 1–2 paragraphs, optional summary table
-- Write to a staging path (pipeline captures content into memory after
-  invocation; final `report/agent-insights.md` is published during the
-  atomic report swap, not written to `report/` directly)
-- Tone: concise, interesting, informative to a parent
-
-Context variables: `{{export_path}}`, `{{baby_age_days}}`,
-`{{cutoff_time}}`
-
-**3.2 `skills/model_tuning/prompt.md`**
-
-The agent assesses a single model's recent performance and decides whether
-to tune its constants.
-
-Key prompt elements:
-- Read the model's `design.md`, `research.md`, `CHANGELOG.md`, `model.py`
-- Review last retrospective scores (provided in context)
-- Assess whether the baby's feeding patterns are shifting in ways the
-  model's current constants don't reflect
-- **Forward-looking framing**: anticipate where patterns are heading. The
-  baby is growing — patterns shift week to week. Tuning is about adapting
-  to emerging behavior, not minimizing historical error
-- Available CLI tools:
-  - Replay score: `.venv/bin/python scripts/run_replay.py <slug>`
-  - Replay with overrides: `.venv/bin/python scripts/run_replay.py <slug> KEY=val`
-  - Replay sweep: `.venv/bin/python scripts/run_replay.py <slug> KEY=v1,v2,v3`
-  - Analysis: `.venv/bin/python -m feedcast.models.<slug>.analysis`
-- **Write scope**: model directory only (`feedcast/models/<slug>/`).
-  If tuning: update `model.py` constants, add `CHANGELOG.md` entry (what
-  changed and why), update `research.md` if evidence changed.
-  If declining: briefly note why no changes are needed
-- Cross-cutting insights noted in the model's own `research.md` for the
-  user to promote to `feedcast/research/` later
-
-Context variables: `{{model_slug}}`, `{{model_dir}}`, `{{export_path}}`,
-`{{last_retro_scores}}`, `{{research_hub_path}}`
+- `skills/trend_insights/prompt.md`: 7–14 day feeding trend analysis,
+  parent-facing output to `{{output_path}}` staging path.
+  Context variables: `{{export_path}}`, `{{baby_age_days}}`,
+  `{{cutoff_time}}`, `{{output_path}}`
+- `skills/model_tuning/prompt.md`: four-step assess-and-tune workflow
+  with forward-looking framing, replay CLI tools, hard write boundary
+  to `{{model_dir}}` (tracked files only; gitignored replay artifacts
+  are allowed).
+  Context variables: `{{model_slug}}`, `{{model_dir}}`,
+  `{{export_path}}`, `{{last_retro_scores}}`, `{{research_hub_path}}`
 
 ### Phase 4 · Pipeline Orchestration
 
-Depends on Phases 1–3.
+Depends on Phases 1–3 (all complete).
+
+**Already done in earlier phases** (do not re-implement):
+- `run_all_agents` import removed from `pipeline.py` (Phase 2)
+- `--skip-agents` CLI flag removed from `pipeline.py` (Phase 2)
+- `feedcast/agent_runner.py` exists with `invoke_agent()` and
+  `validate_agent_forecast()` (Phase 1)
+- Pre-flight git-clean check exists in `pipeline.py` (Phase 1)
 
 **4.1 Rewrite `feedcast/pipeline.py`**
 
-New `main()` signature:
+Split CLI from orchestration: `pipeline.py` exposes a Python API,
+`scripts/run_forecast.py` owns argparse. Currently `main()` in
+`pipeline.py` owns argparse and `run_forecast.py` is a thin wrapper
+that calls `main()`. Refactor so `main()` takes explicit parameters:
+
 ```python
 def main(
-    export_path: str | None = None,
+    export_path: Path | None = None,
     agent: str = "claude",
     skip_tuning: bool = False,
     skip_insights: bool = False,
@@ -299,47 +253,93 @@ def main(
 
 Sequence (references to pipeline flow above):
 1. Pre-flight: git-clean check, resolve export, parse CSV → snapshot
-2. `git checkout -b feedcast/{timestamp}` (all mutations on new branch from here)
-3. Step 1: `invoke_agent(agent, skills/trend_insights, ...)` unless skipped
-4. Step 2: `ThreadPoolExecutor` → `invoke_agent(agent, skills/model_tuning, ...)`
-   × 4 scripted models, unless skipped
-5. Step 3: `git add -A` → `git commit --allow-empty` (tuning + insights)
-6. Step 4: `ThreadPoolExecutor` → run scripted models (existing `run_all_models`)
-   + invoke agent inference (unless skipped), in parallel
-7. Parse agent `forecast.json` via `validate_agent_forecast()` if produced
-8. Consensus blend + featured selection (existing logic)
+2. `git checkout -b feedcast/{timestamp}` (all mutations on new branch)
+3. Trend insights (unless skipped):
+   - Create a temp file for agent output
+   - `invoke_agent(agent, skills/trend_insights, {... output_path=tmp ...})`
+   - Read the temp file content into an `agent_insights: str` variable
+   - This content is passed to the renderer later (not written to
+     `report/` yet)
+4. Model tuning (unless skipped):
+   - `ThreadPoolExecutor` → `invoke_agent(agent, skills/model_tuning, ...)`
+     × N scripted models (one per `ModelSpec` in `feedcast/models/`)
+5. Tuning commit:
+   - `git add -A` → `git commit --allow-empty` (tuning changes only)
+   - **Capture this commit SHA** — it is the provenance commit recorded in
+     tracker and report. Do not infer provenance from ambient git state
+     later (the worktree will be dirty again after step 6 produces outputs)
+6. Execute (parallel via `ThreadPoolExecutor`):
+   - 6a: `run_all_models()` (existing, unchanged)
+   - 6b: Agent inference (unless skipped):
+     - Delete stale `feedcast/agents/forecast.json`
+     - `invoke_agent(agent, feedcast/agents/prompt.md, {...})`
+     - `validate_agent_forecast()` → `list[ForecastPoint]`
+     - Read `feedcast/agents/methodology.md`
+     - Construct `Forecast(name=..., slug=..., points=..., methodology=...)`
+     - (This `Forecast` construction happens in the pipeline, not in
+       `agent_runner.py` — the runner stays narrow)
+7. Consensus blend + featured selection (existing logic, uses only
+   scripted model forecasts — agent forecast is excluded)
+8. Append agent `Forecast` to `all_forecasts` (after consensus, so the
+   agent is in the report and tracker but not in the blend)
 9. Retrospective scoring (existing logic)
 10. Historical accuracy aggregation (existing logic)
-11. Render report — pass `agent_insights` content + agent `Forecast` to renderer
-12. Save tracker
+11. Render report — pass `agent_insights` content + `all_forecasts`
+    (including agent) to renderer. Also write `agent-insights.md` as a
+    report artifact during the atomic swap
+12. Save tracker — use the captured tuning commit SHA as provenance,
+    not the current (dirty) worktree state
 13. `git add -A` → `git commit` (results)
 
 Key reuse: `run_all_models()`, `select_featured_forecast()`, scoring,
-retrospective, tracker, and report rendering logic all survive. The pipeline refactor is
-about orchestration and sequencing, not reimplementing model execution or
-scoring.
+retrospective, tracker, and report rendering logic all survive. The
+pipeline refactor is about orchestration and sequencing, not
+reimplementing model execution or scoring.
 
 **4.2 Update `scripts/run_forecast.py`**
-- Add `--agent {claude,codex}` (default: `claude`)
-- Add `--skip-tuning`
-- Add `--skip-insights`
-- Add `--skip-agent-inference`
-- Remove old `--skip-agents` from `feedcast/pipeline.py` (clean break; no external consumers)
 
-**4.3 Update report template**
-- `feedcast/templates/report.md.j2`: conditional `{% if agent_insights %}`
-  section near top, before the forecast table
-- `feedcast/report.py`: accept `agent_insights: str | None` from the pipeline
-  and pass it to the template context. The pipeline reads the file content
-  after the trend_insights agent writes it (or passes `None` if skipped).
-  `report/agent-insights.md` is written as an output artifact alongside
-  the report — the renderer never discovers it from disk
+Move argparse here. Parse CLI args, call `pipeline.main(...)`:
+- `--export-path PATH` (existing, passed through)
+- `--agent {claude,codex}` (default: `claude`)
+- `--skip-tuning`
+- `--skip-insights`
+- `--skip-agent-inference`
+
+**4.3 Update report rendering**
+
+`feedcast/report.py`:
+- `generate_report()` accepts `agent_insights: str | None` as a new
+  parameter. Pass it into the template context.
+- If `agent_insights` is not `None`, write `agent-insights.md` into the
+  staging directory during `_render_report()` so it is published by the
+  existing atomic swap. The renderer never reads it from disk.
+
+`feedcast/templates/report.md.j2`:
+- Add a conditional `{% if agent_insights %}` section near the top,
+  after the charts and before the retrospective table.
 
 **4.4 Agent forecast integration**
-- Agent forecast parsed into a `Forecast` object (same type as scripted models)
-- Included in report's per-model methodology sections and spaghetti chart
-- Excluded from consensus blend (enforced in `run_all_models` / blend logic)
-- Tracked in `tracker.json` alongside scripted model predictions
+- Agent forecast is a `Forecast` object constructed by the pipeline
+  (not by `agent_runner.py`)
+- Included in report methodologies, spaghetti chart, and `tracker.json`
+- Excluded from consensus blend: the blend operates on `base_forecasts`
+  (output of `run_all_models`); the agent forecast is appended to
+  `all_forecasts` after the blend is computed
+- Methodology text comes from the persistent `feedcast/agents/methodology.md`
+
+**4.5 Tracker provenance**
+
+`build_run_entry()` currently infers `git_commit` and `git_dirty` from
+the live worktree via subprocess. After the tuning commit and
+before the results commit, the worktree is dirty with model
+outputs, so the inferred state is misleading.
+
+Fix: after the tuning commit, capture the SHA explicitly
+(`git rev-parse HEAD`). Pass it to `build_run_entry()` — either as a
+new optional parameter or by overwriting the `git_commit`/`git_dirty`
+fields in the returned dict before saving. The report footer
+(`_git_commit_display()`) uses the same tracker meta, so it will show
+the correct provenance commit automatically.
 
 ### Phase 5 · README Rewrite
 
