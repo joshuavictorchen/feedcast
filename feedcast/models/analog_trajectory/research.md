@@ -163,6 +163,51 @@ gap/volume signals than raw history:
 Those shifts are exactly what you would expect if cluster-internal
 top-ups were being removed from the state library.
 
+### Simulation-study findings
+
+`tests/simulation/test_analog_trajectory.py` validates the Analog
+Trajectory implementation against a synthetic DGP where the analog
+hypothesis is exactly true. The DGP is a clean bottle-only
+alternating-archetype schedule: two distinct state archetypes repeat
+across 14 days, each with a characteristic subsequent trajectory.
+
+Both archetypes anchor at the same hour (`08:00`). This forces
+retrieval to separate states using recent gap/volume structure rather
+than `sin_hour`/`cos_hour`. If the archetypes differed by time-of-day,
+the test would mostly validate the hour features instead of the
+intended recurrence signal.
+
+The suite validates three properties on that conforming DGP:
+
+- **Retrieval correctness:** the nearest-neighbor search recovers
+  same-archetype historical anchors exactly under a focused retrieval
+  regime (`raw`, `12h`, `recent_only`, `k=5`, `72h`, `median`, `gap`).
+- **Forecast conformance:** the public forecaster reproduces the
+  planted future for a new occurrence of the archetype under that same
+  regime.
+- **Canonical diagnostic:** replay on a targeted grid rewards the
+  focused retrieval regime over deliberately blurrier alternatives
+  (larger `k`, longer lookback, means-emphasis). This layer uses
+  deterministic within-archetype jitter so feature weighting, neighbor
+  count, and trajectory blending are exercised on non-trivial distances
+  rather than exact duplicates.
+
+These results confirm that **the implementation behaves correctly on
+clean hypothesis-conforming data**. They do not validate the production
+episode configuration: the fixture uses raw history and omits clustered
+top-ups to isolate analog retrieval from episode collapse. All
+synthetic gaps stay above the clustering-extension boundary, so
+`HISTORY_MODE="episode"` is a no-op on this DGP — the canonical
+diagnostic and the raw-history specification tests exercise the same
+underlying event sequence.
+
+The canonical diagnostic also reinforces a finding from the real-data
+sweep: the analog canonical surface is shallow. Small fixture changes
+move the exact top-ranked candidate while preserving the broader
+ordering that focused retrieval beats blurrier retrieval. Regime-level
+assertions are therefore more defensible than exact-best-candidate
+assertions.
+
 ## Conclusions
 
 **Disposition: Change.** Analog Trajectory should ship the full-canonical
@@ -187,6 +232,13 @@ proxy-gated two-stage tuning path. The project can afford the full
 canonical sweep, and the internal `full_traj_MAE` sweep should stay in
 the script only as diagnostic evidence.
 
+The synthetic validation adds a narrower conclusion: when the analog
+story is made true in a controlled DGP, the current implementation does
+retrieve the right neighbors and produce the right future. That reduces
+the chance that the remaining disagreement between internal diagnostics,
+canonical replay, and real-world behavior is caused by a basic
+implementation bug in retrieval or blending.
+
 ## Open questions
 
 ### Model-local
@@ -198,6 +250,11 @@ the script only as diagnostic evidence.
   within a few tenths of headline score. If future exports shift, the
   exact weight/half-life combination may move while the higher-level
   design stays the same.
+- **How robust is the model once archetypes overlap or drift?** The
+  simulation suite validates clean recurrence, not ambiguous or
+  contaminated states. The next synthetic extensions should test near-
+  miss archetypes, gradual archetype evolution, and top-up
+  contamination.
 
 ### Cross-cutting
 
