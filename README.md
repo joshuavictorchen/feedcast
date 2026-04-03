@@ -1,15 +1,19 @@
 # Feedcast
 
 Feedcast predicts the next 24 hours of bottle feeds for a newborn from
-Nara Baby app exports, using an ensemble of scripted forecasting models.
-Feed timing is the primary target. Each run scores the prior run's
-predictions against what actually happened.
+Nara Baby app exports — and proposes its own model improvements. Each
+run, CLI agents (Claude or Codex) analyze recent feeding trends, assess
+and tune the scripted forecasting models, and produce an independent
+forecast. Everything happens on a review branch; the human decides what
+ships. Feed timing is the primary target, and each run scores the prior
+run's predictions against what actually happened.
 
 *Built by a tired dad with Claude and Codex between bottle feedings.
 Coordinated via [claodex](https://github.com/joshuavictorchen/claodex).
 My wife mentioned missing the sense of daily structure we used to have
 before Silas was born. Predicting feedings felt like a practical place
-to start. It also gave me a reason to experiment with agentic engineering.*
+to start. It also gave me a reason to experiment with agentic
+engineering — agents that maintain a repo's own models.*
 
 ## Latest Forecast
 
@@ -68,25 +72,54 @@ objective — would produce a stronger ensemble by preserving
 hypothesis-specific model diversity rather than homogenizing toward a
 shared optimum.
 
-**LLM agent inference** (pipeline integration planned — see
-`feedcast/agents/`): An agent workspace exists for Claude or Codex to
-produce an independent forecast using freeform reasoning. The agent
-receives the export CSV, a persistent workspace, and full read access to
-the repo. Agent forecasts will be excluded from the consensus blend and
-scored by the same retrospective evaluation as scripted models.
+**LLM agent inference** (`feedcast/agents/`): A CLI agent (Claude or
+Codex) produces an independent forecast using freeform reasoning. The
+agent receives the export CSV, a persistent workspace, and full read
+access to the repo. Agent forecasts are excluded from the consensus
+blend and scored by the same retrospective evaluation as scripted models.
+
+Beyond forecasting, agents also participate earlier in the pipeline:
+analyzing recent feeding trends (published in the report) and assessing
+each scripted model's fit to current patterns, tuning constants when
+warranted. See [Pipeline](#pipeline) for the full flow.
 
 ## Pipeline
 
-| Step | Description |
-| ---- | ----------- |
-| Parse Activities | Filter feeding events from the raw CSV export |
-| Build Events | Create bottle-centered events with optional breastfeed volume merging (per model) |
-| Run Models | Execute scripted models independently |
-| Consensus Blend | Exact majority-vote selector across scripted models |
-| Select Featured | Choose the consensus blend, or fall back to a static tiebreaker |
-| Retrospective | Score the prior run's predictions against newly observed actuals |
-| Render Report | Generate the markdown report, charts, and diagnostics |
-| Save Tracker | Persist predictions and retrospective to `tracker.json` |
+Each run creates an isolated review branch. All mutations — model
+tuning, forecasts, report — happen there. Nothing touches the working
+branch without a human merge.
+
+```
+Pre-flight
+  ├── Verify clean git state
+  ├── Resolve export (--export-path or latest in exports/)
+  └── Create review branch  →  feedcast/YYYYMMDD-HHMMSS
+
+Trend Insights                                   [agent · skippable]
+  └── Analyze 7–14 days of feeding patterns
+      → summary held in memory for the report
+
+Model Tuning                                     [agent ×4 parallel · skippable]
+  └── One agent per scripted model assesses recent
+      performance and tunes constants when warranted
+
+Tuning Commit
+  └── Commit all tuning changes (provenance SHA for tracker)
+
+Execute                                          [parallel]
+  ├── Scripted models  →  consensus blend  →  featured selection
+  └── Agent inference  →  independent forecast   [skippable]
+
+Finalize
+  ├── Score prior predictions against new actuals
+  ├── Render report with trend insights and all forecasts
+  ├── Update tracker.json
+  └── Commit results
+```
+
+Two commits per run: the tuning commit records the code state that
+produced the forecasts; the results commit packages outputs. The tuning
+commit SHA is the provenance recorded in the tracker and report.
 
 ## Event Construction
 
@@ -138,21 +171,36 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
+The full pipeline requires a configured `claude` or `codex` CLI. For
+scripted-only runs, pass `--skip-tuning --skip-insights
+--skip-agent-inference`.
+
 1. Drop the latest Nara export into `exports/`.
 2. Run `.venv/bin/python scripts/run_forecast.py`.
-3. Read the report at `report/report.md`.
+3. Review the branch and report at `report/report.md`.
+
+The pipeline requires a clean git working tree. It creates a
+`feedcast/YYYYMMDD-HHMMSS` branch, commits tuning changes and results
+there, and leaves the branch for manual review.
 
 ```bash
-# Run the pipeline:
+# Full pipeline (agents analyze, tune, and forecast):
 .venv/bin/python scripts/run_forecast.py
 
 # Specific export:
 .venv/bin/python scripts/run_forecast.py --export-path exports/export_narababy_silas_YYYYMMDD.csv
+
+# Use Codex instead of Claude:
+.venv/bin/python scripts/run_forecast.py --agent codex
+
+# Skip agent steps for a fast scripted-only run:
+.venv/bin/python scripts/run_forecast.py --skip-tuning --skip-insights --skip-agent-inference
 ```
 
-Each run updates these artifacts:
+Each run updates these artifacts on the review branch:
 
 - `report/report.md` — the human-readable forecast report
+- `report/agent-insights.md` — agent trend analysis (when insights enabled)
 - `report/schedule.png` — the featured schedule chart
 - `report/spaghetti.png` — the all-model trajectory chart
 - `report/diagnostics.yaml` — structured model diagnostics
@@ -176,8 +224,14 @@ out-of-sample validation. Full usage and examples:
 ```text
 scripts/
   run_forecast.py              CLI entrypoint
+skills/                        Agent skill definitions
+  trend_insights/
+    prompt.md                  Feeding trend analysis task
+  model_tuning/
+    prompt.md                  Model assessment and tuning task
 feedcast/
   pipeline.py                  End-to-end orchestration
+  agent_runner.py              Agent CLI invocation and forecast validation
   data.py                      CSV parsing, domain types, fingerprinting
   clustering.py                Episode grouping rule and FeedEpisode type
   research/                    Cross-cutting research for models and agents
@@ -339,8 +393,26 @@ See [`feedcast/replay/README.md`](feedcast/replay/README.md) for details.
 
 ## Working with Agents
 
-**Edit the prompt:** Modify `feedcast/agents/prompt.md`. The prompt uses
-`{{variable}}` placeholders that the pipeline substitutes at runtime.
+Agents participate in three pipeline steps:
+
+1. **Trend insights** — analyze 7–14 days of feeding history and write a
+   parent-facing summary of recent patterns. Published in the report.
+2. **Model tuning** — independently assess each scripted model's fit to
+   current and emerging feeding patterns. Tune constants when warranted,
+   constrained to that model's directory.
+3. **Agent inference** — produce an independent feeding forecast from the
+   export data and a persistent workspace. Excluded from the consensus
+   blend, scored by the same retrospective as scripted models.
+
+All three steps are skippable via CLI flags (see
+[Quick Start](#quick-start)). Each runs on the review branch the
+pipeline creates — the human merges or discards the branch after
+reviewing.
+
+**Edit the inference prompt:** Modify `feedcast/agents/prompt.md`. The
+prompt uses `{{variable}}` placeholders that the pipeline substitutes at
+runtime. The agent can also modify its own prompt across runs — the
+branch workflow provides a review gate.
 
 **Iterate on strategy:** The agent workspace (`feedcast/agents/`) persists
 across runs. The agent can keep durable strategy notes, helper scripts,
@@ -353,6 +425,32 @@ inform an approach, but they are not requirements.
 **Update the agent:** When the agent's behavior or instructions change,
 add a new top entry to `feedcast/agents/CHANGELOG.md`.
 
+## Working with Skills
+
+Skills are reusable task instructions that the pipeline passes to
+agents — generic jobs like "analyze these trends" or "tune this model."
+They are distinct from the agent inference workspace
+(`feedcast/agents/`), which is a persistent model that produces its own
+forecast. Each skill lives in its own directory under `skills/`:
+
+| File | Purpose |
+| ---- | ------- |
+| `prompt.md` | Agent instructions with `{{variable}}` placeholders for runtime context. |
+| `*.py`, `*.sh` | Optional helper scripts the agent can invoke during the task. |
+
+The pipeline reads `prompt.md`, substitutes context variables, and
+passes the rendered prompt to the agent CLI via
+[`feedcast/agent_runner.py`](feedcast/agent_runner.py).
+
+**Current skills:**
+
+- `skills/trend_insights/` — feeding trend analysis for the report
+- `skills/model_tuning/` — model assessment and optional constant tuning
+
+**Add a skill:** Create a new directory under `skills/` with a
+`prompt.md`. Use `{{variable_name}}` for values the pipeline should
+inject at runtime. Wire the invocation into `feedcast/pipeline.py`.
+
 ## Design Decisions
 
 | Decision | Choice | Rationale |
@@ -364,6 +462,10 @@ add a new top entry to `feedcast/agents/CHANGELOG.md`.
 | Ensemble | Consensus uses scripted models only | Agents excluded until retrospectives demonstrate consistent value |
 | Featured forecast | Consensus > static tiebreaker | Simple default; manually overridable via `FEATURED_DEFAULT` |
 | Agent failure | Fail fast | No silent fallback |
+| Branch per run | Isolated review branch | All mutations on `feedcast/YYYYMMDD-HHMMSS`; the working branch is never modified directly |
+| Tuning provenance | Explicit tuning commit SHA | Captured immediately after tuning; not inferred from ambient worktree state |
+| Agent steps | Independently skippable | `--skip-tuning`, `--skip-insights`, `--skip-agent-inference` for faster runs |
+| Parallel tuning | Up to 4 concurrent agents | One agent per scripted model; write scope constrained to `feedcast/models/<slug>/` by prompt instruction |
 | Model registration | Explicit `MODELS` list | No auto-discovery; you see what runs by reading one list |
 | Report tracking | `report/` and `tracker.json` committed | One workspace; latest report always accessible; tracker keeps the latest run per dataset rather than every retry |
 | Exports | Untracked raw drops | Reproducibility via `tracker.json` dataset fingerprints |
