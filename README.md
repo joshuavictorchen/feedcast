@@ -229,6 +229,8 @@ skills/                        Agent skill definitions
     prompt.md                  Feeding trend analysis task
   model_tuning/
     prompt.md                  Model assessment and tuning task
+  research_review/
+    prompt.md                  Model-research alignment review (manual)
 feedcast/
   pipeline.py                  End-to-end orchestration
   agent_runner.py              Agent CLI invocation and forecast validation
@@ -427,29 +429,34 @@ add a new top entry to `feedcast/agents/CHANGELOG.md`.
 
 ## Working with Skills
 
-Skills are reusable task instructions that the pipeline passes to
-agents — generic jobs like "analyze these trends" or "tune this model."
-They are distinct from the agent inference workspace
-(`feedcast/agents/`), which is a persistent model that produces its own
-forecast. Each skill lives in its own directory under `skills/`:
+Skills are reusable task instructions for agents — generic jobs like
+"analyze these trends" or "tune this model." Some skills are invoked by
+the pipeline automatically; others are designed for manual use in an
+interactive agent session. They are distinct from the agent inference
+workspace (`feedcast/agents/`), which is a persistent model that
+produces its own forecast. Each skill lives in its own directory under
+`skills/`:
 
 | File | Purpose |
 | ---- | ------- |
 | `prompt.md` | Agent instructions with `{{variable}}` placeholders for runtime context. |
 | `*.py`, `*.sh` | Optional helper scripts the agent can invoke during the task. |
 
-The pipeline reads `prompt.md`, substitutes context variables, and
-passes the rendered prompt to the agent CLI via
-[`feedcast/agent_runner.py`](feedcast/agent_runner.py).
+Pipeline-integrated skills are read by `feedcast/pipeline.py`, which
+substitutes context variables and passes the rendered prompt to the
+agent CLI via [`feedcast/agent_runner.py`](feedcast/agent_runner.py).
+Manual skills are read directly by an interactive agent session.
 
 **Current skills:**
 
 - `skills/trend_insights/` — feeding trend analysis for the report
 - `skills/model_tuning/` — model assessment and optional constant tuning
+- `skills/research_review/` — assess models against research hub findings (manual invocation)
 
 **Add a skill:** Create a new directory under `skills/` with a
-`prompt.md`. Use `{{variable_name}}` for values the pipeline should
-inject at runtime. Wire the invocation into `feedcast/pipeline.py`.
+`prompt.md`. For pipeline-integrated skills, use `{{variable_name}}`
+placeholders and wire the invocation into `feedcast/pipeline.py`. For
+manual skills, write the prompt as self-contained instructions.
 
 ## Design Decisions
 

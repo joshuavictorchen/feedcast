@@ -139,7 +139,7 @@ def invoke_agent(
 
 Dispatches to `claude -p` or `codex -q` with the rendered prompt.
 Raises on non-zero exit or timeout. Used by all pipeline steps that
-invoke agents and by the standalone research review skill.
+invoke agents.
 
 ### Repo Layout (changes only)
 
@@ -151,7 +151,7 @@ scripts/
 +     prompt.md
 +   model_tuning/
 +     prompt.md
-+   research_review/           DEFERRED
++   research_review/
 +     prompt.md
 feedcast/
   pipeline.py                  REWRITTEN — new orchestration
@@ -407,12 +407,18 @@ start from scratch — edit what's there.
 about the tired dad) with technical reference. Preserve both voices.
 The personal context is part of what makes the repo distinctive.
 
-### Phase 6 · Research Review Skill (deferred)
+### Phase 6 · Research Review Skill ✓
 
-- `skills/research_review/prompt.md`: assess a model against latest research
-  hub findings, propose changes if warranted, same forward-looking framing
-- Runs in parallel across models (or a specified subset)
-- Manual invocation mechanism TBD when this phase is built
+`skills/research_review/prompt.md`: assess scripted models against
+cross-cutting research hub findings. Forward-looking framing consistent
+with model tuning skill. Four-step workflow: read research hub, review
+each model (parallel sub-agents recommended), flag cross-cutting
+discrepancies to the user, summarize.
+
+Manual invocation — designed for interactive Claude/Codex sessions, not
+pipeline-integrated. The user tells the agent to follow the skill
+prompt. Write scope: model directory only per model; cross-cutting
+research modifications require human approval.
 
 ## Risks
 
