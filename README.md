@@ -172,8 +172,7 @@ python3 -m venv .venv
 ```
 
 The full pipeline requires a configured `claude` or `codex` CLI. For
-scripted-only runs, pass `--skip-tuning --skip-insights
---skip-agent-inference`.
+scripted-only runs, pass `--no-agents`.
 
 1. Drop the latest Nara export into `exports/`.
 2. Run `.venv/bin/python scripts/run_forecast.py`.
@@ -193,8 +192,8 @@ there, and leaves the branch for manual review.
 # Use Codex instead of Claude:
 .venv/bin/python scripts/run_forecast.py --agent codex
 
-# Skip agent steps for a fast scripted-only run:
-.venv/bin/python scripts/run_forecast.py --skip-tuning --skip-insights --skip-agent-inference
+# Skip all agent steps for a fast scripted-only run:
+.venv/bin/python scripts/run_forecast.py --no-agents
 ```
 
 Each run updates these artifacts on the review branch:
@@ -471,7 +470,8 @@ manual skills, write the prompt as self-contained instructions.
 | Agent failure | Fail fast | No silent fallback |
 | Branch per run | Isolated review branch | All mutations on `feedcast/YYYYMMDD-HHMMSS`; the working branch is never modified directly |
 | Tuning provenance | Explicit tuning commit SHA | Captured immediately after tuning; not inferred from ambient worktree state |
-| Agent steps | Independently skippable | `--skip-tuning`, `--skip-insights`, `--skip-agent-inference` for faster runs |
+| Agent steps | Independently skippable | `--skip-tuning`, `--skip-insights`, `--skip-agent-inference` (or `--no-agents` for all) |
+| Agent model versions | Hardcoded in `agent_runner.py` | `_agent_command()` pins specific model IDs and effort flags for claude and codex; update there when model versions change |
 | Parallel tuning | Up to 4 concurrent agents | One agent per scripted model; write scope constrained to `feedcast/models/<slug>/` by prompt instruction |
 | Model registration | Explicit `MODELS` list | No auto-discovery; you see what runs by reading one list |
 | Report tracking | `report/` and `tracker.json` committed | One workspace; latest report always accessible; tracker keeps the latest run per dataset rather than every retry |

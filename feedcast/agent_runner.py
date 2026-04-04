@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 import re
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from feedcast.data import ForecastPoint
+
+logger = logging.getLogger(__name__)
 
 AGENT_TIMEOUT_SECONDS = 600
 _PLACEHOLDER_PATTERN = re.compile(r"{{\s*([A-Za-z0-9_]+)\s*}}")
@@ -61,12 +64,14 @@ def invoke_agent(
 def validate_agent_forecast(
     forecast_path: Path,
     latest_activity_time: datetime,
+    horizon_hours: int | None = None,
 ) -> list[ForecastPoint]:
     """Load and validate one agent forecast payload.
 
     Args:
         forecast_path: Path to the agent-written `forecast.json`.
         latest_activity_time: Latest observed activity time in the export.
+        horizon_hours: When set, points beyond the horizon are filtered out.
 
     Returns:
         Parsed forecast points in chronological order.
@@ -79,8 +84,15 @@ def validate_agent_forecast(
     if not isinstance(feeds, list) or not feeds:
         raise RuntimeError(f"{forecast_path} must contain a non-empty 'feeds' list.")
 
+    horizon_end = (
+        latest_activity_time + timedelta(hours=horizon_hours)
+        if horizon_hours is not None
+        else None
+    )
+
     points: list[ForecastPoint] = []
     previous_time = latest_activity_time
+    clipped_count = 0
 
     for item in feeds:
         if not isinstance(item, dict):
@@ -109,6 +121,12 @@ def validate_agent_forecast(
                 f"{forecast_path} feed volumes must be positive finite numbers."
             )
 
+        # Filter points beyond the forecast horizon
+        if horizon_end is not None and point_time > horizon_end:
+            clipped_count += 1
+            previous_time = point_time
+            continue
+
         gap_hours = (point_time - previous_time).total_seconds() / 3600
         points.append(
             ForecastPoint(
@@ -118,6 +136,17 @@ def validate_agent_forecast(
             )
         )
         previous_time = point_time
+
+    if clipped_count:
+        logger.warning(
+            "%s: filtered %d point(s) beyond %dh horizon",
+            forecast_path, clipped_count, horizon_hours,
+        )
+
+    if not points:
+        raise RuntimeError(
+            f"{forecast_path} contains no feeds within the {horizon_hours}h horizon."
+        )
 
     return points
 

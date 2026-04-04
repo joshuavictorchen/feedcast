@@ -107,7 +107,6 @@ def build_run_entry(
     forecasts: list[Forecast],
     featured_slug: str,
     retrospective: Retrospective,
-    prompt_hashes: dict[str, str] | None = None,
     git_commit: str | None = None,
     git_dirty: bool | None = None,
 ) -> dict[str, Any]:
@@ -139,7 +138,6 @@ def build_run_entry(
         "featured_slug": featured_slug,
         "model_slugs": [forecast.slug for forecast in forecasts],
         "model_names": model_names,
-        "prompt_hashes": prompt_hashes or {},
         "predictions": predictions,
         "retrospective": _serialize_retrospective(retrospective),
     }

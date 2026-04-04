@@ -120,3 +120,57 @@ class ValidateAgentForecastTests(unittest.TestCase):
                     forecast_path,
                     latest_activity_time=datetime(2026, 3, 25, 0, 0, 0),
                 )
+
+    def test_validate_agent_forecast_filters_beyond_horizon(self) -> None:
+        """Points beyond the horizon window are filtered out with a warning."""
+        with tempfile.TemporaryDirectory(
+            prefix="feedcast-agent-runner-test-"
+        ) as temp_dir:
+            forecast_path = Path(temp_dir) / "forecast.json"
+            # Cutoff at midnight, horizon 24h. Third point is at +25h.
+            forecast_path.write_text(
+                json.dumps(
+                    {
+                        "feeds": [
+                            {"time": "2026-03-25T03:00:00", "volume_oz": 3.5},
+                            {"time": "2026-03-25T06:00:00", "volume_oz": 4.0},
+                            {"time": "2026-03-26T01:00:00", "volume_oz": 3.0},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            points = validate_agent_forecast(
+                forecast_path,
+                latest_activity_time=datetime(2026, 3, 25, 0, 0, 0),
+                horizon_hours=24,
+            )
+
+        self.assertEqual(len(points), 2)
+        self.assertEqual(points[0].time, datetime(2026, 3, 25, 3, 0))
+        self.assertEqual(points[1].time, datetime(2026, 3, 25, 6, 0))
+
+    def test_validate_agent_forecast_rejects_all_beyond_horizon(self) -> None:
+        """If every point is beyond the horizon, the forecast is rejected."""
+        with tempfile.TemporaryDirectory(
+            prefix="feedcast-agent-runner-test-"
+        ) as temp_dir:
+            forecast_path = Path(temp_dir) / "forecast.json"
+            forecast_path.write_text(
+                json.dumps(
+                    {
+                        "feeds": [
+                            {"time": "2026-03-26T12:00:00", "volume_oz": 3.5},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(RuntimeError, "no feeds within"):
+                validate_agent_forecast(
+                    forecast_path,
+                    latest_activity_time=datetime(2026, 3, 25, 0, 0, 0),
+                    horizon_hours=24,
+                )

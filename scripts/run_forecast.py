@@ -47,14 +47,19 @@ def cli() -> None:
         action="store_true",
         help="Skip agent inference forecast.",
     )
+    parser.add_argument(
+        "--no-agents",
+        action="store_true",
+        help="Skip all agent steps (equivalent to --skip-tuning --skip-insights --skip-agent-inference).",
+    )
     args = parser.parse_args()
 
     main(
         export_path=args.export_path,
         agent=args.agent,
-        skip_tuning=args.skip_tuning,
-        skip_insights=args.skip_insights,
-        skip_agent_inference=args.skip_agent_inference,
+        skip_tuning=args.skip_tuning or args.no_agents,
+        skip_insights=args.skip_insights or args.no_agents,
+        skip_agent_inference=args.skip_agent_inference or args.no_agents,
     )
 
 

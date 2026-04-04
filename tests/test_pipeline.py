@@ -10,7 +10,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from feedcast.data import ExportSnapshot, Forecast, ForecastPoint
-from feedcast.pipeline import _assert_clean_git_worktree, _best_retro_scores, main
+from feedcast.pipeline import (
+    _assert_clean_git_worktree,
+    _best_retro_scores,
+    main,
+)
 from feedcast.tracker import Retrospective, RetrospectiveResult
 
 
@@ -270,7 +274,5 @@ class AgentForecastOrderingTests(unittest.TestCase):
             mocks["report"].call_args.kwargs["agent_insights"],
             "Test insights",
         )
-
-
 if __name__ == "__main__":
     unittest.main()
