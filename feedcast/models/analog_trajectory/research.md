@@ -64,6 +64,17 @@ Candidates are ranked by availability tier first, then headline score.
 On the current export, every analog candidate scored all 24 windows, so
 headline score decides the ranking.
 
+### Objective comparison contract
+
+Canonical and internal diagnostics answer different questions.
+Canonical evaluation uses the shared replay stack: bottle-only scoring
+events, episode-boundary cutoffs over the most recent 96 hours, and the
+24-hour headline scorer. The local sweeps optimize fold-causal
+retrieval/blending diagnostics such as `full_traj_MAE`, `gap1_MAE`, and
+`traj3_MAE` on raw or episode history. Because the canonical surface is
+shallow, use the internal/canonical comparison mainly for regime-level
+agreement and disagreement, not for strong exact-best-candidate claims.
+
 ### Diagnostic sweeps
 
 The model still runs two local `full_traj_MAE` sweeps:

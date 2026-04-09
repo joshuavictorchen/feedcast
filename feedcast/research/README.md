@@ -7,7 +7,8 @@ research article.
 
 Research is advisory, not binding. Models and agents may use these
 findings when helpful, or ignore them when a different approach is
-better supported.
+better supported. Shared research articles are descriptive inputs to
+model design, not mandatory features every model must encode.
 
 ## Research Articles
 
@@ -15,7 +16,7 @@ better supported.
 | ------- | ---------- | ------------ | ----- |
 | Feed volume vs. subsequent gap | Supported: larger feeds → longer gaps, but the effect is modest | 2026-03-24 | [`volume_gap_relationship/`](volume_gap_relationship/) |
 | Feed clustering (episodes) | 73-min base / 80-min small-feed extension, zero errors on 96 boundaries | 2026-03-26 | [`feed_clustering/`](feed_clustering/) |
-| Simulation study | Pipeline sound; hypothesis-fit divergence confirmed for 3 of 4 models | 2026-04-03 | [`simulation_study/`](simulation_study/) |
+| Simulation study | No structural distortion detected on the current synthetic fixtures; hypothesis-fit divergence confirmed for 3 of 4 models | 2026-04-03 | [`simulation_study/`](simulation_study/) |
 
 ## Conducting Research
 
@@ -114,9 +115,18 @@ for cross-cutting research but is available when useful.
 **What "canonical" means:** Canonical evaluation uses bottle-only
 scoring events, the shared replay infrastructure, and production
 constants (or explicit overrides for tuning). Canonical results are the
-authoritative basis for production constant decisions. Internal
+current shipping gate for production constant decisions. This is a
+project rule, not a claim that replay is robust out-of-sample
+validation; replay remains recent-history directional evidence. Internal
 diagnostics (gap MAE, MLE fits, trajectory error) inform understanding
-of model mechanics but do not override canonical results.
+of model mechanics but do not override canonical results under the
+current workflow.
+
+**Sweep boundary discipline:** When tuning a scalar parameter, treat a
+boundary winner as evidence that the sweep may be incomplete unless that
+boundary is a justified hard limit. Broaden the search until the optimum
+is interior, a local plateau is visible, or the boundary is explicitly
+defended in `research.md`.
 
 See [`feedcast/replay/README.md`](../replay/README.md) for CLI usage
 and tuning examples. See
@@ -132,16 +142,15 @@ helps explain why the model lineup includes daily-template, instance-based,
 mechanistic, and hazard-style views instead of several versions of the same
 gap regressor.
 
-**Trend direction is critical.** The baby is growing fast — feeding patterns
-shift week to week as gaps lengthen, volumes increase, and overnight behavior
-consolidates. A model that tracks where the pattern is heading right now is
-more useful than one that averages over all history. Recent trend direction is
-likely the most actionable signal in the data after raw feeding cadence itself.
-This is a strong hypothesis, not yet validated by shared research; it should be
-an early candidate for a dedicated article. Acceleration (is the trend speeding
-up or leveling off?) may also matter, but second-derivative estimates are noisy
-with limited data and should be treated cautiously until more history
-accumulates.
+**Trend direction is a repo-wide working assumption.** The baby is
+growing fast — feeding patterns shift week to week as gaps lengthen,
+volumes increase, and overnight behavior consolidates. A model that
+tracks where the pattern is heading right now may be more useful than
+one that averages over all history. This is a strong hypothesis, not yet
+validated by shared research, and several current model choices lean on
+it implicitly. Acceleration (is the trend speeding up or leveling off?)
+may also matter, but second-derivative estimates are noisy with limited
+data and should be treated cautiously until more history accumulates.
 
 ## Unobserved Variables
 
@@ -175,6 +184,11 @@ the data richer than it is.
   `feed_clustering/`). Evaluation and consensus blend collapse feeds
   into episodes using this rule. Models receive raw events and decide
   independently how to handle episodes in their own logic.
+
+- **Shared findings are advisory, not mandatory.** A cross-cutting
+  article can justify trying a signal or representation, but it does
+  not require every model to encode it. Model-local relevance varies by
+  architecture and objective.
 
 - **Episode-collapsed history outperforms raw feed history across all
   four base feed-history models:**
@@ -225,16 +239,17 @@ the data richer than it is.
     counts equally. Stacked generalization requires the level-1
     meta-learner to learn differential model trust, so the blend
     architecture would need to change.
-  - **Simulation study findings.** The canonical replay pipeline is
-    sound for all four models — no pipeline-structural distortion
-    detected on synthetic data. Three models (Latent Hunger, Survival
+  - **Simulation study findings.** On the current hypothesis-conforming
+    synthetic fixtures, canonical replay shows no structural
+    distortion. Three models (Latent Hunger, Survival
     Hazard, Analog Trajectory) show confirmed hypothesis-fit
     divergence: internal and canonical agree on synthetic data but
-    disagree on real data. Slot Drift's pipeline is sound, but its
-    full decomposition is incomplete because the model lacks a scalar
+    disagree on real data. Slot Drift shows no structural distortion on
+    the current synthetic fixtures, but its full decomposition is
+    incomplete because the model lacks a scalar
     internal diagnostic for real-data comparison. These results
     establish that internal tuning is a coherent intervention for the
-    three confirmed models. See
+    three confirmed models under the current experimental setup. See
     [`simulation_study/research.md`](simulation_study/research.md)
     for the full analysis, per-model evidence, and caveats.
   - **Next investigation: diagnostic experiment.** Re-tune the three
@@ -251,10 +266,13 @@ the data richer than it is.
     that divergence is a deficiency to accept or an opportunity to
     exploit through architectural change.
 
-- How stable is daily episode count once more complete days accumulate?
-
 - Does recent trend direction or acceleration improve forecasts more
-  than raw recent cadence?
+  than raw recent cadence? This is a repo-wide working assumption:
+  several model designs and tuning decisions currently favor faster
+  adaptation to recent data, but the assumption itself has not yet been
+  validated in a dedicated shared article.
+
+- How stable is daily episode count once more complete days accumulate?
 
 - Are time-of-day features capturing real structure or fitting noise
   given the small dataset?

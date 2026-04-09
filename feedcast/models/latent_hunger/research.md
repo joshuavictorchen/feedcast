@@ -49,6 +49,18 @@ episodes and is not overridable via constant overrides, so it is not
 part of the sweep. Candidates are ranked by availability tier first,
 then headline score.
 
+### Objective comparison contract
+
+Canonical and internal diagnostics answer different questions. Canonical
+evaluation uses the shared replay stack: bottle-only scoring events,
+episode-boundary cutoffs over the most recent 96 hours, and the 24-hour
+headline scorer. The local diagnostics use the model's own merged,
+episode-collapsed history and optimize walk-forward gap/count errors
+such as `gap1_MAE`, `gap3_MAE`, and feed-count MAE. When these
+objectives disagree, interpret the result as a comparison between
+different targets rather than as a silent tie-break between equivalent
+metrics.
+
 ### Model-specific diagnostics
 
 **Breastfeed merge impact** (Section 1) documents which events gain

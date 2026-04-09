@@ -13,6 +13,7 @@ from feedcast.data import ExportSnapshot, Forecast, ForecastPoint
 from feedcast.pipeline import (
     _assert_clean_git_worktree,
     _best_retro_scores,
+    _run_trend_insights,
     main,
 )
 from feedcast.tracker import Retrospective, RetrospectiveResult
@@ -164,6 +165,28 @@ class BestRetroScoresTests(unittest.TestCase):
             result = _best_retro_scores(retro, "slot_drift")
         self.assertIn("90.0", result)
         self.assertIn("new-run", result)
+
+
+class TrendInsightsTests(unittest.TestCase):
+    """Trend insights output validation."""
+
+    def test_empty_trend_insights_output_raises(self) -> None:
+        """A zero-length agent write should fail fast."""
+        snapshot = ExportSnapshot(
+            export_path=Path("exports/fake.csv"),
+            activities=[],
+            latest_activity_time=datetime(2026, 4, 1, 12, 0),
+            dataset_id="sha256:fake",
+            source_hash="sha256:fake",
+        )
+
+        with patch("feedcast.pipeline.invoke_agent"):
+            with self.assertRaisesRegex(RuntimeError, "without writing any content"):
+                _run_trend_insights(
+                    agent="claude",
+                    snapshot=snapshot,
+                    cutoff=snapshot.latest_activity_time,
+                )
 
 
 # ---------------------------------------------------------------------------

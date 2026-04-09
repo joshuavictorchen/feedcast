@@ -1,12 +1,13 @@
 # Feedcast
 
-Feedcast predicts the next 24 hours of bottle feeds for a newborn from
-Nara Baby app exports — and proposes its own model improvements. Each
-run, CLI agents (Claude or Codex) analyze recent feeding trends, assess
-and tune the scripted forecasting models, and produce an independent
-forecast. Everything happens on a review branch; the human decides what
-ships. Feed timing is the primary target, and each run scores the prior
-run's predictions against what actually happened.
+Feedcast explores next-24-hour bottle-feed forecasting from Nara Baby
+app exports — and uses that problem as a compact testbed for agentic
+engineering. Each run, CLI agents (Claude or Codex) analyze recent
+feeding trends, assess and tune the scripted forecasting models, and
+produce an independent forecast. Everything happens on a review branch;
+the human decides what ships. Feed timing is the primary target, and
+each run scores the prior run's predictions against what actually
+happened.
 
 *Built by a tired dad with Claude and Codex between bottle feedings.
 Coordinated via [claodex](https://github.com/joshuavictorchen/claodex).
@@ -14,6 +15,15 @@ My wife mentioned missing the sense of daily structure we used to have
 before Silas was born. Predicting feedings felt like a practical place
 to start. It also gave me a reason to experiment with agentic
 engineering — agents that maintain a repo's own models.*
+
+## Scope
+
+Feedcast is primarily an experiment in agentic engineering and model
+maintenance, using newborn feeding data as a compact real-world testbed.
+The forecasts, replay tooling, and research artifacts are best read as
+outputs from a single-subject experimental system on a small,
+fast-changing dataset. This repository is not a validated forecasting
+product or decision-support tool.
 
 ## Latest Forecast
 
@@ -43,11 +53,15 @@ a small, shifting dataset.
 Not every recorded feed is an independent hunger event. Consecutive
 bottle feeds that occur close together — a large feed followed by a
 small top-up, for example — often form a single **feeding episode**.
-Feedcast uses a deterministic rule to group raw feeds into episodes
-(see [`feedcast/research/feed_clustering/`](feedcast/research/feed_clustering/)).
+Feedcast uses a deterministic working rule to group raw feeds into
+episodes (see
+[`feedcast/research/feed_clustering/`](feedcast/research/feed_clustering/)).
+The current rule was derived from hand-labeled bottle-feed boundaries
+with a conservative objective that prioritizes avoiding false collapses.
 Evaluation scores at the episode level: both predictions and actuals
 are collapsed into episodes before matching. Models receive raw feed
 events and decide independently how to handle episodes in their logic.
+The rule should be re-checked periodically as new exports accumulate.
 
 ## Forecast Sources
 
@@ -161,7 +175,9 @@ The headline score is the geometric mean of a weighted count F1 (did you
 predict the right number of episodes?) and a weighted timing score (how
 close were the timestamps?). Both components weight earlier episodes more
 heavily. Partial horizons are scored on the observed window only and
-reported with explicit coverage. Full methodology:
+reported with explicit coverage. These weights, cutoffs, and guardrails
+are current scoring assumptions rather than settled truths. Full
+methodology:
 [`feedcast/evaluation/methodology.md`](feedcast/evaluation/methodology.md).
 
 ## Quick Start
@@ -356,7 +372,7 @@ under `feedcast/models/` with a standard set of files:
 | `CHANGELOG.md` | Reverse-chronological behavior log. Update it whenever the model's behavior, assumptions, or tuning changes. Use a one-line summary with `Problem` and `Solution` sections. |
 | `methodology.md` | Report-facing text. Content before the first `##` heading is loaded by `load_methodology()` and rendered into the forecast report. |
 | `design.md` | Design decisions and rationale. Documents why the model works the way it does. |
-| `analysis.py` | Repeatable data analysis. Run with `.venv/bin/python -m feedcast.models.<name>.analysis`. Uses the same export selection, data parsing, and constants as the model so its output matches what the model sees. |
+| `analysis.py` | Repeatable data analysis. Run with `.venv/bin/python -m feedcast.models.<name>.analysis`. Shares the same export selection, core data parsing, and production constants as the model. Some scripts also run explicitly labeled diagnostic views that differ from production inputs or objectives. |
 | `research.md` | Evidence document. Current support and challenges for the model's design and constants. Standard template: overview, last canonical run box, methods (canonical + diagnostic), results (canonical + diagnostic), conclusions with disposition, labeled open questions (model-local + cross-cutting). |
 | `artifacts/` | Committed outputs (`research_results.txt` and any other generated files) referenced by `research.md`. |
 

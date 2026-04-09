@@ -3,8 +3,8 @@
 Instance-based forecasting that asks "when have we seen a feeding
 episode like this before, and what happened next?" Instead of fitting a
 global function, the model stores historical episode states with their
-observed 24-hour futures and retrieves the closest analogs at forecast
-time.
+subsequent observed trajectories and retrieves the closest analogs at
+forecast time.
 
 The model first builds bottle-only events, then collapses close-together
 feeds into feeding episodes. Each episode state is summarized by six
@@ -25,4 +25,6 @@ trajectory length.
 
 The model requires at least 10 complete historical states. A state is
 complete only if it has at least 3 future events and at least one future
-event at least 20 hours after the anchor episode.
+event at least 20 hours after the anchor episode. This is a practical
+completeness rule, not a literal requirement that the full future be
+observed for all 24 hours.

@@ -57,6 +57,18 @@ corner, so the wider grid is the authoritative search.
 Scale is still estimated at runtime; only the fixed shape parameters
 are tuned canonically.
 
+### Objective comparison contract
+
+Canonical and internal diagnostics answer different questions.
+Canonical evaluation uses the shared replay stack: bottle-only scoring
+events, episode-boundary cutoffs over the most recent 96 hours, and the
+24-hour headline scorer applied to the shipped chained-median
+forecaster. The internal diagnostics fit or test the gap distribution
+more directly: weighted MLE on observed gaps and walk-forward gap/count
+errors. When these objectives disagree, the comparison is between a
+distribution-fit question and a shipped-forecast-quality question, not
+between two equivalent estimators of the same target.
+
 ### Model-specific diagnostics
 
 **Raw-gap Weibull fits** (Sections 1-4) establish the basic hazard

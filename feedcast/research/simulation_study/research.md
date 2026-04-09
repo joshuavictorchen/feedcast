@@ -296,12 +296,12 @@ aspects of the approximation.
 
 ## Conclusions
 
-**The canonical replay pipeline is sound for all four models.** No
-pipeline-structural distortion was detected: each model's canonical
-diagnostic on synthetic data either recovers the DGP parameters
-directly (Latent Hunger, Survival Hazard) or picks hyperparameter
-regimes consistent with correct model behavior (Slot Drift, Analog
-Trajectory).
+**On the current hypothesis-conforming synthetic fixtures, the canonical
+replay pipeline shows no structural distortion for the four models.**
+Each model's canonical diagnostic on synthetic data either recovers the
+DGP parameters directly (Latent Hunger, Survival Hazard) or picks
+hyperparameter regimes consistent with correct model behavior (Slot
+Drift, Analog Trajectory).
 
 **Three models have confirmed hypothesis-fit divergence.** Latent
 Hunger, Survival Hazard, and Analog Trajectory each have documented

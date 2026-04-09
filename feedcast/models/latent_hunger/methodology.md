@@ -24,6 +24,10 @@ last observed episode and elapsed time, then simulates forward: hunger
 grows until it crosses the threshold, a feed fires at the simulation
 median volume, hunger resets, and the cycle repeats.
 
+Future feed volumes are not modeled as a separate trajectory. The
+forward simulation uses the recency-median episode volume for each
+predicted feed.
+
 Uses breastfeed-merged events so that nearby breastfeed volume is
 attributed to the next bottle event.
 Infrastructure is in place for smooth circadian modulation of the

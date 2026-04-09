@@ -137,7 +137,12 @@ beyond the window are excluded — not penalized and not credited. The
 score is accompanied by a coverage ratio so the consumer knows how much
 of the horizon was actually verified.
 
-### Parameters
+### Parameters (current scoring assumptions)
+
+These constants are part of the current evaluation design. They are
+explicit assumptions chosen for operational usefulness, not empirically
+settled truths. The scorer has to start somewhere; future sensitivity
+work may justify changing these values or the cutoff policy.
 
 | Parameter | Default | Rationale |
 | --------- | ------- | --------- |

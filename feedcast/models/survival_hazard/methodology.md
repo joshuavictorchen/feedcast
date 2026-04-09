@@ -1,9 +1,9 @@
 # Survival Hazard
 
-Probabilistic model that frames each feeding episode as a survival
-event whose likelihood increases with elapsed time. Uses a Weibull
-hazard function with a configured overnight/daytime split to capture
-the structurally different feeding regimes.
+Hazard-based point-forecast model that frames each feeding episode as a
+survival event whose likelihood increases with elapsed time. Uses a
+Weibull hazard function with a configured overnight/daytime split to
+capture the structurally different feeding regimes.
 
 Raw bottle feeds are collapsed into feeding episodes, removing
 cluster-internal gaps that would otherwise contaminate the gap
@@ -21,7 +21,8 @@ The forecast uses the median of the Weibull survival function as the
 point prediction — the time at which there is a 50% probability the
 next feed has occurred. The first predicted feed accounts for the time
 already elapsed since the last observed episode using the conditional
-survival function.
+survival function. Later predicted feeds chain deterministic Weibull
+medians rather than sampling from the full distribution.
 
 This methodology intentionally stays at the level of mechanism. Current
 fitted values, empirical comparisons, and replay evidence live in

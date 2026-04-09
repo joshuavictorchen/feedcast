@@ -185,7 +185,12 @@ def _run_trend_insights(
                 "output_path": str(tmp_path),
             },
         )
-        return tmp_path.read_text(encoding="utf-8").strip()
+        insights = tmp_path.read_text(encoding="utf-8").strip()
+        if not insights:
+            raise RuntimeError(
+                "Trend insights agent completed without writing any content."
+            )
+        return insights
     finally:
         tmp_path.unlink(missing_ok=True)
 
