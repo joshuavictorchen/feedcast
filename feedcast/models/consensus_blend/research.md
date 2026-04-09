@@ -25,11 +25,11 @@ The research questions are therefore different from the base models:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-04-01 |
+| Run date | 2026-04-09 |
 | Export | `exports/export_narababy_silas_20260327.csv` |
 | Dataset | `sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d` |
 | Command | `.venv/bin/python -m feedcast.models.consensus_blend.analysis` |
-| Canonical headline | 73.0 |
+| Canonical headline | 74.8 |
 | Availability | 24/24 windows (100%) |
 | Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
@@ -60,13 +60,11 @@ module-level constants in one base model. The current sweep evaluates:
 
 Candidate generation is cached per `(radius, spread)` pair and reused
 across conflict/penalty variants so the sweep only recomputes the exact
-selection step for those later knobs. The current grid is wider than the
-first local pass because the selector initially won at the geometry and
-conflict boundaries. The conflict grid stops at `150` because the
-recency-weighted lower quartile of real episode gaps is about
-`147` minutes on the current export; pushing the conflict window far
-beyond that would suppress a large share of legitimate close episodes
-by construction.
+selection step for those later knobs. The conflict grid stops at `150`
+because the recency-weighted lower quartile of real episode gaps is
+about `147` minutes on the current export; pushing the conflict window
+far beyond that would suppress a large share of legitimate close
+episodes by construction.
 
 ### Model-specific diagnostics
 
@@ -89,128 +87,113 @@ The current production selector scores:
 
 | Metric | Score |
 |---|---|
-| Headline | 73.0 |
-| Count | 95.4 |
-| Timing | 56.2 |
+| Headline | 74.8 |
+| Count | 96.4 |
+| Timing | 58.5 |
 
 All 24 windows scored (100% availability).
 
-The selector constants were updated from
-`radius=120`, `spread=180`, `conflict=105`, `penalty=0.25`
-to `radius=120`, `spread=150`, `conflict=135`, `penalty=0.25`.
-On the current export, the reproduced canonical comparison is:
+The selector constants are now:
 
-| Metric | Pre-update | Current |
+| Parameter | Value |
+|---|---|
+| `ANCHOR_RADIUS_MINUTES` | `90` |
+| `MAX_CANDIDATE_SPREAD_MINUTES` | `150` |
+| `SELECTION_CONFLICT_WINDOW_MINUTES` | `135` |
+| `SPREAD_PENALTY_PER_HOUR` | `5.0` |
+
+The immediate comparison is against the prior production selector that
+had already been refreshed on the same export:
+
+| Metric | Prior (`120`, `150`, `135`, `0.25`) | Current (`90`, `150`, `135`, `5.0`) |
 |---|---|---|
-| Headline | 72.020 | 72.996 |
-| Count | 95.176 | 95.434 |
-| Timing | 54.994 | 56.176 |
+| Headline | 74.563 | 74.776 |
+| Count | 96.666 | 96.393 |
+| Timing | 57.986 | 58.469 |
 | Availability | 24/24 | 24/24 |
 
-This is a small but real improvement (`+0.976` headline) driven mainly
-by tighter timing (`+1.182`) plus a smaller count gain (`+0.258`).
+This is a small but real improvement (`+0.213` headline) driven by
+tighter timing (`+0.483`) with a modest count tradeoff (`-0.273`).
 
-The selector surface is flat across most levers, but peaked sharply at
-`conflict=135`:
+The selector surface is still shallow, but the current rerun changed two
+important details:
 
-- The best configuration uses an interior anchor radius (`120`) within
-  the widened `60–150` grid. Narrower (`60`, `90`) and wider (`150`)
-  anchors both score worse.
-- The best configurations tighten the spread cap from `180` to `150`,
-  but further tightening to `120` or `90` also scores worse. Candidate
-  geometry still matters after candidate collapsing, but the best cap is
-  now interior rather than a boundary artifact.
-- The preferred conflict window moved upward as the grid widened and now
-  lands at `135`, which is substantially wider than the cluster-floor
-  intuition from the local gap analysis. That peak is narrow rather than
-  shallow: at `radius=120`, `spread=150`, moving the conflict window 15
-  minutes down to `120` costs `0.765` headline, while moving it 15
-  minutes up to `150` costs `1.406`.
-- The spread penalty is flat across the tested values at the top of the
-  surface. Support and conflict handling dominate the ranking on this
-  export.
+- The best anchor radius is now `90`, not `120`. The base models,
+  especially Analog Trajectory, are agreeing tightly enough that the
+  selector benefits from a narrower search region.
+- `SPREAD_PENALTY_PER_HOUR` is no longer completely flat at the top of
+  the surface. The strongest tested penalty (`5.0`) wins at the top row
+  once radius, spread, and conflict are fixed at the best geometry.
 
-The full `artifacts/research_results.txt` table now prints every sweep row at
-three-decimal precision, so both the current production row and the old
-production row remain visible in the artifact.
+That does not mean utility weighting has become the dominant selector
+lever. Geometry and conflict handling still explain most of the
+variation across the grid. But the old claim that the penalty is a pure
+no-op is no longer correct on the current export.
 
 ### Diagnostic findings
 
-**Inter-episode gap context pulls against the canonical winner:** The
-recency-weighted median inter-episode gap is 172 minutes and the lower
-quartile is about 147 minutes, but the minimum observed gap is 75
+**Inter-episode gap context still pulls against the canonical winner:**
+The recency-weighted median inter-episode gap is 172 minutes and the
+lower quartile is about 147 minutes, but the minimum observed gap is 75
 minutes. On local gap intuition alone, that argues for a relatively
 conservative conflict window so close legitimate episodes can survive.
 Canonical replay still prefers `135`, which means duplicate suppression
 is currently more valuable than preserving every close episode pair.
-That tension is now explicit rather than hidden.
 
-**Model spread justifies a wide anchor radius:** Across the five most
-recent diagnostic cutoffs, multi-model matches have spread
-`P50=64`, `P75=85`, `P90=115`, `Max=134` minutes. The wide anchor radius
-is therefore still justified: many legitimate agreement regions would be
-missed by a narrow anchor. The tighter spread cap then filters out
-diffuse clusters rather than preventing them from being considered at
-all.
+**Model spread still justifies a non-trivial anchor radius:** Across the
+five most recent diagnostic cutoffs, multi-model matches have spread
+`P50=72`, `P75=86`, `P90=117`, `Max=143` minutes. The narrower `90`
+minute anchor is viable only because the blend also filters by support
+and spread; it is not evidence that the models now agree within a few
+minutes.
 
-**Candidate geometry matters more than utility weighting:** The sweep
-surface shows meaningful separation across spread caps and conflict
-windows, but none across the tested spread penalties. On the current
-export, support and conflict constraints determine the selected
-sequence; the utility weight is mostly a tie-breaker that does not move
-the headline.
+**Candidate geometry still matters more than utility weighting overall:**
+The sweep surface shows meaningful separation across spread caps and
+conflict windows, while most penalty cells away from the very top still
+tie. The current export does show a real top-row benefit from `5.0`,
+but the main selector character is still set by support geometry and
+conflict handling.
 
 **The selector remains timing-limited even when count is strong:** The
-canonical count score is strong across the surface, including the
-pre-update selector. The main benefit from the new constants is timing.
-This suggests the blend is already finding roughly the right number of
+canonical count score is strong across the surface, including the prior
+selector. The main benefit from the new constants is timing. This
+suggests the blend is already finding roughly the right number of
 episodes; the remaining leverage is in choosing tighter candidate slots
 and resolving near-duplicate explanations more cleanly.
 
 ## Conclusions
 
-**Disposition: Change.** Updated
-`MAX_CANDIDATE_SPREAD_MINUTES` from `180` to `150` and
-`SELECTION_CONFLICT_WINDOW_MINUTES` from `105` to `135`. Kept
-`ANCHOR_RADIUS_MINUTES=120` and `SPREAD_PENALTY_PER_HOUR=0.25`.
+**Disposition: Change.** Updated `ANCHOR_RADIUS_MINUTES` from `120` to
+`90` and `SPREAD_PENALTY_PER_HOUR` from `0.25` to `5.0`. Kept
+`MAX_CANDIDATE_SPREAD_MINUTES=150` and
+`SELECTION_CONFLICT_WINDOW_MINUTES=135`.
 
 This is not a major design reversal. The selector architecture still
-looks sound: wide anchors, immutable majority-supported candidates,
-single-use evidence, and exact sequence selection. The update is a
-local retune of candidate geometry and conflict handling. The refreshed
-canonical sweep says the blend works better when it rejects diffuse
-candidate clusters earlier and suppresses near-duplicate explanations
-more aggressively.
+looks sound: immutable majority-supported candidates, single-use
+evidence, and exact sequence selection. The update is a local retune
+caused by the current upstream model behavior, not by a change in the
+selector's core logic.
 
-The gain is still modest enough that the selector should be treated as a
-shallow surface, not a settled optimum. But it is large enough to
-warrant an update because availability is unchanged and the broader grid
-removed the earlier geometry-boundary ambiguity. The improvement comes
-from geometric choices, not from gaming availability or weight tuning,
-and it survives a 24-window canonical evaluation.
-
-The more important conceptual result is that the older 5-cutoff sweep
-was not wrong so much as incomplete. Once the blend was re-evaluated on
-the shared canonical multi-window objective, the best selector moved.
-Consensus Blend is therefore sensitive not only to its own constants,
-but also to the current behavior of the base scripted models it blends.
+The more important conceptual result is that Consensus Blend remains
+downstream-sensitive. Once Analog Trajectory tightened and moved to a
+different regime, the best selector moved too. That is expected for an
+ensemble selector, but it means consensus research should be treated as
+dependent on the current base-model lineup rather than as a one-time
+settled sweep.
 
 ## Open questions
 
 ### Model-local
 
-- **Conflict-window tension:** The canonical winner now uses a conflict
-  window much wider than the raw gap context would suggest, and the
-  local peak is narrow: at `radius=120`, `spread=150`, a 15-minute
-  shift to `120` drops headline by `0.765`, while a 15-minute shift to
-  `150` drops it by `1.406`. Is this a stable property of the blend, or
-  a temporary compensation for the current base-model timing patterns?
-- **Penalty flatness:** Why is `SPREAD_PENALTY_PER_HOUR` effectively a
-  no-op across the tested range? This could mean the current candidate
-  set is already well-separated, or it could mean the utility function
-  is too weak to express meaningful preferences once the hard
-  constraints are applied.
-- **Geometry vs. utility:** The latest sweep says spread cap and
+- **Conflict-window tension:** The canonical winner still uses a
+  conflict window much wider than the raw gap context would suggest. Is
+  that a stable property of the selector, or a temporary compensation
+  for current base-model timing patterns?
+- **Penalty significance:** The current top row finally prefers a
+  stronger spread penalty, but most of the surface still treats penalty
+  as secondary. Is `5.0` a durable selector property, or just the first
+  point high enough to break a shallow local tie?
+- **Geometry vs. utility:** The latest sweep still says spread cap and
   conflict handling matter more than the utility weight. If that
   remains true across future exports, the selector may be better served
   by richer candidate construction or richer conflict logic rather than
@@ -218,9 +201,9 @@ but also to the current behavior of the base scripted models it blends.
 
 ### Cross-cutting
 
-- **Timing as shared bottleneck:** Count (95.4) is strong while timing
-  (56.2) is the weaker component. This pattern persists across all five
-  models — see `feedcast/research/README.md`.
+- **Timing as shared bottleneck:** Count (`96.4`) is strong while timing
+  (`58.5`) is the weaker component. This pattern persists across all
+  five models — see `feedcast/research/README.md`.
 - **Upstream-model sensitivity:** Consensus constants can move when the
   four base scripted models change. Whether selector retunes track
   upstream timing sharpness is an open question — see

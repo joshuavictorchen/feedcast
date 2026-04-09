@@ -2,6 +2,32 @@
 
 Tracks hypothesis, method, and conclusion changes for the simulation study. Add newest entries first.
 
+## Refresh synthesis after analog retune | 2026-04-09
+
+### Problem
+
+The cross-model simulation synthesis had been written against the older
+Analog Trajectory canonical regime. After the widened analog rerun
+moved production to `9h`, `hour_emphasis`, `k=7`, `120h`, the
+simulation-study article no longer matched the current real-data
+evidence even though the synthetic classification itself had not
+changed.
+
+### Solution
+
+Re-ran the full simulation suite (`tests/simulation/`) and refreshed the
+cross-model synthesis to reference the current Analog Trajectory
+canonical regime. The classification remains unchanged:
+
+- 3 models still show hypothesis-fit divergence
+- Slot Drift remains pipeline-sound with incomplete decomposition
+- no structural distortion was detected on the current synthetic
+  fixtures
+
+Simulation suite result: `18 passed`.
+
+Export: `exports/export_narababy_silas_20260327.csv`.
+
 ## Compile cross-model synthesis and classify divergence | 2026-04-03
 
 ### Problem

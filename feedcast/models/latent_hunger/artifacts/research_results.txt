@@ -1,7 +1,7 @@
 Export: exports/export_narababy_silas_20260327.csv
 Dataset: sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d
 Cutoff: 2026-03-27 21:00:33
-Run: 2026-03-31T22:08:28
+Run: 2026-04-09T15:48:08
 Events (with BF merge): 121
 Events (bottle only):   121
 
@@ -228,7 +228,7 @@ Per-window breakdown:
 Sweeps SATIETY_RATE via tune_model (multi-window canonical
 scoring). Growth rate is runtime-estimated, not overridable.
 
-Candidates evaluated: 12
+Candidates evaluated: 16
 
                      Headline   Count  Timing  Windows
 Baseline                 66.9    94.0    47.9   24/24

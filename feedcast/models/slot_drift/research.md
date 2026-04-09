@@ -22,7 +22,7 @@ episode slots and tracks their drift. The key research questions are:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-03-29 |
+| Run date | 2026-04-09 |
 | Export | `exports/export_narababy_silas_20260327.csv` |
 | Dataset | `sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d` |
 | Command | `.venv/bin/python -m feedcast.models.slot_drift.analysis` |
@@ -42,16 +42,18 @@ shared replay infrastructure. This produces a multi-window aggregate
 (lookback 96h, half-life 36h, episode-boundary cutoffs) that is
 directly comparable across all models.
 
-**Canonical tuning** last ran as a 128-candidate joint sweep via
-`tune_model()`: `DRIFT_WEIGHT_HALF_LIFE_DAYS` (8 values: 1.0–7.0),
-`MATCH_COST_THRESHOLD_HOURS` (4 values: 1.5–3.0), and `LOOKBACK_DAYS`
-(4 values: 5–14). Because that winner landed on the aggressive edge, a
-2026-04-09 boundary follow-up reopened only the aggressive side of the
-search: half-life 0.25–2.0, threshold 1.0–2.0, and lookback 3–10
-(210 focused candidates). The winner remained the current production
-triplet. `analysis.py` now carries the widened domain for future full
-reruns. `MIN_COMPLETE_DAYS` is not swept because it is a minimum-data
-guard, not a tuning knob.
+**Canonical tuning** last ran as a widened 588-candidate joint sweep via
+`tune_model()` across the full current search domain:
+
+- `DRIFT_WEIGHT_HALF_LIFE_DAYS`: `0.25`, `0.5`, `0.75`, `1.0`, `1.25`,
+  `1.5`, `2.0`, `2.5`, `3.0`, `4.0`, `5.0`, `7.0`
+- `MATCH_COST_THRESHOLD_HOURS`: `1.0`, `1.25`, `1.5`, `1.75`, `2.0`,
+  `2.5`, `3.0`
+- `LOOKBACK_DAYS`: `3`, `4`, `5`, `6`, `7`, `10`, `14`
+
+This widened rerun supersedes the earlier narrower sweep plus boundary
+follow-up framing. `MIN_COMPLETE_DAYS` is not swept because it is a
+minimum-data guard, not a tuning knob.
 
 ### Model-specific diagnostics
 
@@ -114,13 +116,13 @@ Aggregate scores (weighted by recency, 36h half-life):
 All 24 windows scored (100% availability).
 
 The current production constants (`DRIFT_WEIGHT_HALF_LIFE_DAYS=1.0`,
-`LOOKBACK_DAYS=5`, `MATCH_COST_THRESHOLD_HOURS=1.5`) won the original
-128-candidate canonical sweep and retained that lead in the 2026-04-09
-aggressive-side follow-up. The strongest follow-up challenger
-(`DRIFT_WEIGHT_HALF_LIFE_DAYS=0.75`, `LOOKBACK_DAYS=5`,
+`LOOKBACK_DAYS=5`, `MATCH_COST_THRESHOLD_HOURS=1.5`) are now
+baseline=best in the widened 588-candidate canonical sweep. The nearest
+challenger (`DRIFT_WEIGHT_HALF_LIFE_DAYS=0.75`, `LOOKBACK_DAYS=5`,
 `MATCH_COST_THRESHOLD_HOURS=1.5`) scored headline 68.3, slightly below
-the production 68.4. No more aggressive combination improved the
-headline or availability on the current export.
+the production 68.4. The widened search did not uncover a better
+shorter-lookback, tighter-threshold, or faster-decay regime on the
+current export.
 
 These constants were updated from the prior values (DRIFT=3.0,
 LOOKBACK=7, THRESHOLD=2.0, headline=59.2) based on this sweep.
@@ -155,12 +157,11 @@ collapsing removes ~1 cluster-internal feed per day on average.
 
 **Disposition: Hold.** Current constants remain supported.
 
-Production constants were previously updated based on the original
-128-candidate canonical sweep (see `CHANGELOG.md` for details). The
-2026-04-09 aggressive-side follow-up then checked whether the apparent
-boundary winner was just an incomplete search artifact. It was not on
-the current export: lower half-lives, tighter thresholds, and shorter
-lookbacks all underperformed the current triplet.
+Production constants were previously updated based on canonical replay
+(see `CHANGELOG.md` for details). The widened 2026-04-09 rerun removes
+the remaining "incomplete sweep" objection on the current export:
+lower half-lives, tighter thresholds, and shorter lookbacks all
+underperformed the current triplet.
 
 The 1-day drift half-life is still aggressive — the model weights
 yesterday's drift far more than older days. The follow-up result makes
@@ -177,8 +178,8 @@ reflects structural limits of the fixed-slot approach.
 
 ### Model-local
 
-- **Aggressive-side stability across exports:** The 2026-04-09 follow-up
-  did not beat the current triplet with lower half-lives, tighter
+- **Aggressive-side stability across exports:** The widened 2026-04-09
+  rerun did not beat the current triplet with lower half-lives, tighter
   thresholds, or shorter lookbacks. That removes the immediate boundary
   concern on this export, but the optimum could still move if the
   volatility regime changes on later exports.

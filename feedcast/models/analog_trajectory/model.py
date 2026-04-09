@@ -37,23 +37,21 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 # Per-feature weights for weighted Euclidean distance.
 # Order: last_gap, mean_gap, last_volume, mean_volume, sin_hour, cos_hour.
 # Higher weight = more influence on neighbor selection.
-# "recent_only" profile: the latest gap and volume dominate similarity,
-# rolling means are deemphasized, and hour-of-day remains informative
-# but secondary. Selected via the full canonical replay sweep in
-# analysis.py.
-FEATURE_WEIGHTS = np.array([2.0, 0.5, 2.0, 0.5, 1.0, 1.0])
+# "hour_emphasis" profile: hour-of-day is the strongest retrieval cue,
+# while gap and volume remain available as supporting context. Selected
+# via the widened full canonical replay sweep in analysis.py.
+FEATURE_WEIGHTS = np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
 
 # Lookback window for rolling mean features (hours).
 # Events within this window contribute to mean_gap and mean_volume.
-# 18h still focuses the means on the recent feeding rhythm, but the
-# targeted follow-up below 24h scored slightly better than 12h within
-# the current canonical-best regime.
-LOOKBACK_HOURS = 18
+# 9h keeps rolling means tight to the current local state and wins the
+# widened full canonical replay sweep.
+LOOKBACK_HOURS = 9
 
 # Number of nearest neighbors to retrieve.
-# k=5 gives the best count/timing balance on episode-level state
-# history. Selected via the full canonical replay sweep in analysis.py.
-K_NEIGHBORS = 5
+# k=7 wins the widened full canonical replay sweep on the current
+# export, slightly improving timing over the smaller neighborhoods.
+K_NEIGHBORS = 7
 
 # Minimum number of historical states with complete trajectories.
 MIN_COMPLETE_STATES = 10
@@ -62,9 +60,9 @@ MIN_COMPLETE_STATES = 10
 MIN_PRIOR_EVENTS = 3
 
 # Half-life for recency weighting of neighbor states (hours).
-# 72h means a state from 3 days ago gets half the weight of an
-# equivalent state right now. Selected via analysis.py canonical sweep.
-RECENCY_HALF_LIFE_HOURS = 72
+# 120h keeps useful multi-day analogs in play while still preferring
+# recent states. Selected via the widened canonical sweep.
+RECENCY_HALF_LIFE_HOURS = 120
 
 # Trajectory length aggregation method: "median" or "mean".
 # "median" remains best under canonical replay.

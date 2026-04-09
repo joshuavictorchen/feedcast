@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Date | 2026-04-03 |
+| Date | 2026-04-09 |
 | Export | `exports/export_narababy_silas_20260327.csv` |
 | Dataset | `sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d` |
 | Test command | `.venv/bin/pytest tests/simulation/ -q` |
@@ -240,9 +240,8 @@ gap/volume structure, not time-of-day):
   exactly (distance ≈ 0.0).
 - Forecast conformance: predicted times and volumes match the planted
   future within tight tolerance.
-- Canonical replay: prefers the focused retrieval regime
-  (`LOOKBACK_HOURS=12`, `recent_only` feature weights,
-  `K_NEIGHBORS=5`) over blurrier alternatives.
+- Canonical replay: prefers the focused retrieval regime over blurrier
+  alternatives.
 - Retrieval, forecast, and canonical are **consistent**: all reward
   clean archetype separation.
 
@@ -250,8 +249,8 @@ gap/volume structure, not time-of-day):
 
 - Internal (`full_traj_MAE`): prefers `LOOKBACK_HOURS=48`,
   `means_only` feature weights, `RECENCY_HALF_LIFE_HOURS=36`.
-- Canonical replay: prefers `LOOKBACK_HOURS=12`, `recent_only`
-  feature weights, `RECENCY_HALF_LIFE_HOURS=72`.
+- Canonical replay: prefers `LOOKBACK_HOURS=9`, `hour_emphasis`
+  feature weights, `K_NEIGHBORS=7`, `RECENCY_HALF_LIFE_HOURS=120`.
 - Both agree on the major architectural choices (episode history over
   raw, gap alignment over time-offset). They disagree on specific
   constant values — internal rewards broader context for trajectory
@@ -336,8 +335,8 @@ hypotheses more strongly. Specifically:
   more peaked hazard forecasts rather than the broader predictions at
   4.75/1.75.
 - **Analog Trajectory** at lb=48h with means-emphasis would retrieve
-  neighbors from a wider context rather than the recent-focused
-  retrieval at lb=12h.
+  neighbors from a wider context rather than the hour-led focused
+  retrieval at lb=9h.
 - **Slot Drift** is less clear — no internal diagnostic divergence is
   documented on real data. Internal tuning would require first
   defining what "internal-optimal" means for a structural-recovery

@@ -27,10 +27,10 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 
 # --- Production selector constants ---
 
-# Candidate slots are built around every model prediction. Keep the anchor
-# radius wide enough to capture legitimate multi-model agreement regions;
-# tighter filtering happens via the spread cap and exact selector.
-ANCHOR_RADIUS_MINUTES = 120
+# Candidate slots are built around every model prediction. The current
+# canonical sweep prefers a somewhat narrower anchor because the retuned
+# analog model tightened the ensemble's agreement regions.
+ANCHOR_RADIUS_MINUTES = 90
 
 # Candidate slots wider than this are too diffuse to treat as one feed.
 MAX_CANDIDATE_SPREAD_MINUTES = 150
@@ -42,8 +42,10 @@ MAX_CANDIDATE_SPREAD_MINUTES = 150
 # the current ensemble.
 SELECTION_CONFLICT_WINDOW_MINUTES = 135
 
-# Support is the primary signal. Spread breaks ties in favor of tighter slots.
-SPREAD_PENALTY_PER_HOUR = 0.25
+# Support is still primary, but the latest canonical sweep now benefits
+# from a stronger spread penalty once support and geometry have already
+# filtered the candidate set.
+SPREAD_PENALTY_PER_HOUR = 5.0
 
 # --- Availability floor ---
 

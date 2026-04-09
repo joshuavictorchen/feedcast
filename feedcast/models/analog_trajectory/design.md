@@ -11,9 +11,9 @@ is a full canonical replay sweep through `tune_model()`. The local
 | --------- | --------- |
 | HISTORY_MODE | Episode-level history removes cluster noise from the state library, improving both local retrieval quality and canonical replay headline |
 | LOOKBACK_HOURS | A short lookback keeps rolling means focused on recent feeding rhythm rather than smoothing across older patterns |
-| FEATURE_WEIGHTS | The latest gap and volume are the sharpest similarity signals; rolling means and hour-of-day provide supporting context |
+| FEATURE_WEIGHTS | Hour-of-day is the sharpest retrieval cue on the current export once states are already local and episode-level; gap and volume remain supporting context |
 | K_NEIGHBORS | Balances count accuracy against timing precision under canonical replay |
-| RECENCY_HALF_LIFE_HOURS | Moderately broad recency weighting keeps useful analogs available without letting much older states dominate |
+| RECENCY_HALF_LIFE_HOURS | Broad recency weighting keeps useful multi-day analogs available without letting much older states dominate |
 | TRAJECTORY_LENGTH_METHOD | Median is more robust than mean on variable-length neighbor trajectories |
 | ALIGNMENT | Gap-based blending outperforms time-offset alignment under both diagnostic and canonical evaluation |
 
@@ -39,11 +39,12 @@ Each state uses six features:
 - `sin_hour`
 - `cos_hour`
 
-The shipped weight profile emphasizes instantaneous gap and volume over
-rolling means, with hour-of-day as a supporting context signal. The
-internal diagnostic sweep and canonical replay disagree on the best
-profile — canonical replay prefers sharper, more local state matching.
-That divergence is why the canonical metric, not `full_traj_MAE`, owns
+The shipped weight profile currently puts the strongest weight on
+hour-of-day, with gap and volume still available as supporting signals.
+The internal diagnostic sweep and canonical replay disagree on the best
+profile — canonical replay prefers a more hour-led local-matching
+regime, while the internal diagnostic prefers means-emphasis. That
+divergence is why the canonical metric, not `full_traj_MAE`, owns
 production constants. See `research.md` for the specific comparison.
 
 ## Lookback and recency
@@ -77,9 +78,9 @@ The model has two research layers:
 - **Shipping layer:** a full canonical replay sweep across all
   production-relevant constants, including `HISTORY_MODE`.
 
-The canonical sweep is authoritative. When the two layers disagree on
-a knob setting, canonical replay wins. See `research.md` for the
-current comparison.
+The canonical sweep is the current shipping gate. When the two layers
+disagree on a knob setting, canonical replay wins. See `research.md`
+for the current comparison.
 
 ## Bottle-only events and completeness
 

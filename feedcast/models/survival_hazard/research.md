@@ -23,7 +23,7 @@ day-part-specific Weibull hazards. The key research questions are:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-03-31 |
+| Run date | 2026-04-09 |
 | Export | `exports/export_narababy_silas_20260327.csv` |
 | Dataset | `sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d` |
 | Command | `.venv/bin/python -m feedcast.models.survival_hazard.analysis` |
@@ -240,7 +240,8 @@ objective on the current export.
 The important design conclusion is narrower than "the Weibull fits were
 wrong." They were not. The episode-level MLE fit still correctly says
 overnight is more regular than daytime. What changed is the choice of
-which evidence is authoritative for production constants. For Survival
+which evidence is the current shipping gate for production constants.
+For Survival
 Hazard, direct distribution fit and canonical replay do not rank shape
 pairs the same way. Production should follow canonical replay.
 

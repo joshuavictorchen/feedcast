@@ -13,9 +13,10 @@ and circular hour-of-day (`sin_hour`, `cos_hour`). The rolling means use
 a configurable lookback window.
 
 Similarity is weighted Euclidean distance with per-feature weights that
-emphasize recent gap and volume over rolling means, with hour-of-day as
-supporting context. The model retrieves the K nearest historical states
-and weights them by both proximity and recency.
+currently give hour-of-day the strongest influence, while gap and
+volume remain available as supporting context. The model retrieves the K
+nearest historical states and weights them by both proximity and
+recency.
 
 The forecast is produced by blending neighbor gap sequences step by
 step. Gaps are rolled forward from the cutoff to generate predicted feed

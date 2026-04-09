@@ -14,9 +14,9 @@ model design, not mandatory features every model must encode.
 
 | Concept | Conclusion | Last updated | Where |
 | ------- | ---------- | ------------ | ----- |
-| Feed volume vs. subsequent gap | Supported: larger feeds → longer gaps, but the effect is modest | 2026-03-24 | [`volume_gap_relationship/`](volume_gap_relationship/) |
-| Feed clustering (episodes) | 73-min base / 80-min small-feed extension, zero errors on 96 boundaries | 2026-03-26 | [`feed_clustering/`](feed_clustering/) |
-| Simulation study | No structural distortion detected on the current synthetic fixtures; hypothesis-fit divergence confirmed for 3 of 4 models | 2026-04-03 | [`simulation_study/`](simulation_study/) |
+| Feed volume vs. subsequent gap | Supported: larger feeds → longer gaps, but the effect is modest | 2026-04-09 | [`volume_gap_relationship/`](volume_gap_relationship/) |
+| Feed clustering (episodes) | Supported on the current labeled 96-boundary dataset; latest-export refresh is blocked pending label extension | 2026-04-09 | [`feed_clustering/`](feed_clustering/) |
+| Simulation study | No structural distortion detected on the current synthetic fixtures; hypothesis-fit divergence confirmed for 3 of 4 models | 2026-04-09 | [`simulation_study/`](simulation_study/) |
 
 ## Conducting Research
 
@@ -183,7 +183,10 @@ the data richer than it is.
   `feedcast/clustering.py`, derived from labeled data (see
   `feed_clustering/`). Evaluation and consensus blend collapse feeds
   into episodes using this rule. Models receive raw events and decide
-  independently how to handle episodes in their own logic.
+  independently how to handle episodes in their own logic. The rule is
+  currently supported on the labeled 96-boundary dataset; latest-export
+  revalidation is blocked until `labels.yaml` is extended to the 120
+  boundaries in the newest export.
 
 - **Shared findings are advisory, not mandatory.** A cross-cutting
   article can justify trying a signal or representation, but it does
@@ -301,10 +304,10 @@ the data richer than it is.
     count 94.3, timing 56.6
   - Instance-based
     ([Analog Trajectory](../models/analog_trajectory/research.md)):
-    count 93.8, timing 52.8
+    count 93.0, timing 55.4
   - Ensemble
     ([Consensus Blend](../models/consensus_blend/research.md)):
-    count 95.4, timing 56.2
+    count 96.4, timing 58.5
   - Candidate explanations: irreducible variability from unobserved
     variables (sleep, growth spurts), concentration of timing error in
     specific window types (cluster-feed periods, overnight transitions),
@@ -325,8 +328,8 @@ the data richer than it is.
   - [Analog Trajectory](../models/analog_trajectory/research.md):
     trajectory-MAE prefers different lookback and weighting than
     canonical
-  - The project rule that canonical replay is authoritative for
-    production constants is settled. The divergence itself is
+  - The project rule that canonical replay is the current shipping gate
+    for production constants is settled. The divergence itself is
     informative: it measures how much each production forecaster's
     mechanics (chained predictions, conditional logic, runtime
     estimation) distort the relationship between the data-generating

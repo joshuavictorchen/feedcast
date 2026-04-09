@@ -1,20 +1,20 @@
-Export: exports/export_narababy_silas_20260323.csv
-Dataset: sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0
-Source hash: sha256:e1658d2f4e1136a5ecc62dc3835f34e51102d541fe6d6e03b678b1bd0f9ed670
-Cutoff: 2026-03-23T11:41:13
-Run: 2026-03-24T17:31:17
+Export: exports/export_narababy_silas_20260327.csv
+Dataset: sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d
+Source hash: sha256:3a998a554e397820d393ecf2ba0752646d92079daa5d1524545c0be1cb42dcec
+Cutoff: 2026-03-27T21:00:33
+Run: 2026-04-09T15:48:09
 
 === BOTTLE_ONLY ===
-Pairs: 80
-Pearson r: 0.357
-P-value: 0.0012
-Slope: 0.334 hours/oz
+Pairs: 120
+Pearson r: 0.334
+P-value: 0.0002
+Slope: 0.294 hours/oz
 
 === MERGED_45_MIN ===
-Pairs: 80
-Pearson r: 0.351
-P-value: 0.0014
-Slope: 0.328 hours/oz
+Pairs: 120
+Pearson r: 0.331
+P-value: 0.0002
+Slope: 0.292 hours/oz
 
 Scatter plot: artifacts/bottle_only_volume_gap_scatter.png
 Summary JSON: artifacts/summary.json

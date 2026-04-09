@@ -1,233 +1,233 @@
 {
-  "export_path": "exports/export_narababy_silas_20260323.csv",
-  "dataset_id": "sha256:7b6cdd2f60a01fa673d275d709782826dd0e7f61fe13491b571813fcf2492cc0",
-  "source_hash": "sha256:e1658d2f4e1136a5ecc62dc3835f34e51102d541fe6d6e03b678b1bd0f9ed670",
-  "cutoff": "2026-03-23T11:41:13",
-  "run_timestamp": "2026-03-24T17:31:17",
+  "export_path": "exports/export_narababy_silas_20260327.csv",
+  "dataset_id": "sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d",
+  "source_hash": "sha256:3a998a554e397820d393ecf2ba0752646d92079daa5d1524545c0be1cb42dcec",
+  "cutoff": "2026-03-27T21:00:33",
+  "run_timestamp": "2026-04-09T15:48:09",
   "views": {
     "bottle_only": {
-      "pair_count": 80,
+      "pair_count": 120,
       "overall": {
-        "volume_mean_oz": 2.84375,
-        "volume_median_oz": 3.375,
-        "gap_mean_hours": 2.507576388888889,
+        "volume_mean_oz": 3.049583333333333,
+        "volume_median_oz": 3.5,
+        "gap_mean_hours": 2.549402777777778,
         "gap_median_hours": 2.731527777777778,
-        "pearson_r": 0.3569473266972192,
-        "pearson_pvalue": 0.001153393546850735,
-        "slope_hours_per_oz": 0.3337667050652889,
-        "intercept_hours": 1.5584273213594737,
-        "r_squared": 0.1274113940362914
+        "pearson_r": 0.3335506951122811,
+        "pearson_pvalue": 0.0001970114726058066,
+        "slope_hours_per_oz": 0.29446949508050585,
+        "intercept_hours": 1.6513935134051854,
+        "r_squared": 0.11125606620988604
       },
       "recent_windows": [
         {
-          "volume_mean_oz": 3.25,
-          "volume_median_oz": 3.5,
-          "gap_mean_hours": 2.631697530864198,
-          "gap_median_hours": 3.004722222222222,
-          "pearson_r": 0.48346518032374447,
-          "pearson_pvalue": 0.01062498509279668,
-          "slope_hours_per_oz": 0.4647475039636628,
-          "intercept_hours": 1.1212681429822937,
-          "r_squared": 0.23373858058547065,
+          "volume_mean_oz": 3.605769230769231,
+          "volume_median_oz": 4.0,
+          "gap_mean_hours": 2.7529380341880336,
+          "gap_median_hours": 2.9141666666666666,
+          "pearson_r": 0.3685660421599928,
+          "pearson_pvalue": 0.06392040692684324,
+          "slope_hours_per_oz": 0.3029739347033182,
+          "intercept_hours": 1.6604839427097229,
+          "r_squared": 0.13584092743348175,
           "days": 3,
-          "pair_count": 27
+          "pair_count": 26
         },
         {
-          "volume_mean_oz": 3.2056818181818176,
-          "volume_median_oz": 3.5,
-          "gap_mean_hours": 2.665814393939394,
-          "gap_median_hours": 2.9269444444444446,
-          "pearson_r": 0.35335972253342657,
-          "pearson_pvalue": 0.018626961808245576,
-          "slope_hours_per_oz": 0.3247973511405021,
-          "intercept_hours": 1.624617430794671,
-          "r_squared": 0.12486309350890025,
+          "volume_mean_oz": 3.47,
+          "volume_median_oz": 4.0,
+          "gap_mean_hours": 2.612123456790123,
+          "gap_median_hours": 2.721388888888889,
+          "pearson_r": 0.30232736527417087,
+          "pearson_pvalue": 0.043538004474954504,
+          "slope_hours_per_oz": 0.26610722892448757,
+          "intercept_hours": 1.688731372422151,
+          "r_squared": 0.09140183579362186,
           "days": 5,
-          "pair_count": 44
+          "pair_count": 45
         },
         {
-          "volume_mean_oz": 2.9671875,
-          "volume_median_oz": 3.5,
-          "gap_mean_hours": 2.6221267361111114,
-          "gap_median_hours": 2.859861111111111,
-          "pearson_r": 0.3162318470983191,
-          "pearson_pvalue": 0.010906278817049114,
-          "slope_hours_per_oz": 0.2813309480575656,
-          "intercept_hours": 1.7873650636715535,
-          "r_squared": 0.10000258111921466,
+          "volume_mean_oz": 3.3703125,
+          "volume_median_oz": 3.55,
+          "gap_mean_hours": 2.6224175347222225,
+          "gap_median_hours": 2.8343055555555554,
+          "pearson_r": 0.35107516307582376,
+          "pearson_pvalue": 0.004449651191117426,
+          "slope_hours_per_oz": 0.3145724064361276,
+          "intercept_hours": 1.5622102211554612,
+          "r_squared": 0.12325377012871624,
           "days": 7,
           "pair_count": 64
         }
       ],
       "dayparts": {
         "daytime": {
-          "volume_mean_oz": 2.5771739130434783,
-          "volume_median_oz": 2.75,
-          "gap_mean_hours": 2.134933574879227,
-          "gap_median_hours": 2.09875,
-          "pearson_r": 0.2917471287257885,
-          "pearson_pvalue": 0.04914842526651773,
-          "slope_hours_per_oz": 0.2723195073755518,
-          "intercept_hours": 1.433118844458104,
-          "r_squared": 0.08511638711974187,
-          "pair_count": 46,
-          "mean_volume_oz": 2.5771739130434783,
-          "mean_gap_hours": 2.134933574879227
+          "volume_mean_oz": 2.820588235294118,
+          "volume_median_oz": 3.125,
+          "gap_mean_hours": 2.236544117647059,
+          "gap_median_hours": 2.390416666666667,
+          "pearson_r": 0.27870971795640354,
+          "pearson_pvalue": 0.02136350327128871,
+          "slope_hours_per_oz": 0.23392551886621027,
+          "intercept_hours": 1.5767365511979543,
+          "r_squared": 0.07767910688333794,
+          "pair_count": 68,
+          "mean_volume_oz": 2.820588235294118,
+          "mean_gap_hours": 2.236544117647059
         },
         "overnight": {
-          "volume_mean_oz": 3.2044117647058825,
+          "volume_mean_oz": 3.349038461538462,
           "volume_median_oz": 3.5,
-          "gap_mean_hours": 3.0117401960784314,
+          "gap_mean_hours": 2.958525641025641,
           "gap_median_hours": 3.133472222222222,
-          "pearson_r": 0.22073921012959272,
-          "pearson_pvalue": 0.20965322708975082,
-          "slope_hours_per_oz": 0.1684347539533379,
-          "intercept_hours": 2.4720058889250147,
-          "r_squared": 0.048725798888636485,
-          "pair_count": 34,
-          "mean_volume_oz": 3.2044117647058825,
-          "mean_gap_hours": 3.0117401960784314
+          "pearson_r": 0.26115120646611734,
+          "pearson_pvalue": 0.061483108819490456,
+          "slope_hours_per_oz": 0.22370737406224558,
+          "intercept_hours": 2.2093210411614086,
+          "r_squared": 0.06819995263870865,
+          "pair_count": 52,
+          "mean_volume_oz": 3.349038461538462,
+          "mean_gap_hours": 2.958525641025641
         }
       },
       "volume_bins": [
         {
           "label": "[0.0, 1.5)",
-          "pair_count": 12,
-          "mean_gap_hours": 1.9671064814814816,
-          "median_gap_hours": 1.7809722222222222
+          "pair_count": 15,
+          "mean_gap_hours": 1.9684629629629633,
+          "median_gap_hours": 1.913888888888889
         },
         {
           "label": "[1.5, 2.5)",
-          "pair_count": 10,
-          "mean_gap_hours": 1.8443611111111111,
-          "median_gap_hours": 1.8888888888888888
+          "pair_count": 14,
+          "mean_gap_hours": 1.9477380952380954,
+          "median_gap_hours": 2.3826388888888888
         },
         {
           "label": "[2.5, 3.5)",
-          "pair_count": 18,
-          "mean_gap_hours": 2.5330092592592592,
-          "median_gap_hours": 3.0408333333333335
+          "pair_count": 21,
+          "mean_gap_hours": 2.5087169312169313,
+          "median_gap_hours": 3.0180555555555557
         },
         {
           "label": "[3.5, 5.0)",
-          "pair_count": 40,
-          "mean_gap_hours": 2.824076388888889,
-          "median_gap_hours": 2.975416666666667
+          "pair_count": 69,
+          "mean_gap_hours": 2.797508051529791,
+          "median_gap_hours": 2.9858333333333333
         }
       ],
       "merge_adjusted_pair_count": 0
     },
     "merged_45_min": {
-      "pair_count": 80,
+      "pair_count": 120,
       "overall": {
-        "volume_mean_oz": 2.8484756944444447,
-        "volume_median_oz": 3.375,
-        "gap_mean_hours": 2.507576388888889,
+        "volume_mean_oz": 3.0538449074074077,
+        "volume_median_oz": 3.5,
+        "gap_mean_hours": 2.549402777777778,
         "gap_median_hours": 2.731527777777778,
-        "pearson_r": 0.3514064213717234,
-        "pearson_pvalue": 0.0013925166748171825,
-        "slope_hours_per_oz": 0.32770606139951136,
-        "intercept_hours": 1.574113638070262,
-        "r_squared": 0.12348647298128129
+        "pearson_r": 0.33051750716471645,
+        "pearson_pvalue": 0.00022698817925619215,
+        "slope_hours_per_oz": 0.29170538882256786,
+        "intercept_hours": 1.6585797616586815,
+        "r_squared": 0.1092418225423784
       },
       "recent_windows": [
         {
-          "volume_mean_oz": 3.2621502057613165,
-          "volume_median_oz": 3.5,
-          "gap_mean_hours": 2.631697530864198,
-          "gap_median_hours": 3.004722222222222,
-          "pearson_r": 0.4621482400868984,
-          "pearson_pvalue": 0.015225962624557741,
-          "slope_hours_per_oz": 0.44198054901936423,
-          "intercept_hours": 1.1898905919381793,
-          "r_squared": 0.21358099581541734,
+          "volume_mean_oz": 3.605769230769231,
+          "volume_median_oz": 4.0,
+          "gap_mean_hours": 2.7529380341880336,
+          "gap_median_hours": 2.9141666666666666,
+          "pearson_r": 0.3685660421599928,
+          "pearson_pvalue": 0.06392040692684324,
+          "slope_hours_per_oz": 0.3029739347033182,
+          "intercept_hours": 1.6604839427097229,
+          "r_squared": 0.13584092743348175,
           "days": 3,
-          "pair_count": 27
+          "pair_count": 26
         },
         {
-          "volume_mean_oz": 3.213137626262626,
-          "volume_median_oz": 3.5,
-          "gap_mean_hours": 2.665814393939394,
-          "gap_median_hours": 2.9269444444444446,
-          "pearson_r": 0.3362471622245987,
-          "pearson_pvalue": 0.02563981689827702,
-          "slope_hours_per_oz": 0.30770707770254324,
-          "intercept_hours": 1.677109204706035,
-          "r_squared": 0.11306215410409556,
+          "volume_mean_oz": 3.472962962962963,
+          "volume_median_oz": 4.0,
+          "gap_mean_hours": 2.612123456790123,
+          "gap_median_hours": 2.721388888888889,
+          "pearson_r": 0.3043987447202889,
+          "pearson_pvalue": 0.042049007887449634,
+          "slope_hours_per_oz": 0.26904011646031895,
+          "intercept_hours": 1.677757096772193,
+          "r_squared": 0.09265859578728756,
           "days": 5,
-          "pair_count": 44
+          "pair_count": 45
         },
         {
-          "volume_mean_oz": 2.9730946180555557,
-          "volume_median_oz": 3.5,
-          "gap_mean_hours": 2.6221267361111114,
-          "gap_median_hours": 2.859861111111111,
-          "pearson_r": 0.30824048299930396,
-          "pearson_pvalue": 0.013212761471512662,
-          "slope_hours_per_oz": 0.2734291003890956,
-          "intercept_hours": 1.809196149324519,
-          "r_squared": 0.09501219535964425,
+          "volume_mean_oz": 3.377521701388889,
+          "volume_median_oz": 3.6500000000000004,
+          "gap_mean_hours": 2.6224175347222225,
+          "gap_median_hours": 2.8343055555555554,
+          "pearson_r": 0.3443467890833016,
+          "pearson_pvalue": 0.005332304072397246,
+          "slope_hours_per_oz": 0.30890038845275003,
+          "intercept_hours": 1.5790997691556015,
+          "r_squared": 0.11857471115197986,
           "days": 7,
           "pair_count": 64
         }
       ],
       "dayparts": {
         "daytime": {
-          "volume_mean_oz": 2.5853925120772945,
-          "volume_median_oz": 2.775,
-          "gap_mean_hours": 2.134933574879227,
-          "gap_median_hours": 2.09875,
-          "pearson_r": 0.28520794038799685,
-          "pearson_pvalue": 0.05469967730943127,
-          "slope_hours_per_oz": 0.26462255697663417,
-          "intercept_hours": 1.45078039754509,
-          "r_squared": 0.08134356926036307,
-          "pair_count": 46,
-          "mean_volume_oz": 2.5853925120772945,
-          "mean_gap_hours": 2.134933574879227
+          "volume_mean_oz": 2.828108660130719,
+          "volume_median_oz": 3.125,
+          "gap_mean_hours": 2.236544117647059,
+          "gap_median_hours": 2.390416666666667,
+          "pearson_r": 0.27536299745678494,
+          "pearson_pvalue": 0.023042213958765552,
+          "slope_hours_per_oz": 0.23071184111222914,
+          "intercept_hours": 1.5840659618028614,
+          "r_squared": 0.07582478036838544,
+          "pair_count": 68,
+          "mean_volume_oz": 2.828108660130719,
+          "mean_gap_hours": 2.236544117647059
         },
         "overnight": {
-          "volume_mean_oz": 3.2044117647058825,
+          "volume_mean_oz": 3.349038461538462,
           "volume_median_oz": 3.5,
-          "gap_mean_hours": 3.0117401960784314,
+          "gap_mean_hours": 2.958525641025641,
           "gap_median_hours": 3.133472222222222,
-          "pearson_r": 0.22073921012959272,
-          "pearson_pvalue": 0.20965322708975082,
-          "slope_hours_per_oz": 0.1684347539533379,
-          "intercept_hours": 2.4720058889250147,
-          "r_squared": 0.048725798888636485,
-          "pair_count": 34,
-          "mean_volume_oz": 3.2044117647058825,
-          "mean_gap_hours": 3.0117401960784314
+          "pearson_r": 0.26115120646611734,
+          "pearson_pvalue": 0.061483108819490456,
+          "slope_hours_per_oz": 0.22370737406224558,
+          "intercept_hours": 2.2093210411614086,
+          "r_squared": 0.06819995263870865,
+          "pair_count": 52,
+          "mean_volume_oz": 3.349038461538462,
+          "mean_gap_hours": 2.958525641025641
         }
       },
       "volume_bins": [
         {
           "label": "[0.0, 1.5)",
-          "pair_count": 12,
-          "mean_gap_hours": 1.9671064814814816,
-          "median_gap_hours": 1.7809722222222222
+          "pair_count": 15,
+          "mean_gap_hours": 1.9684629629629633,
+          "median_gap_hours": 1.913888888888889
         },
         {
           "label": "[1.5, 2.5)",
-          "pair_count": 10,
-          "mean_gap_hours": 1.8443611111111111,
-          "median_gap_hours": 1.8888888888888888
+          "pair_count": 14,
+          "mean_gap_hours": 1.9477380952380954,
+          "median_gap_hours": 2.3826388888888888
         },
         {
           "label": "[2.5, 3.5)",
-          "pair_count": 18,
-          "mean_gap_hours": 2.5330092592592592,
-          "median_gap_hours": 3.0408333333333335
+          "pair_count": 21,
+          "mean_gap_hours": 2.5087169312169313,
+          "median_gap_hours": 3.0180555555555557
         },
         {
           "label": "[3.5, 5.0)",
-          "pair_count": 40,
-          "mean_gap_hours": 2.824076388888889,
-          "median_gap_hours": 2.975416666666667
+          "pair_count": 69,
+          "mean_gap_hours": 2.797508051529791,
+          "median_gap_hours": 2.9858333333333333
         }
       ],
-      "merge_adjusted_pair_count": 2
+      "merge_adjusted_pair_count": 3
     }
   }
 }

@@ -92,11 +92,10 @@ and samples the recent regime more densely during active periods.
 
 ## Where to improve next
 
-The selector surface is now shaped mostly by candidate geometry and
-conflict handling rather than utility weighting. The latest sweep shows
-that tighter spread caps and a wider conflict window can move the
-headline, while the tested spread penalties sit on a broad local
-plateau. See `research.md` for the current evidence.
+The selector surface is still shaped mostly by candidate geometry and
+conflict handling. The latest sweep also shows a real top-row benefit
+from a stronger spread penalty once the ensemble is already operating in
+the best geometry. See `research.md` for the current evidence.
 
 Gains would come from changing how candidates are generated or how
 conflicts are defined — for example, a scoring model where a tight

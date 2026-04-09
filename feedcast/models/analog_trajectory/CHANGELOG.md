@@ -2,6 +2,54 @@
 
 Tracks behavior-level changes to the Analog Trajectory model. Add newest entries first.
 
+## Widened full-grid rerun supersedes the 18h follow-up | 2026-04-09
+
+### Problem
+
+The same-day targeted lookback follow-up that moved runtime to `18h`
+only reopened one axis of the canonical surface. That was enough to
+check the boundary concern, but not enough to claim the whole analog
+regime was settled.
+
+### Research
+
+Ran the widened full canonical sweep on
+`exports/export_narababy_silas_20260327.csv` after expanding the low
+lookback region in `analysis.py`.
+
+The 4704-candidate rerun selects:
+
+- `HISTORY_MODE=episode`
+- `LOOKBACK_HOURS=9`
+- `FEATURE_WEIGHTS=hour_emphasis`
+- `K_NEIGHBORS=7`
+- `RECENCY_HALF_LIFE_HOURS=120`
+- `TRAJECTORY_LENGTH_METHOD=median`
+- `ALIGNMENT=gap`
+
+Canonical replay comparison:
+
+| Metric | 18h targeted regime | Full-rerun winner | Better? |
+|--------|----------------------|-------------------|---------|
+| Headline | 70.19 | 71.28 | Full rerun (+1.09) |
+| Count | not re-recorded in targeted probe | 93.0 | Full rerun |
+| Timing | not re-recorded in targeted probe | 55.4 | Full rerun |
+
+The best raw-history candidate remains materially worse:
+
+| Metric | Raw best | Episode best | Better? |
+|--------|----------|--------------|---------|
+| Headline | 69.2 | 71.3 | Episode (+2.1) |
+| Count | 92.2 | 93.0 | Episode |
+| Timing | 52.3 | 55.4 | Episode |
+
+### Solution
+
+Ship the full-rerun winner and treat the earlier 18h result as a useful
+intermediate boundary check, not the final answer. The current analog
+regime is now backed by a full widened canonical sweep rather than a
+targeted one-axis probe.
+
 ## Reopen low-lookback boundary and shift to 18h | 2026-04-09
 
 ### Problem

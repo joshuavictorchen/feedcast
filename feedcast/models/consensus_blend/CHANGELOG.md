@@ -2,6 +2,51 @@
 
 Tracks behavior-level changes to the Consensus Blend model. Add newest entries first.
 
+## Retune selector after analog refresh | 2026-04-09
+
+### Problem
+
+Consensus Blend is downstream of the four scripted base models. After
+Analog Trajectory moved to a stronger episode-level regime, the current
+selector constants were no longer obviously the best fit for the new
+candidate geometry.
+
+### Research
+
+Ran the refreshed selector sweep on
+`exports/export_narababy_silas_20260327.csv` after the analog retune.
+
+The prior production selector:
+
+- `ANCHOR_RADIUS_MINUTES=120`
+- `MAX_CANDIDATE_SPREAD_MINUTES=150`
+- `SELECTION_CONFLICT_WINDOW_MINUTES=135`
+- `SPREAD_PENALTY_PER_HOUR=0.25`
+
+scored headline `74.563`, count `96.666`, timing `57.986`.
+
+The new canonical winner:
+
+- `ANCHOR_RADIUS_MINUTES=90`
+- `MAX_CANDIDATE_SPREAD_MINUTES=150`
+- `SELECTION_CONFLICT_WINDOW_MINUTES=135`
+- `SPREAD_PENALTY_PER_HOUR=5.0`
+
+scored headline `74.776`, count `96.393`, timing `58.469`.
+
+This is a modest but real gain (`+0.213` headline) driven by timing
+(`+0.483`) with a small count tradeoff (`-0.273`). The narrower anchor
+and stronger penalty indicate that the refreshed ensemble now benefits
+from a tighter agreement region and a more meaningful cost for diffuse
+support.
+
+### Solution
+
+Lowered `ANCHOR_RADIUS_MINUTES` from `120` to `90` and raised
+`SPREAD_PENALTY_PER_HOUR` from `0.25` to `5.0`. Kept
+`MAX_CANDIDATE_SPREAD_MINUTES=150` and
+`SELECTION_CONFLICT_WINDOW_MINUTES=135`.
+
 ## Broaden selector sweep, tighten spread cap, and widen conflict window | 2026-04-01
 
 ### Problem

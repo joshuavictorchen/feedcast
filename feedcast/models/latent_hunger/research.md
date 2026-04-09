@@ -23,7 +23,7 @@ are:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-03-31 |
+| Run date | 2026-04-09 |
 | Export | `exports/export_narababy_silas_20260327.csv` |
 | Dataset | `sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d` |
 | Command | `.venv/bin/python -m feedcast.models.latent_hunger.analysis` |
@@ -43,15 +43,17 @@ the shared replay infrastructure. This produces a multi-window
 aggregate (lookback 96h, half-life 36h, episode-boundary cutoffs) that
 is directly comparable across all models.
 
-**Canonical tuning** last ran as a 12-candidate `SATIETY_RATE` sweep
-via `tune_model()` (0.05–0.8). Because that winner landed on the lower
-bound, a 2026-04-09 follow-up reopened the low-rate region with 11
-focused candidates from 0.01 to 0.25. `0.05` remained the best tested
-value. Growth rate is estimated at runtime from recent episodes and is
-not overridable via constant overrides, so it is not part of the
-sweep. `analysis.py` now carries the widened low-end range for future
-full reruns. Candidates are ranked by availability tier first, then
-headline score.
+**Canonical tuning** last ran as a widened 16-candidate
+`SATIETY_RATE` sweep via `tune_model()`:
+
+`0.01`, `0.02`, `0.03`, `0.04`, `0.05`, `0.1`, `0.15`, `0.2`, `0.25`,
+`0.3`, `0.35`, `0.4`, `0.5`, `0.6`, `0.7`, `0.8`
+
+This widened rerun supersedes the earlier "full sweep plus low-end
+follow-up" framing. Growth rate is estimated at runtime from recent
+episodes and is not overridable via constant overrides, so it is not
+part of the sweep. Candidates are ranked by availability tier first,
+then headline score.
 
 ### Objective comparison contract
 
@@ -123,9 +125,8 @@ single change in the model's history (~20% gap MAE improvement).
 
 ### Canonical findings
 
-The last full canonical sweep evaluated 12 `SATIETY_RATE` candidates.
-The pre-update baseline (sr=0.257) and the sweep winner (sr=0.05)
-compared as follows:
+The pre-update baseline (sr=0.257) and the current sweep winner
+(sr=0.05) compared as follows:
 
 | Metric | Pre-update (sr=0.257) | Sweep winner (sr=0.05) |
 |---|---|---|
@@ -133,18 +134,16 @@ compared as follows:
 | Count | 92.6 | 94.0 |
 | Timing | 47.8 | 47.9 |
 
-All 24 windows scored (100% availability) for every full-sweep and
-follow-up candidate. Production was updated to sr=0.05 based on the
-original full sweep (see `CHANGELOG.md`). A 2026-04-09 low-end follow-up
-then tested 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.075, 0.1, 0.15, 0.2,
-and 0.25; `0.05` remained best. The current production canonical score
-is headline 66.9, confirmed by re-running the research script after the
-original update (baseline=best in `artifacts/research_results.txt`).
+All 24 windows scored (100% availability) for every widened-sweep
+candidate. Production remains `sr=0.05`, and the current production
+canonical score is headline 66.9, confirmed by re-running the research
+script after widening the search domain (baseline=best in
+`artifacts/research_results.txt`).
 
-The expanded low-end top 5 are `0.05`, `0.06`, `0.075`, `0.1`, and
-`0.15`, all within 0.3 headline points of each other. The surface is
-still shallow, but values below `0.05` do not improve the headline on
-the current export. The gain over the prior production value comes
+The widened-grid top 5 are `0.05`, `0.1`, `0.15`, `0.2`, and `0.25`,
+all within 0.5 headline points of each other. The surface is still
+shallow, but values below `0.05` do not improve the headline on the
+current export. The gain over the prior production value comes
 primarily from count (+1.4) with timing nearly unchanged (+0.1).
 
 Per-window timing scores range from 28.8 to 59.2. The weakest window
@@ -196,8 +195,8 @@ mean-3-gaps (0.780h). The multiplicative model at 0.720h represents a
 **Disposition: Hold.** Current `SATIETY_RATE=0.05` remains supported.
 
 The canonical sweep selected sr=0.05 with headline +0.550
-(66.3->66.9). The 2026-04-09 low-end follow-up then checked whether
-that result was just a lower-bound artifact. It was not on the current
+(66.3->66.9). The widened 2026-04-09 rerun then checked whether that
+result was just a lower-bound artifact. It was not on the current
 export: rates below `0.05` underperformed, while nearby rates above
 `0.05` stayed close enough to confirm a shallow low-end plateau rather
 than a hidden lower optimum.

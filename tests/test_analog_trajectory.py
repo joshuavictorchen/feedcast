@@ -127,14 +127,14 @@ class CanonicalConstantsTests(unittest.TestCase):
     def test_constants_match_canonical_winner(self) -> None:
         """4.4 should leave the production constants at the best replay config."""
         self.assertEqual(HISTORY_MODE, "episode")
-        self.assertEqual(LOOKBACK_HOURS, 12)
-        self.assertEqual(K_NEIGHBORS, 5)
-        self.assertEqual(RECENCY_HALF_LIFE_HOURS, 72)
+        self.assertEqual(LOOKBACK_HOURS, 9)
+        self.assertEqual(K_NEIGHBORS, 7)
+        self.assertEqual(RECENCY_HALF_LIFE_HOURS, 120)
         self.assertEqual(TRAJECTORY_LENGTH_METHOD, "median")
         self.assertEqual(ALIGNMENT, "gap")
         np.testing.assert_allclose(
             FEATURE_WEIGHTS,
-            np.array([2.0, 0.5, 2.0, 0.5, 1.0, 1.0]),
+            np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0]),
         )
 
 
