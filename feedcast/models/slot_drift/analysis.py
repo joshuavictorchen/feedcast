@@ -310,9 +310,22 @@ def main() -> None:
     tune_result = tune_model(
         "slot_drift",
         candidates_by_name={
-            "DRIFT_WEIGHT_HALF_LIFE_DAYS": [1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0],
-            "MATCH_COST_THRESHOLD_HOURS": [1.5, 2.0, 2.5, 3.0],
-            "LOOKBACK_DAYS": [5, 7, 10, 14],
+            "DRIFT_WEIGHT_HALF_LIFE_DAYS": [
+                0.25,
+                0.5,
+                0.75,
+                1.0,
+                1.25,
+                1.5,
+                2.0,
+                2.5,
+                3.0,
+                4.0,
+                5.0,
+                7.0,
+            ],
+            "MATCH_COST_THRESHOLD_HOURS": [1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0],
+            "LOOKBACK_DAYS": [3, 4, 5, 6, 7, 10, 14],
         },
         export_path=snapshot.export_path,
     )

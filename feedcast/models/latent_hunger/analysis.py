@@ -825,8 +825,9 @@ def main() -> None:
     # CANONICAL PARAMETER TUNING
     # ================================================================
     # Growth rate is estimated at runtime, not a module constant.
-    # SATIETY_RATE is the primary tunable constant. Sweep a focused
-    # range covering the internal grid search's domain (0.05-0.8).
+    # SATIETY_RATE is the primary tunable constant. Extend below the
+    # prior 0.05 lower bound so canonical boundary winners are
+    # pressure-tested on future reruns.
     log("=== CANONICAL PARAMETER TUNING ===")
     log()
     log("Sweeps SATIETY_RATE via tune_model (multi-window canonical")
@@ -836,8 +837,24 @@ def main() -> None:
     tune_result = tune_model(
         "latent_hunger",
         candidates_by_name={
-            "SATIETY_RATE": [0.05, 0.1, 0.15, 0.2, 0.25, 0.3,
-                             0.35, 0.4, 0.5, 0.6, 0.7, 0.8],
+            "SATIETY_RATE": [
+                0.01,
+                0.02,
+                0.03,
+                0.04,
+                0.05,
+                0.1,
+                0.15,
+                0.2,
+                0.25,
+                0.3,
+                0.35,
+                0.4,
+                0.5,
+                0.6,
+                0.7,
+                0.8,
+            ],
         },
         export_path=snapshot.export_path,
     )

@@ -43,11 +43,15 @@ the shared replay infrastructure. This produces a multi-window
 aggregate (lookback 96h, half-life 36h, episode-boundary cutoffs) that
 is directly comparable across all models.
 
-**Canonical tuning** sweeps `SATIETY_RATE` via `tune_model()` with 12
-candidates (0.05–0.8). Growth rate is estimated at runtime from recent
-episodes and is not overridable via constant overrides, so it is not
-part of the sweep. Candidates are ranked by availability tier first,
-then headline score.
+**Canonical tuning** last ran as a 12-candidate `SATIETY_RATE` sweep
+via `tune_model()` (0.05–0.8). Because that winner landed on the lower
+bound, a 2026-04-09 follow-up reopened the low-rate region with 11
+focused candidates from 0.01 to 0.25. `0.05` remained the best tested
+value. Growth rate is estimated at runtime from recent episodes and is
+not overridable via constant overrides, so it is not part of the
+sweep. `analysis.py` now carries the widened low-end range for future
+full reruns. Candidates are ranked by availability tier first, then
+headline score.
 
 ### Objective comparison contract
 
@@ -119,9 +123,9 @@ single change in the model's history (~20% gap MAE improvement).
 
 ### Canonical findings
 
-The canonical sweep evaluated 12 `SATIETY_RATE` candidates. The
-pre-update baseline (sr=0.257) and the sweep winner (sr=0.05) compared
-as follows:
+The last full canonical sweep evaluated 12 `SATIETY_RATE` candidates.
+The pre-update baseline (sr=0.257) and the sweep winner (sr=0.05)
+compared as follows:
 
 | Metric | Pre-update (sr=0.257) | Sweep winner (sr=0.05) |
 |---|---|---|
@@ -129,16 +133,19 @@ as follows:
 | Count | 92.6 | 94.0 |
 | Timing | 47.8 | 47.9 |
 
-All 24 windows scored (100% availability) for all 12 candidates.
-Production was updated to sr=0.05 based on this sweep (see
-`CHANGELOG.md`). The current production canonical score is headline
-66.9, confirmed by re-running the research script after the update
-(baseline=best in `artifacts/research_results.txt`).
+All 24 windows scored (100% availability) for every full-sweep and
+follow-up candidate. Production was updated to sr=0.05 based on the
+original full sweep (see `CHANGELOG.md`). A 2026-04-09 low-end follow-up
+then tested 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.075, 0.1, 0.15, 0.2,
+and 0.25; `0.05` remained best. The current production canonical score
+is headline 66.9, confirmed by re-running the research script after the
+original update (baseline=best in `artifacts/research_results.txt`).
 
-The top 5 candidates form a monotonic sequence from sr=0.05 to sr=0.25,
-all within 0.5 headline points of each other — the surface is shallow.
-The gain over the prior production value comes primarily from count
-(+1.4) with timing nearly unchanged (+0.1).
+The expanded low-end top 5 are `0.05`, `0.06`, `0.075`, `0.1`, and
+`0.15`, all within 0.3 headline points of each other. The surface is
+still shallow, but values below `0.05` do not improve the headline on
+the current export. The gain over the prior production value comes
+primarily from count (+1.4) with timing nearly unchanged (+0.1).
 
 Per-window timing scores range from 28.8 to 59.2. The weakest window
 is March 26 13:56 (headline 49.5, timing 28.8) — a period immediately
@@ -186,13 +193,14 @@ mean-3-gaps (0.780h). The multiplicative model at 0.720h represents a
 
 ## Conclusions
 
-**Disposition: Change.** `SATIETY_RATE` updated from 0.257 to 0.05.
+**Disposition: Hold.** Current `SATIETY_RATE=0.05` remains supported.
 
-The canonical sweep selects sr=0.05 with headline +0.550 (66.3->66.9).
-The improvement is real but shallow — the top 5 candidates span only
-0.5 headline points. The gain is primarily in count accuracy (+1.4),
-suggesting that the lower satiety rate produces more uniform gap
-predictions that better match the observed feeding rhythm.
+The canonical sweep selected sr=0.05 with headline +0.550
+(66.3->66.9). The 2026-04-09 low-end follow-up then checked whether
+that result was just a lower-bound artifact. It was not on the current
+export: rates below `0.05` underperformed, while nearby rates above
+`0.05` stayed close enough to confirm a shallow low-end plateau rather
+than a hidden lower optimum.
 
 The internal diagnostics (gap1_MAE) and canonical scoring (headline)
 disagree on the optimal direction for `SATIETY_RATE`. The internal
@@ -208,9 +216,10 @@ gaps is smaller than at the internal diagnostic optimum.
 
 ### Model-local
 
-- **Sweep boundary:** sr=0.05 is the lowest value in the 12-candidate
-  sweep. Values below 0.05 were not tested. Whether further reduction
-  would continue to improve canonical scores or plateau is unknown.
+- **Low-rate stability across exports:** The current export no longer
+  shows a lower-bound ambiguity, but the optimum still sits in a shallow
+  low-rate plateau. If future exports shift the best value upward, that
+  would suggest the current preference is more local than structural.
 - **Internal-canonical metric divergence for this model:** The
   disagreement between gap1_MAE (prefers ~0.6) and canonical headline
   (prefers 0.05) is large. If future exports show the canonical optimum

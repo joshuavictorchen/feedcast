@@ -2,6 +2,48 @@
 
 Tracks behavior-level changes to the Analog Trajectory model. Add newest entries first.
 
+## Reopen low-lookback boundary and shift to 18h | 2026-04-09
+
+### Problem
+
+The corrected full canonical sweep had moved Analog Trajectory to an
+episode-level `12h` lookback regime, but `12h` was also the lowest
+lookback tested in that sweep. Under the updated sweep-discipline rule,
+that made the shipped lookback only provisionally justified.
+
+### Research
+
+Ran a targeted canonical follow-up on
+`exports/export_narababy_silas_20260327.csv` holding the other winning
+constants fixed:
+
+- `HISTORY_MODE=episode`
+- `FEATURE_WEIGHTS=recent_only`
+- `K_NEIGHBORS=5`
+- `RECENCY_HALF_LIFE_HOURS=72`
+- `TRAJECTORY_LENGTH_METHOD=median`
+- `ALIGNMENT=gap`
+
+Reopened only `LOOKBACK_HOURS` over `6`, `9`, `12`, `18`, and `24`:
+
+| Lookback | Headline |
+|--------|--------|
+| 6h | 68.40 |
+| 9h | 69.46 |
+| 12h | 69.90 |
+| 18h | 70.19 |
+| 24h | 69.63 |
+
+The improvement is modest (`+0.29` over `12h`) but real on the same
+24-window canonical replay objective.
+
+### Solution
+
+Ship `LOOKBACK_HOURS=18` while keeping the rest of the full-canonical
+episode regime unchanged. Also widen the analysis grid so the next full
+rerun includes `6`, `9`, and `18` by default instead of assuming the
+old lower boundary.
+
 ## Full canonical retune adopts episode history | 2026-04-01
 
 ### Problem

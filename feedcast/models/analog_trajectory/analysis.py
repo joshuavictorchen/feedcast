@@ -48,7 +48,7 @@ OUTPUT_DIR = Path(__file__).parent
 
 # --- Parameter grids ---
 
-LOOKBACK_HOURS_GRID = [12, 24, 48, 72]
+LOOKBACK_HOURS_GRID = [6, 9, 12, 18, 24, 48, 72]
 
 WEIGHT_PROFILES: dict[str, list[float]] = {
     # last_gap, mean_gap, last_volume, mean_volume, sin_hour, cos_hour

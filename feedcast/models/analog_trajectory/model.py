@@ -45,9 +45,10 @@ FEATURE_WEIGHTS = np.array([2.0, 0.5, 2.0, 0.5, 1.0, 1.0])
 
 # Lookback window for rolling mean features (hours).
 # Events within this window contribute to mean_gap and mean_volume.
-# 12h focuses the means on the most recent feeding rhythm. Selected via
-# the full canonical replay sweep in analysis.py.
-LOOKBACK_HOURS = 12
+# 18h still focuses the means on the recent feeding rhythm, but the
+# targeted follow-up below 24h scored slightly better than 12h within
+# the current canonical-best regime.
+LOOKBACK_HOURS = 18
 
 # Number of nearest neighbors to retrieve.
 # k=5 gives the best count/timing balance on episode-level state

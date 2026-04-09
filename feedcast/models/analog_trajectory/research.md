@@ -38,6 +38,12 @@ questions are:
 > **Staleness check:** if the current export differs from the one listed
 > here, re-run the command above to refresh results.
 
+> **Targeted follow-up:** on 2026-04-09, a focused lookback probe within
+> the canonical-best episode regime reopened the low-lookback boundary
+> and found `LOOKBACK_HOURS=18` scoring `70.19` versus `69.90` at `12`.
+> Runtime now ships `18`, but a fresh full-grid rerun is still the next
+> clean confirmation step.
+
 ## Methods
 
 ### Canonical evaluation and tuning
@@ -47,9 +53,9 @@ through the shared replay infrastructure. This produces the same
 multi-window aggregate used elsewhere in the project: 96-hour replay
 lookback, 36-hour window half-life, and episode-boundary cutoffs.
 
-**Canonical tuning** runs a full 2688-candidate sweep via `tune_model()`
-with candidate-parallel replay. The sweep includes every
-production-relevant constant:
+**Canonical tuning** last ran as a full 2688-candidate sweep via
+`tune_model()` with candidate-parallel replay. That recorded sweep
+included every production-relevant constant:
 
 - `HISTORY_MODE`: `raw`, `episode`
 - `LOOKBACK_HOURS`: `12`, `24`, `48`, `72`
@@ -62,7 +68,12 @@ production-relevant constant:
 
 Candidates are ranked by availability tier first, then headline score.
 On the current export, every analog candidate scored all 24 windows, so
-headline score decides the ranking.
+headline score decides the ranking. Because `12h` won at the lower
+boundary, a 2026-04-09 targeted follow-up held the other winning
+constants fixed and reopened only the small-lookback region (`6`, `9`,
+`12`, `18`, `24`). That probe moved the regime-local optimum to `18h`.
+`analysis.py` now carries the widened lookback grid for the next full
+rerun.
 
 ### Objective comparison contract
 
@@ -77,21 +88,22 @@ agreement and disagreement, not for strong exact-best-candidate claims.
 
 ### Diagnostic sweeps
 
-The model still runs two local `full_traj_MAE` sweeps:
+The last recorded analysis ran two local `full_traj_MAE` sweeps:
 
 - one 1344-config sweep on raw bottle history
 - one 1344-config sweep on episode-collapsed history
 
 These are fold-causal retrieval/blending diagnostics. They explain what
 kind of state representation and neighbor behavior is locally clean, but
-they do not choose shipped constants.
+they do not choose shipped constants. The widened lookback grid in
+`analysis.py` means future reruns will expand these local sweeps too.
 
 ### Raw vs. episode comparison
 
 The research script also compares feature distributions across raw and
-episode history at the canonical-best lookback. This is the simplest way
-to see how episode collapse changes the state space before any tuning
-metric is applied.
+episode history at the last full-sweep canonical-best lookback. This is
+the simplest way to see how episode collapse changes the state space
+before any tuning metric is applied.
 
 ## Results
 
@@ -106,7 +118,7 @@ The old production configuration
 | Count | 88.19 |
 | Timing | 46.11 |
 
-The corrected full canonical sweep updates production to
+The corrected full canonical sweep first updated production to
 (`episode`, `12h`, `recent_only`, `k=5`, `72h`, `median`, `gap`), which
 scores:
 
@@ -120,7 +132,22 @@ All 24 windows scored in both cases. The improvement is not marginal:
 headline `+6.36`, count `+5.61`, timing `+6.69`, with no availability
 loss.
 
-The reopened raw-vs-episode decision now has a clean canonical answer.
+Because `12h` was the lowest lookback tested in that full sweep, a
+2026-04-09 targeted follow-up reopened only the small-lookback region
+while holding the other winning constants fixed:
+
+| Lookback | Headline |
+|---|---|
+| 6h | 68.40 |
+| 9h | 69.46 |
+| 12h | 69.90 |
+| 18h | 70.19 |
+| 24h | 69.63 |
+
+That is a real but modest gain (`+0.29` headline), so runtime now ships
+the same episode/recent-only regime with `LOOKBACK_HOURS=18`.
+
+The reopened raw-vs-episode decision still has a clean canonical answer.
 The best raw-history candidate scores `69.2`; the best episode-history
 candidate scores `69.9`. Episode history wins by about `0.7` headline
 points while also leading on count and timing.
@@ -132,7 +159,7 @@ shipping on the current export.
 
 The top of the canonical surface is fairly shallow once history is
 episode-level. Several nearby episode candidates land between `69.6` and
-`69.9`, which suggests the model is reasonably robust within the current
+`70.2`, which suggests the model is reasonably robust within the current
 design family even though the shipped winner is distinct.
 
 ### Diagnostic findings
@@ -156,14 +183,14 @@ metrics prefer episode history and gap alignment.
 **Internal and canonical metrics disagree on some knob settings:** The
 best episode diagnostic configuration is
 (`episode`, `48h`, `means_only`, `k=5`, `36h`, `median`, `gap`), while
-the best canonical configuration is
-(`episode`, `12h`, `recent_only`, `k=5`, `72h`, `median`, `gap`).
+the current shipped canonical configuration is
+(`episode`, `18h`, `recent_only`, `k=5`, `72h`, `median`, `gap`).
 That divergence matters. It means local trajectory reconstruction and
 full 24-hour product quality are aligned on architecture, but not on all
 constant values.
 
-**Feature distributions explain why episode history helps:** At the
-canonical 12-hour lookback, episode history produces larger and tighter
+**Feature distributions explain why episode history helps:** At the last
+full-sweep 12-hour lookback, episode history produces larger and tighter
 gap/volume signals than raw history:
 
 - `last_gap`: `2.547 -> 3.017`
@@ -221,11 +248,11 @@ assertions.
 
 ## Conclusions
 
-**Disposition: Change.** Analog Trajectory should ship the full-canonical
-winner:
+**Disposition: Change.** Analog Trajectory should now ship the current
+evidence-backed winner:
 
 - `HISTORY_MODE = "episode"`
-- `LOOKBACK_HOURS = 12`
+- `LOOKBACK_HOURS = 18`
 - `FEATURE_WEIGHTS = recent_only [2, 0.5, 2, 0.5, 1, 1]`
 - `K_NEIGHBORS = 5`
 - `RECENCY_HALF_LIFE_HOURS = 72`
@@ -235,13 +262,17 @@ winner:
 The important model-level conclusion is that the earlier raw-history
 rejection is no longer defensible once the question is asked under the
 correct objective and the lookback override bug is fixed. Episode
-history now wins both the local retrieval diagnostics and the canonical
-ship metric.
+history wins both the local retrieval diagnostics and the canonical
+ship metric. The 2026-04-09 follow-up only re-opened the lookback
+boundary within that winning regime, and it moved the shipped lookback
+from `12h` to `18h`.
 
 The important process-level conclusion is that analog no longer needs a
 proxy-gated two-stage tuning path. The project can afford the full
 canonical sweep, and the internal `full_traj_MAE` sweep should stay in
-the script only as diagnostic evidence.
+the script only as diagnostic evidence. A fresh full-grid rerun is still
+the cleanest next confirmation that no other nearby combination should
+move together with the new `18h` lookback.
 
 The synthetic validation adds a narrower conclusion: when the analog
 story is made true in a controlled DGP, the current implementation does
@@ -261,6 +292,10 @@ implementation bug in retrieval or blending.
   within a few tenths of headline score. If future exports shift, the
   exact weight/half-life combination may move while the higher-level
   design stays the same.
+- **Full-grid confirmation is still pending.** Runtime now ships `18h`
+  from a targeted small-lookback follow-up, not yet from a fresh full
+  widened-grid rerun. That is the next clean verification step if later
+  exports make the nearby regime move again.
 - **How robust is the model once archetypes overlap or drift?** The
   simulation suite validates clean recurrence, not ambiguous or
   contaminated states. The next synthetic extensions should test near-

@@ -42,11 +42,16 @@ shared replay infrastructure. This produces a multi-window aggregate
 (lookback 96h, half-life 36h, episode-boundary cutoffs) that is
 directly comparable across all models.
 
-**Canonical tuning** sweeps three constants jointly via `tune_model()`:
-`DRIFT_WEIGHT_HALF_LIFE_DAYS` (8 values: 1.0–7.0),
+**Canonical tuning** last ran as a 128-candidate joint sweep via
+`tune_model()`: `DRIFT_WEIGHT_HALF_LIFE_DAYS` (8 values: 1.0–7.0),
 `MATCH_COST_THRESHOLD_HOURS` (4 values: 1.5–3.0), and `LOOKBACK_DAYS`
-(4 values: 5–14) — 128 total candidates. `MIN_COMPLETE_DAYS` is not
-swept because it is a minimum-data guard, not a tuning knob.
+(4 values: 5–14). Because that winner landed on the aggressive edge, a
+2026-04-09 boundary follow-up reopened only the aggressive side of the
+search: half-life 0.25–2.0, threshold 1.0–2.0, and lookback 3–10
+(210 focused candidates). The winner remained the current production
+triplet. `analysis.py` now carries the widened domain for future full
+reruns. `MIN_COMPLETE_DAYS` is not swept because it is a minimum-data
+guard, not a tuning knob.
 
 ### Model-specific diagnostics
 
@@ -109,11 +114,13 @@ Aggregate scores (weighted by recency, 36h half-life):
 All 24 windows scored (100% availability).
 
 The current production constants (`DRIFT_WEIGHT_HALF_LIFE_DAYS=1.0`,
-`LOOKBACK_DAYS=5`, `MATCH_COST_THRESHOLD_HOURS=1.5`) are the best of
-128 candidates in the canonical sweep. The next-best candidate
-(DRIFT=7.0, LOOKBACK=10, THRESHOLD=2.5, headline=67.1) trades timing
-for count but scores lower overall. No candidate with equal or higher
-availability outperforms the current constants.
+`LOOKBACK_DAYS=5`, `MATCH_COST_THRESHOLD_HOURS=1.5`) won the original
+128-candidate canonical sweep and retained that lead in the 2026-04-09
+aggressive-side follow-up. The strongest follow-up challenger
+(`DRIFT_WEIGHT_HALF_LIFE_DAYS=0.75`, `LOOKBACK_DAYS=5`,
+`MATCH_COST_THRESHOLD_HOURS=1.5`) scored headline 68.3, slightly below
+the production 68.4. No more aggressive combination improved the
+headline or availability on the current export.
 
 These constants were updated from the prior values (DRIFT=3.0,
 LOOKBACK=7, THRESHOLD=2.0, headline=59.2) based on this sweep.
@@ -146,38 +153,35 @@ collapsing removes ~1 cluster-internal feed per day on average.
 
 ## Conclusions
 
-**Disposition: Change.** Constants updated.
+**Disposition: Hold.** Current constants remain supported.
 
-Production constants were updated based on the 128-candidate canonical
-sweep (see `CHANGELOG.md` for details). The new values
-(`DRIFT_WEIGHT_HALF_LIFE_DAYS=1.0`, `LOOKBACK_DAYS=5`,
-`MATCH_COST_THRESHOLD_HOURS=1.5`) improved the headline from 59.2 to
-68.4 (+9.2), with the timing bottleneck improving from 40.4 to 51.9
-(+11.5) and count from 87.6 to 90.8 (+3.2). Availability remained at
-24/24.
+Production constants were previously updated based on the original
+128-candidate canonical sweep (see `CHANGELOG.md` for details). The
+2026-04-09 aggressive-side follow-up then checked whether the apparent
+boundary winner was just an incomplete search artifact. It was not on
+the current export: lower half-lives, tighter thresholds, and shorter
+lookbacks all underperformed the current triplet.
 
-The 1-day drift half-life is aggressive — the model now weights
-yesterday's drift almost entirely and older days negligibly. This
-makes it highly responsive to recent pattern changes but potentially
-volatile if a single unusual day occurs. The 5-day lookback and 1.5h
-threshold complement this by keeping the template focused on recent,
-well-matching data.
+The 1-day drift half-life is still aggressive — the model weights
+yesterday's drift far more than older days. The follow-up result makes
+that aggressiveness easier to defend on the current export, but it
+still implies a model that will react quickly to real pattern changes
+and quickly to unusual days.
 
 The timing score (51.9) is still the weaker component relative to
-count (90.8). The winning constants sit at the grid boundary
-(lowest half-life, shortest lookback, tightest threshold tested),
-so further improvement from more aggressive values cannot be ruled
-out. However, the remaining count-vs-timing gap likely reflects
-structural limits of the fixed-slot approach.
+count (90.8). The follow-up removes the immediate "incomplete sweep"
+objection for this export, but the remaining count-vs-timing gap likely
+reflects structural limits of the fixed-slot approach.
 
 ## Open questions
 
 ### Model-local
 
-- **Drift half-life stability:** The 1-day half-life is the lowest
-  value tested and the sweep winner. It may be worth monitoring
-  whether this causes volatility on unusual feeding days — a single
-  outlier day now dominates the drift estimate.
+- **Aggressive-side stability across exports:** The 2026-04-09 follow-up
+  did not beat the current triplet with lower half-lives, tighter
+  thresholds, or shorter lookbacks. That removes the immediate boundary
+  concern on this export, but the optimum could still move if the
+  volatility regime changes on later exports.
 - **Slot count sensitivity:** The median slot count (8) is stable in
   the current 5-day window. A shorter lookback amplifies the impact
   of any single day's count on the median. If the baby's feeding
