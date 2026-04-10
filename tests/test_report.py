@@ -144,6 +144,22 @@ class AgentInsightsRenderTests(unittest.TestCase):
         self.assertIn("## Trend Insights", report_text)
         self.assertIn("Test trend content here.", report_text)
 
+    def test_report_strips_embedded_insights_heading(self) -> None:
+        """Main report owns the section heading for embedded insights."""
+        content = "## Trend Insights — Last 14 Days\n\nTest trend content here."
+        output_dir = self._render(content)
+        report_text = (output_dir / "report.md").read_text()
+        self.assertEqual(report_text.count("## Trend Insights"), 1)
+        self.assertNotIn("## Trend Insights — Last 14 Days", report_text)
+        self.assertIn("Test trend content here.", report_text)
+
+    def test_standalone_insights_artifact_keeps_original_heading(self) -> None:
+        """Standalone insights artifact remains a complete markdown document."""
+        content = "## Trend Insights — Last 14 Days\n\nTest trend content here."
+        output_dir = self._render(content)
+        insights_text = (output_dir / "agent-insights.md").read_text()
+        self.assertIn("## Trend Insights — Last 14 Days", insights_text)
+
     def test_no_file_when_none(self) -> None:
         """agent-insights.md is NOT published when insights are None."""
         output_dir = self._render(None)
@@ -154,6 +170,35 @@ class AgentInsightsRenderTests(unittest.TestCase):
         output_dir = self._render(None)
         report_text = (output_dir / "report.md").read_text()
         self.assertNotIn("## Trend Insights", report_text)
+
+    def test_report_strips_embedded_methodology_heading(self) -> None:
+        """Methodology content should not duplicate the report-owned heading."""
+        forecast = Forecast(
+            name="Method With Heading",
+            slug="method_with_heading",
+            points=[_point(CUTOFF, 3.0)],
+            methodology="# Internal Methodology Title\n\nMethod body.",
+            diagnostics={},
+        )
+        output_dir = Path(tempfile.mkdtemp(prefix="test-report-"))
+        self.addCleanup(shutil.rmtree, output_dir)
+
+        _render_report(
+            output_dir=output_dir,
+            snapshot=_RENDER_SNAPSHOT,
+            all_forecasts=[forecast],
+            featured_slug="method_with_heading",
+            cutoff=CUTOFF,
+            retrospective=Retrospective(available=False),
+            historical_accuracy=[],
+            tracker_meta=_RENDER_META,
+            agent_insights=None,
+        )
+
+        report_text = (output_dir / "report.md").read_text()
+        self.assertIn("### Method With Heading (featured)", report_text)
+        self.assertNotIn("# Internal Methodology Title", report_text)
+        self.assertIn("Method body.", report_text)
 
 
 if __name__ == "__main__":

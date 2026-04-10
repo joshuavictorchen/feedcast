@@ -6,6 +6,7 @@ generation, and the atomic swap that keeps `report/` consistent on failure.
 
 from __future__ import annotations
 
+import re
 import shutil
 import tempfile
 from datetime import datetime
@@ -25,6 +26,10 @@ from feedcast.data import (
 )
 from feedcast.plots import write_schedule_plot, write_spaghetti_plot
 from feedcast.tracker import HistoricalAccuracySummary, Retrospective
+
+_LEADING_HEADING_PATTERN = re.compile(
+    r"^\s{0,3}#{1,6}[ \t]+[^\n]+(?:\n+|$)"
+)
 
 
 def generate_report(
@@ -146,7 +151,7 @@ def _render_report(
             }
             for row in historical_accuracy
         ],
-        "agent_insights": agent_insights,
+        "agent_insights": _strip_leading_heading(agent_insights),
         "source_file": snapshot.export_path.name,
         "dataset_id_short": snapshot.dataset_id[:15] + "...",
         "git_commit_display": _git_commit_display(tracker_meta),
@@ -176,8 +181,21 @@ def _prepare_methodology_row(forecast: Forecast, featured_slug: str) -> dict[str
         }
     return {
         "title": title,
-        "body": forecast.methodology.strip(),
+        "body": _strip_leading_heading(forecast.methodology),
     }
+
+
+def _strip_leading_heading(markdown: str | None) -> str | None:
+    """Remove one leading markdown heading when embedding content in the report."""
+    if markdown is None:
+        return None
+
+    normalized = markdown.strip()
+    if not normalized:
+        return None
+
+    without_heading = _LEADING_HEADING_PATTERN.sub("", normalized, count=1)
+    return without_heading.strip() or normalized
 
 
 def _prepare_retrospective(retrospective: Retrospective) -> dict[str, Any]:
