@@ -35,7 +35,7 @@ optional -- it will be collapsed before scoring.
 
 ## Workspace
 
-Your workspace may contain artifacts from prior runs — strategy notes,
+Your workspace may contain artifacts from prior runs, including strategy notes,
 model code, or helper scripts. If `strategy.md` exists, read it first:
 it documents the current approach, performance data, and guidance from
 prior agents. You are free to follow, modify, or discard prior work.
@@ -98,8 +98,21 @@ Requirements:
 
 ## methodology.md
 
-Your workspace contains `methodology.md` -- a persistent document that
-describes your forecasting approach. Its content is rendered directly into
-the forecast report. Update it when your approach changes materially. Keep
-it concise and descriptive: what you do, why, and how it connects to the
-data. Long-term strategy notes belong in separate workspace files.
+Your workspace contains `methodology.md`, a persistent document whose
+contents are rendered directly into the forecast report for this run.
+Update it when your approach changes materially so it describes the
+method you actually used for the current forecast.
+
+Write it from first principles for a fresh reader:
+
+- Describe the current method, not the delta from an older one.
+- Explain what data it uses and how it turns that data into predicted
+  feed times.
+- Mention how volume and overall feed count are handled when they matter.
+- Keep it self-contained. Do not rely on "builds on", "same as before",
+  or references to prior iterations for basic context.
+- Keep history, experiments, and future ideas in `CHANGELOG.md` or
+  `strategy.md`, not here.
+
+Use the scripted model `methodology.md` files as the style bar:
+concise, current-state, and mechanism-first.

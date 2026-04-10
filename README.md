@@ -32,7 +32,8 @@ Pre-flight
   └── Create run branch  →  feedcast/YYYYMMDD-HHMMSS
 
 Trend Insights                                   [agent · skippable]
-  └── Analyze 7 to 14 days of feeding patterns
+  └── Analyze a 7-day baseline, then zoom in on
+      the newest data for fresh signal
       → summary held in memory for the report
 
 Model Tuning                                     [agent ×4 parallel · skippable]
@@ -77,7 +78,7 @@ A feeding episode is a cluster of close-together feeds treated as a single hunge
 | [Latent Hunger](feedcast/models/latent_hunger/) | Hunger is a hidden process that rises with time and resets with each feed. | Hidden scalar state with multiplicative satiety reset proportional to volume; growth rate fit at runtime; forward simulation. |
 | [Survival Hazard](feedcast/models/survival_hazard/) | The next feed is a timed event whose hazard rises with elapsed time, with distinct day and night regimes. | Day-part Weibull hazard fit by maximum likelihood; conditional survival for the runtime feed. |
 | [Consensus Blend](feedcast/models/consensus_blend/) | A majority vote across diverse hypotheses beats any single model. | Exact majority-vote sequence selector via mixed-integer linear programming, with episode collapsing before candidate generation. |
-| [Agent Inference](feedcast/agents/) | Freeform LLM reasoning may capture patterns that scripted models miss. | CLI agent with a persistent workspace that it can rewrite between runs. Current implementation is Empirical Cadence Projection: recency-weighted day-part gap medians with conditional survival for the first feed. |
+| [Agent Inference](feedcast/agents/) | Freeform LLM reasoning may capture patterns that scripted models miss. | CLI agent with a persistent workspace that it can rewrite between runs. The latest run's report-facing method is recorded in `feedcast/agents/methodology.md`. |
 
 Each scripted model folder contains its implementation, a `design.md`, a `methodology.md`, a `research.md` with canonical evaluation results, and a `CHANGELOG.md` with every behavior change. The agent inference workspace uses a different document set: `model.py`, `prompt.md` (runtime instructions), `strategy.md` (durable approach notes), `methodology.md`, `design.md`, and `CHANGELOG.md`.
 

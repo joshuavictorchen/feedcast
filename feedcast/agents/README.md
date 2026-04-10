@@ -8,21 +8,30 @@ Runtime instructions for the agent live in [`prompt.md`](prompt.md). That file i
 
 ## What's currently in the workspace
 
-  These are the files currently in the workspace and how they are used today. Future agents may reshape the approach or rewrite most of this workspace (and even this file). Under the current pipeline, `prompt.md` and `methodology.md` are expected inputs, and each run must produce `forecast.json`.
+These are the files currently in the workspace and how they are used
+today. Future agents may reshape the approach or rewrite most of this
+workspace, including this file. Under the current pipeline, `prompt.md`
+guides the run, `methodology.md` describes the method used for the
+latest forecast, and each run must produce `forecast.json`.
 
 | File | Current use |
 | ---- | ----------- |
 | `model.py` | The current forecasting script. Prior agents have rewritten it when they had a better approach. |
 | `prompt.md` | Runtime instructions the agent reads on each run. Uses `{{variable}}` placeholders substituted by the pipeline. The agent may edit this to change how future runs invoke it. |
-| `strategy.md` | Durable notes from prior agents: approach, measured strengths and weaknesses, open questions. |
-| `methodology.md` | Report-facing description. Content before the first `##` heading is rendered into the forecast report. |
+| `strategy.md` | Durable notes from prior agents: baseline approach, measured strengths and weaknesses, open questions. |
+| `methodology.md` | Report-facing description of the method used for the latest run. Keep it current and self-contained. |
 | `design.md` | Design decisions behind the current implementation. |
 | `CHANGELOG.md` | Prior agents' log of what changed and why. |
 | `forecast.json` | The most recent forecast output. Overwritten on each run and read by the pipeline. |
 
-## Current implementation
+## Current workspace state
 
-Empirical Cadence Projection: recency-weighted day-part gap medians with conditional survival for the first feed. See [`strategy.md`](strategy.md) for the approach notes and [`design.md`](design.md) for the rationale. A future agent may keep it, tune its constants, or replace it entirely.
+The durable workspace currently includes a baseline `model.py`
+implementing Empirical Cadence Projection. An agent may reuse it, tune
+it, replace it, or bypass it if another approach better fits the latest
+data. `methodology.md` is the report-facing record of the method
+actually used for the most recent forecast. `strategy.md` and
+`CHANGELOG.md` hold longer-lived notes, evidence, and history.
 
 ## How the pipeline invokes the agent
 
