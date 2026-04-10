@@ -1,8 +1,8 @@
-Export: exports/export_narababy_silas_20260410.csv
-Dataset: sha256:8dc1ea2650b0779b6a342b90aa918bc5bd2d5412bfbef25a2df4a8e1bada504e
-Cutoff: 2026-04-10 09:52:59
-Events (with BF merge): 238
-Events (bottle only):   238
+Export: exports/export_narababy_silas_20260410(2).csv
+Dataset: sha256:ff8b0a112f77742af35b44e97652b6108915a609526619b808546434315927b8
+Cutoff: 2026-04-10 18:33:17
+Events (with BF merge): 241
+Events (bottle only):   241
 
 === BREASTFEED MERGE IMPACT ===
 
@@ -10,7 +10,7 @@ Events (bottle only):   238
   03/22 11:54: 3.50 -> 3.83 oz (+0.33 oz BF)
   03/23 11:41: 2.00 -> 2.13 oz (+0.13 oz BF)
 
-Affected events: 3 / 238
+Affected events: 3 / 241
 
 === VOLUME-TO-GAP RELATIONSHIP ===
 
@@ -22,30 +22,30 @@ Volume-binned mean gaps:
   [0.0, 1.5) oz: n= 22, mean_gap=2.14h, std=1.04h
   [1.5, 2.5) oz: n= 23, mean_gap=2.17h, std=0.93h
   [2.5, 3.5) oz: n= 38, mean_gap=2.55h, std=0.97h
-  [3.5, 5.0) oz: n=147, mean_gap=2.80h, std=0.88h
+  [3.5, 5.0) oz: n=150, mean_gap=2.80h, std=0.87h
 
 === CIRCADIAN STRUCTURE ===
 
 Time-of-day binned mean gaps (all history):
   00-04: n= 34, mean_gap=3.27h, std=0.68h, mean_vol=3.72oz
   04-08: n= 34, mean_gap=3.10h, std=0.51h, mean_vol=3.73oz
-  08-12: n= 40, mean_gap=2.61h, std=0.95h, mean_vol=3.29oz
-  12-16: n= 49, mean_gap=2.21h, std=0.94h, mean_vol=2.84oz
+  08-12: n= 41, mean_gap=2.61h, std=0.94h, mean_vol=3.30oz
+  12-16: n= 51, mean_gap=2.25h, std=0.94h, mean_vol=2.87oz
   16-20: n= 43, mean_gap=2.30h, std=0.99h, mean_vol=3.28oz
   20-24: n= 37, mean_gap=2.76h, std=1.01h, mean_vol=3.09oz
 
-Circadian spread: 1.06h (ratio: 1.48)
+Circadian spread: 1.02h (ratio: 1.45)
 
 Recent circadian (last 7 days, 2h bins):
   00-02: n= 5, mean_gap=2.77h, mean_vol=3.30oz
   02-04: n= 6, mean_gap=3.51h, mean_vol=3.82oz
   04-06: n= 3, mean_gap=2.90h, mean_vol=4.00oz
   06-08: n= 6, mean_gap=2.70h, mean_vol=3.96oz
-  08-10: n= 4, mean_gap=2.52h, mean_vol=3.50oz
-  10-12: n= 5, mean_gap=2.89h, mean_vol=3.60oz
-  12-14: n= 5, mean_gap=2.20h, mean_vol=2.55oz
-  14-16: n= 6, mean_gap=2.66h, mean_vol=3.83oz
-  16-18: n= 7, mean_gap=2.13h, mean_vol=3.16oz
+  08-10: n= 5, mean_gap=2.49h, mean_vol=3.50oz
+  10-12: n= 4, mean_gap=2.68h, mean_vol=3.50oz
+  12-14: n= 6, mean_gap=2.37h, mean_vol=2.71oz
+  14-16: n= 6, mean_gap=2.85h, mean_vol=3.92oz
+  16-18: n= 6, mean_gap=2.14h, mean_vol=3.14oz
   18-20: n= 5, mean_gap=3.28h, mean_vol=3.66oz
   20-22: n= 4, mean_gap=3.47h, mean_vol=3.19oz
   22-24: n= 3, mean_gap=3.16h, mean_vol=3.93oz
@@ -53,15 +53,12 @@ Recent circadian (last 7 days, 2h bins):
 === ADDITIVE VS. MULTIPLICATIVE SATIETY ===
 
 Best ADDITIVE constant:  gr=0.341 sc=0.257
-  gap1_MAE=0.718h  pred_std=0.007h
+  gap1_MAE=0.704h  pred_std=0.007h
 
 Best MULTIPLICATIVE constant:  gr=0.293 sr=0.567
-  gap1_MAE=0.719h  gap3_MAE=0.716h  fcount_MAE=0.97  pred_std=0.547h
+  gap1_MAE=0.704h  gap3_MAE=0.711h  fcount_MAE=0.97  pred_std=0.544h
 
 Multiplicative prediction range (recent 15 events):
-  04/08 12:58 vol=3.0oz pred=2.79h actual=2.02h err=+0.77h
-  04/08 14:59 vol=3.0oz pred=2.79h actual=2.68h err=+0.11h
-  04/08 17:40 vol=3.2oz pred=2.87h actual=2.19h err=+0.68h
   04/08 19:51 vol=3.5oz pred=2.94h actual=4.42h err=-1.47h
   04/09 00:16 vol=3.0oz pred=2.79h actual=3.24h err=-0.45h
   04/09 03:31 vol=3.0oz pred=2.79h actual=2.99h err=-0.20h
@@ -74,64 +71,67 @@ Multiplicative prediction range (recent 15 events):
   04/09 23:20 vol=3.8oz pred=3.02h actual=4.09h err=-1.08h
   04/10 03:26 vol=3.4oz pred=2.92h actual=4.25h err=-1.33h
   04/10 07:40 vol=3.5oz pred=2.94h actual=2.20h err=+0.74h
+  04/10 09:52 vol=3.5oz pred=2.94h actual=2.40h err=+0.54h
+  04/10 12:16 vol=3.5oz pred=2.94h actual=3.21h err=-0.27h
+  04/10 15:29 vol=3.5oz pred=2.94h actual=3.06h err=-0.12h
 
 Top 10 multiplicative parameter sets:
-  gr=0.293 sr=0.567: gap1=0.719h  gap3=0.716h  fcount=0.97  pstd=0.547h
-  gr=0.293 sr=0.541: gap1=0.719h  gap3=0.716h  fcount=0.97  pstd=0.550h
-  gr=0.293 sr=0.593: gap1=0.720h  gap3=0.718h  fcount=1.04  pstd=0.543h
-  gr=0.293 sr=0.619: gap1=0.721h  gap3=0.721h  fcount=1.26  pstd=0.539h
-  gr=0.293 sr=0.516: gap1=0.721h  gap3=0.716h  fcount=0.97  pstd=0.552h
-  gr=0.293 sr=0.645: gap1=0.723h  gap3=0.726h  fcount=1.28  pstd=0.535h
-  gr=0.293 sr=0.671: gap1=0.726h  gap3=0.730h  fcount=1.33  pstd=0.529h
-  gr=0.293 sr=0.490: gap1=0.727h  gap3=0.720h  fcount=0.97  pstd=0.553h
-  gr=0.245 sr=0.334: gap1=0.729h  gap3=0.719h  fcount=0.97  pstd=0.635h
-  gr=0.293 sr=0.697: gap1=0.730h  gap3=0.736h  fcount=1.35  pstd=0.524h
+  gr=0.293 sr=0.567: gap1=0.704h  gap3=0.711h  fcount=0.97  pstd=0.544h
+  gr=0.293 sr=0.593: gap1=0.704h  gap3=0.713h  fcount=1.04  pstd=0.540h
+  gr=0.293 sr=0.619: gap1=0.705h  gap3=0.716h  fcount=1.24  pstd=0.536h
+  gr=0.293 sr=0.541: gap1=0.705h  gap3=0.710h  fcount=0.97  pstd=0.547h
+  gr=0.293 sr=0.645: gap1=0.707h  gap3=0.720h  fcount=1.26  pstd=0.532h
+  gr=0.293 sr=0.516: gap1=0.707h  gap3=0.710h  fcount=0.97  pstd=0.549h
+  gr=0.293 sr=0.671: gap1=0.710h  gap3=0.725h  fcount=1.30  pstd=0.526h
+  gr=0.293 sr=0.697: gap1=0.713h  gap3=0.731h  fcount=1.32  pstd=0.521h
+  gr=0.293 sr=0.490: gap1=0.714h  gap3=0.714h  fcount=0.97  pstd=0.550h
+  gr=0.245 sr=0.334: gap1=0.716h  gap3=0.713h  fcount=0.97  pstd=0.631h
 
 === MULTIPLICATIVE + CIRCADIAN ===
 
 Best circadian (base gr/sr from constant):
-  gr=0.293 sr=0.567 amp=0.100 phase=14.0h
-  gap1_MAE=0.698h  gap3_MAE=0.694h  fcount_MAE=1.30  pred_std=0.598h
+  gr=0.293 sr=0.567 amp=0.050 phase=16.0h
+  gap1_MAE=0.685h  gap3_MAE=0.702h  fcount_MAE=1.31  pred_std=0.571h
 
 Joint-refined:
-  gr=0.3359 sr=0.7672 amp=0.100 phase=14.0h
-  gap1_MAE=0.673h  gap3_MAE=0.666h  fcount_MAE=0.97  pred_std=0.510h
+  gr=0.3359 sr=0.7272 amp=0.050 phase=16.0h
+  gap1_MAE=0.671h  gap3_MAE=0.674h  fcount_MAE=0.97  pred_std=0.476h
 
 === LOOKBACK WINDOW SENSITIVITY ===
 
 How does fitting on only the last N days compare to full history?
 (Using best joint-refined params, varying evaluation window.)
 
-  last  3d: gap1_MAE=0.460h  gap3_MAE=0.434h  fcount_MAE=1.77  (n=23)
-  last  5d: gap1_MAE=0.579h  gap3_MAE=0.563h  fcount_MAE=1.45  (n=42)
-  last  7d: gap1_MAE=0.653h  gap3_MAE=0.633h  fcount_MAE=1.25  (n=59)
-  last 14d: gap1_MAE=0.674h  gap3_MAE=0.661h  fcount_MAE=0.96  (n=122)
-  all data: gap1_MAE=0.673h  gap3_MAE=0.666h  fcount_MAE=0.97  (n=231)
+  last  3d: gap1_MAE=0.491h  gap3_MAE=0.498h  fcount_MAE=1.74  (n=23)
+  last  5d: gap1_MAE=0.535h  gap3_MAE=0.531h  fcount_MAE=1.40  (n=41)
+  last  7d: gap1_MAE=0.633h  gap3_MAE=0.645h  fcount_MAE=1.25  (n=59)
+  last 14d: gap1_MAE=0.674h  gap3_MAE=0.673h  fcount_MAE=0.96  (n=121)
+  all data: gap1_MAE=0.671h  gap3_MAE=0.674h  fcount_MAE=0.97  (n=234)
 
 Re-fitting on last 5 days only:
-  Best 5d params: gr=0.3233 sr=0.7172 (vs full: gr=0.3359 sr=0.7672)
-  5d gap1_MAE=0.569h  (full params on 5d: see above)
-  5d params on full history: gap1_MAE=0.674h
-  Full params on full history: gap1_MAE=0.673h
+  Best 5d params: gr=0.2786 sr=0.4772 (vs full: gr=0.3359 sr=0.7272)
+  5d gap1_MAE=0.522h  (full params on 5d: see above)
+  5d params on full history: gap1_MAE=0.679h
+  Full params on full history: gap1_MAE=0.671h
 
 === MOST RECENT 24H PREDICTION QUALITY (holdout) ===
 
 Simulating a 24h forecast from 24h before cutoff.
 Parameters are re-fit using ONLY events before the anchor (true holdout).
 
-Anchor event: 04/09 09:23 vol=3.5oz
+Anchor event: 04/09 18:16 vol=4.0oz
 Holdout-fit params: gr=0.3055 sr=0.7172
   (vs full-data params: gr=0.2931 sr=0.5672)
 
 Predicted 7 feeds, actual 7 feeds
 
-  pred=12:24  actual=12:10  err=0.23h
-  pred=15:24  actual=15:45  err=0.34h
-  pred=18:25  actual=18:16  err=0.15h
-  pred=21:25  actual=20:32  err=0.89h
-  pred=00:26  actual=23:20  err=1.09h
-  pred=03:26  actual=03:26  err=0.01h
-  pred=06:27  actual=07:40  err=1.23h
+  pred=21:21  actual=20:32  err=0.82h
+  pred=00:22  actual=23:20  err=1.03h
+  pred=03:22  actual=03:26  err=0.06h
+  pred=06:23  actual=07:40  err=1.30h
+  pred=09:23  actual=09:52  err=0.49h
+  pred=12:24  actual=12:16  err=0.12h
+  pred=15:24  actual=15:29  err=0.08h
 
 Paired 7, mean timing error: 0.56h
 Feed count error: 0
@@ -140,45 +140,45 @@ Feed count error: 0
 
 Model                                 gap1_MAE
 ------------------------------------------------
-Naive last-gap                           0.913
-Naive mean-3-gaps                        0.837
-Additive constant                        0.718
-Multiplicative constant                  0.719
-Multiplicative + circadian               0.698
-Mult + circadian (joint-refined)         0.673
+Naive last-gap                           0.894
+Naive mean-3-gaps                        0.829
+Additive constant                        0.704
+Multiplicative constant                  0.704
+Multiplicative + circadian               0.685
+Mult + circadian (joint-refined)         0.671
 
 === VOLUME PREDICTION STRATEGY ===
 
 Global median volume: 3.50 oz
 Recency-weighted volume:
-  Last  5: median=3.50 mean=3.54
-  Last 10: median=3.50 mean=3.52
-  Last 15: median=3.50 mean=3.40
+  Last  5: median=3.50 mean=3.75
+  Last 10: median=3.50 mean=3.75
+  Last 15: median=3.50 mean=3.53
 
 === EPISODE-LEVEL COMPARISON ===
 
-Raw events: 238, Episodes: 210 (28 feeds collapsed)
+Raw events: 241, Episodes: 213 (28 feeds collapsed)
 
 Volume-gap correlation: 0.303 (raw: 0.284)
-Episode volume: mean=3.73 std=0.81 min=1.00 max=6.50
-Episode gaps:   mean=3.02 std=0.77 min=1.25 max=5.20
+Episode volume: mean=3.73 std=0.80 min=1.00 max=6.50
+Episode gaps:   mean=3.02 std=0.76 min=1.25 max=5.20
 
 Episode-level multiplicative grid search:
   Best: gr=0.245 sr=0.360
-  gap1_MAE=0.583h  gap3_MAE=0.600h  fcount_MAE=0.87  pred_std=0.366h
+  gap1_MAE=0.572h  gap3_MAE=0.599h  fcount_MAE=0.86  pred_std=0.364h
 
 Top 5 episode-level parameter sets:
-  gr=0.245 sr=0.360: gap1=0.583h  gap3=0.600h  fcount=0.87  pstd=0.366h
-  gr=0.197 sr=0.231: gap1=0.585h  gap3=0.597h  fcount=0.86  pstd=0.437h
-  gr=0.245 sr=0.334: gap1=0.586h  gap3=0.595h  fcount=0.88  pstd=0.368h
-  gr=0.293 sr=0.593: gap1=0.586h  gap3=0.599h  fcount=0.89  pstd=0.259h
-  gr=0.293 sr=0.567: gap1=0.586h  gap3=0.597h  fcount=0.86  pstd=0.266h
+  gr=0.245 sr=0.360: gap1=0.572h  gap3=0.599h  fcount=0.86  pstd=0.364h
+  gr=0.293 sr=0.593: gap1=0.575h  gap3=0.598h  fcount=0.88  pstd=0.257h
+  gr=0.293 sr=0.619: gap1=0.575h  gap3=0.601h  fcount=0.89  pstd=0.251h
+  gr=0.293 sr=0.567: gap1=0.575h  gap3=0.596h  fcount=0.85  pstd=0.264h
+  gr=0.197 sr=0.231: gap1=0.575h  gap3=0.595h  fcount=0.85  pstd=0.434h
 
 Comparison (raw vs episode-level):
-  gap1_MAE:     0.719h vs 0.583h
-  gap3_MAE:     0.716h vs 0.600h
-  fcount_MAE:   0.97 vs 0.87
-  pred_std:     0.547h vs 0.366h
+  gap1_MAE:     0.704h vs 0.572h
+  gap3_MAE:     0.711h vs 0.599h
+  fcount_MAE:   0.97 vs 0.86
+  pred_std:     0.544h vs 0.364h
   Best sr:      0.567 vs 0.360
 
 Episode median volume: 4.00 oz (raw: 3.50 oz)
@@ -191,38 +191,37 @@ CANONICAL MULTI-WINDOW EVALUATION
 Production-constant evaluation via score_model (same
 infrastructure as the replay CLI).
 
-Aggregate:  headline=66.3  count=95.3  timing=46.8
-Windows:    26 scored / 26 total (100.0% availability)
+Aggregate:  headline=66.3  count=96.3  timing=46.1
+Windows:    25 scored / 25 total (100.0% availability)
 Half-life:  36.0h  Lookback: 96.0h
 
 Per-window breakdown:
   Cutoff                  Weight    Head   Count    Time  Status
-  2026-04-06T11:19:55     0.2571    49.7    87.5    28.2  scored
-  2026-04-06T12:38:39     0.2636    75.8   100.0    57.5  scored
-  2026-04-06T15:22:52     0.2779    71.5   100.0    51.1  scored
-  2026-04-06T17:30:34     0.2895    72.8    95.2    55.8  scored
-  2026-04-06T20:14:09     0.3051    64.3    95.2    43.5  scored
-  2026-04-06T23:33:00     0.3253    68.6    95.2    49.4  scored
-  2026-04-07T02:04:34     0.3415    49.4    94.8    25.7  scored
-  2026-04-07T05:56:15     0.3678    76.0    95.2    60.6  scored
-  2026-04-07T09:20:52     0.3928    64.9    95.2    44.2  scored
-  2026-04-07T11:35:15     0.4101    67.7    94.3    48.7  scored
-  2026-04-07T14:11:23     0.4312    61.7    93.2    40.9  scored
-  2026-04-07T17:39:53     0.4610    56.5    93.2    34.3  scored
-  2026-04-07T20:19:33     0.4852    49.7    87.6    28.2  scored
-  2026-04-08T00:05:11     0.5217    63.7    95.2    42.7  scored
-  2026-04-08T03:18:32     0.5551    69.6    95.2    50.9  scored
-  2026-04-08T06:40:35     0.5922    71.3   100.0    50.9  scored
-  2026-04-08T09:45:13     0.6284    68.4   100.0    46.8  scored
-  2026-04-08T12:58:20     0.6686    68.8   100.0    47.3  scored
-  2026-04-08T14:59:15     0.6950    57.5    93.7    35.3  scored
-  2026-04-08T17:40:09     0.7318    49.1    93.2    25.9  scored
-  2026-04-08T19:51:35     0.7634    64.7    91.1    46.0  scored
-  2026-04-09T00:16:39     0.8311    60.9   100.0    37.1  scored
-  2026-04-09T03:31:04     0.8847    76.5   100.0    58.5  scored
-  2026-04-09T06:30:28     0.9371    75.9    95.2    60.6  scored
-  2026-04-09T09:23:51     0.9907    74.7    94.8    58.9  scored
-  2026-04-09T09:52:59     1.0000    73.1    90.6    58.9  scored
+  2026-04-06T20:14:09     0.2582    68.9    95.2    49.9  scored
+  2026-04-06T23:33:00     0.2752    74.6    95.2    58.4  scored
+  2026-04-07T02:04:34     0.2890    53.1    94.8    29.8  scored
+  2026-04-07T05:56:15     0.3113    75.9    95.2    60.5  scored
+  2026-04-07T09:20:52     0.3324    67.1    95.2    47.3  scored
+  2026-04-07T11:35:15     0.3470    68.8    94.3    50.2  scored
+  2026-04-07T14:11:23     0.3649    58.6    93.7    36.7  scored
+  2026-04-07T17:39:53     0.3901    55.5    93.8    32.9  scored
+  2026-04-07T20:19:33     0.4106    50.8    87.6    29.5  scored
+  2026-04-08T00:05:11     0.4415    68.7    95.2    49.6  scored
+  2026-04-08T03:18:32     0.4697    71.0    95.2    53.0  scored
+  2026-04-08T06:40:35     0.5012    75.8   100.0    57.4  scored
+  2026-04-08T09:45:13     0.5318    73.3   100.0    53.7  scored
+  2026-04-08T12:58:20     0.5658    71.6   100.0    51.3  scored
+  2026-04-08T14:59:15     0.5881    55.4    95.2    32.3  scored
+  2026-04-08T17:40:09     0.6193    49.0    94.8    25.3  scored
+  2026-04-08T19:51:35     0.6460    56.6    91.0    35.2  scored
+  2026-04-09T00:16:39     0.7033    63.4   100.0    40.1  scored
+  2026-04-09T03:31:04     0.7486    71.2   100.0    50.6  scored
+  2026-04-09T06:30:28     0.7930    70.7    95.2    52.5  scored
+  2026-04-09T09:23:51     0.8384    72.6    94.8    55.6  scored
+  2026-04-09T12:10:16     0.8843    64.1    94.3    43.5  scored
+  2026-04-09T15:45:13     0.9475    63.4    95.3    42.2  scored
+  2026-04-09T18:16:28     0.9946    72.1   100.0    51.9  scored
+  2026-04-09T18:33:17     1.0000    73.7   100.0    54.3  scored
 
 === CANONICAL PARAMETER TUNING ===
 
@@ -232,41 +231,41 @@ scoring). Growth rate is runtime-estimated, not overridable.
 Candidates evaluated: 16
 
                      Headline   Count  Timing  Windows
-Baseline                 66.3    95.3    46.8   26/26
-Best                     66.3    95.2    46.9   26/26
+Baseline                 66.3    96.3    46.1   25/25
+Best                     67.0    84.5    53.9   25/25
 
-Baseline params: {'SATIETY_RATE': 0.55}
-Best params:     {'SATIETY_RATE': 0.8}
-Headline delta:  +0.031
+Baseline params: {'SATIETY_RATE': 0.18}
+Best params:     {'SATIETY_RATE': 0.03}
+Headline delta:  +0.644
 Availability delta: +0
 
 Top 5 candidates:
-  1. {'SATIETY_RATE': 0.8}  headline=66.3  count=95.2  timing=46.9
-  2. {'SATIETY_RATE': 0.7}  headline=66.3  count=95.2  timing=46.9
-  3. {'SATIETY_RATE': 0.6}  headline=66.3  count=95.3  timing=46.8
-  4. {'SATIETY_RATE': 0.5}  headline=66.3  count=95.3  timing=46.7
-  5. {'SATIETY_RATE': 0.4}  headline=66.2  count=95.4  timing=46.5
+  1. {'SATIETY_RATE': 0.03}  headline=67.0  count=84.5  timing=53.9
+  2. {'SATIETY_RATE': 0.15}  headline=66.3  count=96.3  timing=46.1
+  3. {'SATIETY_RATE': 0.2}  headline=66.3  count=96.3  timing=46.1
+  4. {'SATIETY_RATE': 0.3}  headline=66.0  count=96.3  timing=45.7
+  5. {'SATIETY_RATE': 0.25}  headline=66.0  count=96.0  timing=45.8
 
 === FINAL SUMMARY ===
 
 --- Raw-data exploratory grid search ---
   growth_rate = 0.3359
-  satiety_rate = 0.7672
-  circadian_amp = 0.100
-  circadian_phase = 14.0h
-  gap1_MAE = 0.673h
+  satiety_rate = 0.7272
+  circadian_amp = 0.050
+  circadian_phase = 16.0h
+  gap1_MAE = 0.671h
 
 --- Episode-level diagnostic optimum ---
   growth_rate = 0.2448
   satiety_rate = 0.3603
-  gap1_MAE = 0.583h
-  gap3_MAE = 0.600h
-  fcount_MAE = 0.87
-  pred_std = 0.366h
+  gap1_MAE = 0.572h
+  gap3_MAE = 0.599h
+  fcount_MAE = 0.86
+  pred_std = 0.364h
 
 --- Model implementation (current) ---
   history = episode-level via episodes_as_events()
-  satiety_rate = 0.55 (canonical multi-window sweep)
+  satiety_rate = 0.18 (canonical multi-window sweep)
   growth_rate = estimated at runtime from recent episodes
   recency_half_life = 168h
   circadian_amplitude = 0.0 (infrastructure present, not active)
