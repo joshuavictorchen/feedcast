@@ -171,6 +171,97 @@ class AgentInsightsRenderTests(unittest.TestCase):
         report_text = (output_dir / "report.md").read_text()
         self.assertNotIn("## Trend Insights", report_text)
 
+    def test_methodology_section_prioritizes_cross_model_outputs(self) -> None:
+        """Agent Inference and Consensus Blend lead the Methodologies section."""
+        def _forecast(slug: str, name: str) -> Forecast:
+            return Forecast(
+                name=name,
+                slug=slug,
+                points=[_point(CUTOFF, 3.0)],
+                methodology=f"{name} methodology body.",
+                diagnostics={},
+            )
+
+        # Pipeline order: scripted models, then consensus, then agent
+        forecasts = [
+            _forecast("slot_drift", "Slot Drift"),
+            _forecast("analog_trajectory", "Analog Trajectory"),
+            _forecast("latent_hunger", "Latent Hunger State"),
+            _forecast("survival_hazard", "Survival Hazard"),
+            _forecast("consensus_blend", "Consensus Blend"),
+            _forecast("agent_inference", "Agent Inference"),
+        ]
+
+        output_dir = Path(tempfile.mkdtemp(prefix="test-report-"))
+        self.addCleanup(shutil.rmtree, output_dir)
+        _render_report(
+            output_dir=output_dir,
+            snapshot=_RENDER_SNAPSHOT,
+            all_forecasts=forecasts,
+            featured_slug="consensus_blend",
+            cutoff=CUTOFF,
+            retrospective=Retrospective(available=False),
+            historical_accuracy=[],
+            tracker_meta=_RENDER_META,
+            agent_insights=None,
+        )
+
+        report_text = (output_dir / "report.md").read_text()
+        expected_order = [
+            "### Agent Inference",
+            "### Consensus Blend (featured)",
+            "### Slot Drift",
+            "### Analog Trajectory",
+            "### Latent Hunger State",
+            "### Survival Hazard",
+        ]
+        positions = [report_text.find(heading) for heading in expected_order]
+        for heading, pos in zip(expected_order, positions):
+            self.assertGreater(pos, -1, f"{heading} missing from report")
+        self.assertEqual(
+            positions,
+            sorted(positions),
+            f"Methodology section out of order: {list(zip(expected_order, positions))}",
+        )
+
+    def test_methodology_section_omits_absent_priority_slugs(self) -> None:
+        """Consensus Blend leads when Agent Inference is skipped."""
+        forecast_consensus = Forecast(
+            name="Consensus Blend",
+            slug="consensus_blend",
+            points=[_point(CUTOFF, 3.0)],
+            methodology="Consensus body.",
+            diagnostics={},
+        )
+        forecast_scripted = Forecast(
+            name="Slot Drift",
+            slug="slot_drift",
+            points=[_point(CUTOFF, 3.0)],
+            methodology="Slot drift body.",
+            diagnostics={},
+        )
+
+        output_dir = Path(tempfile.mkdtemp(prefix="test-report-"))
+        self.addCleanup(shutil.rmtree, output_dir)
+        _render_report(
+            output_dir=output_dir,
+            snapshot=_RENDER_SNAPSHOT,
+            all_forecasts=[forecast_scripted, forecast_consensus],
+            featured_slug="consensus_blend",
+            cutoff=CUTOFF,
+            retrospective=Retrospective(available=False),
+            historical_accuracy=[],
+            tracker_meta=_RENDER_META,
+            agent_insights=None,
+        )
+
+        report_text = (output_dir / "report.md").read_text()
+        consensus_pos = report_text.find("### Consensus Blend (featured)")
+        slot_pos = report_text.find("### Slot Drift")
+        self.assertGreater(consensus_pos, -1)
+        self.assertGreater(slot_pos, -1)
+        self.assertLess(consensus_pos, slot_pos)
+
     def test_report_strips_embedded_methodology_heading(self) -> None:
         """Methodology content should not duplicate the report-owned heading."""
         forecast = Forecast(

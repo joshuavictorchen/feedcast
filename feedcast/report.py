@@ -31,6 +31,13 @@ _LEADING_HEADING_PATTERN = re.compile(
     r"^\s{0,3}#{1,6}[ \t]+[^\n]+(?:\n+|$)"
 )
 
+# Rendered Methodologies-section ordering. Agent Inference and Consensus Blend
+# lead the section so the report opens with the cross-model outputs; the
+# individual scripted models follow in their original (pipeline) order. This
+# only affects report rendering — diagnostics, tracker, and plots continue to
+# use the forecast order supplied by the pipeline.
+_METHODOLOGY_SLUG_PRIORITY = ("agent_inference", "consensus_blend")
+
 
 def generate_report(
     snapshot: ExportSnapshot,
@@ -136,7 +143,7 @@ def _render_report(
         "cutoff_display": cutoff.strftime("%-I:%M %p"),
         "methodologies": [
             _prepare_methodology_row(forecast, featured_slug)
-            for forecast in all_forecasts
+            for forecast in _ordered_methodology_forecasts(all_forecasts)
         ],
         "retrospective": _prepare_retrospective(retrospective),
         "historical_accuracy": [
@@ -167,6 +174,25 @@ def _render_report(
         (output_dir / "agent-insights.md").write_text(
             agent_insights + "\n", encoding="utf-8",
         )
+
+
+def _ordered_methodology_forecasts(forecasts: list[Forecast]) -> list[Forecast]:
+    """Return forecasts ordered for the rendered Methodologies section.
+
+    Forecasts whose slugs are listed in ``_METHODOLOGY_SLUG_PRIORITY`` appear
+    first in that explicit order; the remainder preserves the input order.
+    Missing priority slugs (e.g., when agent inference was skipped) are
+    silently elided.
+    """
+    by_slug = {forecast.slug: forecast for forecast in forecasts}
+    prioritized = [
+        by_slug[slug] for slug in _METHODOLOGY_SLUG_PRIORITY if slug in by_slug
+    ]
+    priority_set = set(_METHODOLOGY_SLUG_PRIORITY)
+    remaining = [
+        forecast for forecast in forecasts if forecast.slug not in priority_set
+    ]
+    return prioritized + remaining
 
 
 def _prepare_methodology_row(forecast: Forecast, featured_slug: str) -> dict[str, str]:
