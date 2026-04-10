@@ -8,7 +8,7 @@ Some skills are invoked by the pipeline automatically. Others are designed for m
 
 | Skill | Purpose | Invocation |
 | ----- | ------- | ---------- |
-| [`trend_insights/`](trend_insights/) | Analyze 7 to 14 days of feeding history and write a parent-facing summary for the forecast report. | Pipeline (per run) |
+| [`trend_insights/`](trend_insights/) | Analyze a 7-day baseline, then zoom in on the newest data to write a parent-facing summary for the forecast report. | Pipeline (per run) |
 | [`model_tuning/`](model_tuning/) | Assess one scripted model's fit to current patterns and tune its constants when warranted. | Pipeline (one agent per base model, parallel) |
 | [`research_review/`](research_review/) | Review scripted models against the latest findings in the research hub and propose changes where evidence warrants. | Manual |
 

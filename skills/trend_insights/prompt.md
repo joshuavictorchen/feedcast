@@ -6,9 +6,10 @@ Cutoff time: {{cutoff_time}}
 
 ---
 
-Analyze the last 7-14 days of feeding history from the export CSV and
-write a concise summary of recent trends. This summary will appear near
-the top of the forecast report for a parent audience.
+Analyze the past 7 days of feeding history as the baseline context, then
+zoom in on the newest data near the cutoff and explain what additional
+insight it provides. This summary will appear near the top of the
+forecast report for a parent audience.
 
 ## What to look for
 
@@ -22,6 +23,8 @@ the top of the forecast report for a parent audience.
 - **Day/night patterns**: Is a day/night rhythm emerging or
   strengthening? Are overnight gaps lengthening? Is there a consistent
   daytime feeding cadence?
+- **Newest-data delta**: What did the newest observations add? What do
+  they confirm, weaken, or newly reveal relative to the 7-day baseline?
 - **Anything interesting**: Patterns, anomalies, or shifts that a parent
   would find useful or noteworthy. Use your judgment.
 
@@ -34,17 +37,27 @@ Read the export CSV directly. You may also inspect:
 - `tracker.json` for prior run predictions and retrospective scores
 - `report/report.md` for the most recent forecast report
 
+Use a 7-day baseline window ending at the cutoff. Then identify the
+newest-data window:
+
+- Prefer the data added since the prior run when that is easy to infer
+  from `tracker.json` or the latest report.
+- If that delta window is too sparse to support useful conclusions, use
+  the most recent 24 hours instead.
+- If even that is too sparse, say so plainly and avoid strong claims.
+
 ## Output
 
 Write your summary to `{{output_path}}`.
 
 Format: 1-2 paragraphs of prose, with an optional summary table if the
-data supports it. Address the trend categories above, but focus on what
-is actually interesting — skip categories where nothing notable is
+data supports it. Lead with what the newest data adds, then place it in
+the 7-day context. Address the trend categories above, but focus on what
+is actually interesting. Skip categories where nothing notable is
 happening rather than padding with "no change observed."
 
 Tone: concise, informative, interesting to a parent. Avoid jargon.
-Speak in terms of feeds, hours, and ounces — not model parameters or
+Speak in terms of feeds, hours, and ounces, not model parameters or
 statistical measures.
 
 Do not write any other files. This is a read-and-report task.

@@ -429,6 +429,35 @@ class AgentInferenceRuntimeBudgetTests(unittest.TestCase):
         self.assertIn("T", context["runtime_start_time"])
         self.assertIn("T", context["runtime_deadline"])
 
+    def test_run_agent_inference_uses_post_run_methodology(self) -> None:
+        """Returned forecast uses methodology after same-run agent edits."""
+        with tempfile.TemporaryDirectory(
+            prefix="feedcast-agent-inference-test-"
+        ) as temp_dir:
+            agents_dir = Path(temp_dir)
+            methodology_path = agents_dir / "methodology.md"
+            methodology_path.write_text("Before run\n", encoding="utf-8")
+
+            def fake_invoke(**kwargs: object) -> None:
+                del kwargs
+                methodology_path.write_text("After run\n", encoding="utf-8")
+
+            with patch(
+                "feedcast.pipeline.AGENTS_DIR", agents_dir
+            ), patch(
+                "feedcast.pipeline.invoke_agent", side_effect=fake_invoke
+            ), patch(
+                "feedcast.pipeline.validate_agent_forecast",
+                return_value=[_FAKE_POINT],
+            ):
+                forecast = _run_agent_inference(
+                    agent="claude",
+                    snapshot=_FAKE_SNAPSHOT,
+                    cutoff=_FAKE_SNAPSHOT.latest_activity_time,
+                )
+
+        self.assertEqual(forecast.methodology, "After run")
+
 
 class ModelTuningRuntimeBudgetTests(unittest.TestCase):
     """Runtime budget context passed into each model tuning prompt."""

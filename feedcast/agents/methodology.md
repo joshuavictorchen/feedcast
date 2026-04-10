@@ -1,20 +1,26 @@
 # Agent Inference
 
-Slot-aware Cadence Projection. The agent builds on the Empirical Cadence
-Projection model but replaces the 2-bucket overnight/daytime split with
-hourly-slot-conditional gap estimates. Gaps are computed from feeds at
-similar times of day (e.g., "after a 20:xx feed" or "after a 03:xx feed")
-and weighted by a 48-hour recency half-life. This captures structure that
-a broad overnight median misses: evening-to-late-evening gaps (~2.8h),
-late-evening-to-deep-night gaps (~4.1h), and deep-night-to-morning gaps
-(~3.4-3.6h) are each estimated separately.
+Slot-aware cadence model that forecasts feeding episodes from recent
+episode-level gap patterns. Instead of one broad daytime gap and one
+broad overnight gap, it estimates typical gaps for feeds at similar
+hours of day so the schedule can treat evening follow-ups, first-night
+stretches, morning resets, and afternoon cadence differently.
 
-The evening transition uses pattern detection: some nights include a
-late-evening feed (~23:xx), others skip to midnight. The agent predicts
-whichever pattern has the highest recency-weighted probability. Afternoon
-gaps (after ~12:xx) are estimated separately from morning gaps, as
-they tend to run longer (~3.2h vs ~2.5h).
+The model first collapses nearby bottle feeds into feeding episodes
+using the shared clustering rule. It then looks back over recent
+history and measures the gap after each episode, tagging each gap by the
+hour of day of the episode that started it. Gap estimates are weighted
+toward newer observations with a 48-hour recency half-life so the
+forecast follows the latest cadence rather than a longer-run average.
 
-Volume is set at a flat 3.5 oz based on the recency-weighted mean of
-recent feeds. Feed count targets ~8 episodes per 24 hours, consistent
-with recent daily episode counts.
+For the first predicted feed, the model conditions on how much time has
+already elapsed since the last observed episode and chooses a remaining
+wait that is consistent with comparable recent gaps. Later predicted
+feeds step forward using the hour-appropriate gap estimate for each new
+predicted feed time. When recent evenings support two different
+patterns, such as a late-evening top-up versus a direct jump to
+midnight, the model follows the branch with the stronger recent support.
+
+Predicted volume is held near the recent central tendency at 3.5 oz.
+Overall feed count stays close to recent daily episode counts so the
+schedule remains plausible over the full 24-hour horizon.

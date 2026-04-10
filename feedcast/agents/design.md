@@ -1,13 +1,17 @@
 # Agent Inference Design
 
-## Approach: Code-First with LLM Strategy Layer
+## Baseline Workspace Design: Code-First with LLM Strategy Layer
 
-The agent maintains a Python forecasting script (`model.py`) in its
-workspace. The script implements Empirical Cadence Projection — a
+The persistent workspace includes a Python forecasting script
+(`model.py`) that implements Empirical Cadence Projection, a
 non-parametric approach that projects forward from recency-weighted gap
-medians split by day-part. The LLM agent's role is the strategy layer:
-running the script, reviewing retrospective results, and deciding when
-and how to evolve the approach.
+medians split by day-part. The LLM agent is the strategy layer: it may
+run the script, review retrospective results, tune it, replace it, or
+use another method when the latest data supports that choice.
+
+`methodology.md` is the report-facing description of the method actually
+used for the latest run. `strategy.md` and `CHANGELOG.md` hold the
+longer-lived notes about how the workspace is evolving over time.
 
 **Why code-first:** The scoring system rewards timing precision (30-min
 half-life). Algorithmic gap computation is more reliable for precise
@@ -24,8 +28,8 @@ changes but less precise in well-characterized regimes.
 | File | Purpose |
 | ---- | ------- |
 | `model.py` | Forecasting script. Run with `--export`, `--cutoff`, `--horizon`. Writes `forecast.json`. |
-| `strategy.md` | Approach docs, performance data, constants rationale, open questions, and guidance for future agents. |
-| `methodology.md` | Report-facing description (rendered into the forecast report). |
+| `strategy.md` | Durable baseline approach notes, performance data, constants rationale, open questions, and guidance for future agents. |
+| `methodology.md` | Report-facing description of the method used for the latest run. |
 | `design.md` | This file. Design decisions and rationale. |
 | `CHANGELOG.md` | Reverse-chronological behavior changes. |
 | `forecast.json` | Generated at runtime. The pipeline's required output. |

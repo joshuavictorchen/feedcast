@@ -359,11 +359,6 @@ def _run_agent_inference(
     forecast_path = AGENTS_DIR / "forecast.json"
     methodology_path = AGENTS_DIR / "methodology.md"
 
-    # Read methodology before invoking the agent so the report text matches
-    # the provenance SHA (tuning commit). Workspace mutations the agent makes
-    # during this run take effect in the next run's report.
-    methodology = methodology_path.read_text(encoding="utf-8").strip()
-
     # Delete stale output from a prior run
     if forecast_path.exists():
         forecast_path.unlink()
@@ -397,6 +392,9 @@ def _run_agent_inference(
     points = validate_agent_forecast(
         forecast_path, snapshot.latest_activity_time, HORIZON_HOURS,
     )
+    # Read methodology after the agent finishes so the report describes
+    # the method used for this forecast, including same-run workspace edits.
+    methodology = methodology_path.read_text(encoding="utf-8").strip()
     logger.info("Agent inference: done (%s, %d feeds)", _elapsed(t0), len(points))
 
     return Forecast(

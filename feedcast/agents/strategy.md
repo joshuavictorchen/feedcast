@@ -1,7 +1,11 @@
-# Agent Strategy — Empirical Cadence Projection
+# Agent Strategy: Empirical Cadence Projection
 
 This document describes the agentic inference model's approach and guides
 future agents on how to use, evaluate, and evolve it.
+
+It documents the durable baseline approach in `model.py`. The
+report-facing description of the method used for the latest forecast
+lives in `methodology.md`.
 
 ## Approach
 
@@ -151,5 +155,5 @@ expected impact:
 - **The model is a tool, not a constraint.** If you find a better
   approach, replace `model.py` entirely. The workspace is yours.
 - **Test against multiple cutoff points** when making changes. A single
-  retrospective can be misleading — the 5-cutoff test shows much more
+  retrospective can be misleading, and the 5-cutoff test shows much more
   variance than the single retrospective suggests.
