@@ -36,17 +36,17 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 # --- Tuning parameters (model-specific) ---
 
 # How many days of history to consider for template building and drift.
-LOOKBACK_DAYS = 5
+LOOKBACK_DAYS = 10
 
 # Minimum complete days required to produce a forecast.
 MIN_COMPLETE_DAYS = 3
 
 # Maximum time-of-day distance (hours) for a feed to match a slot.
 # Feeds farther than this are left unmatched (cluster feeds, extras).
-MATCH_COST_THRESHOLD_HOURS = 1.5
+MATCH_COST_THRESHOLD_HOURS = 1.0
 
 # Recency half-life for weighting days in drift and volume estimation.
-DRIFT_WEIGHT_HALF_LIFE_DAYS = 1.0
+DRIFT_WEIGHT_HALF_LIFE_DAYS = 0.25
 
 
 def forecast_slot_drift(

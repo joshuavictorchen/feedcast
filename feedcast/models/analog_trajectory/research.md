@@ -23,17 +23,13 @@ questions are:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-04-09 |
-| Export | `exports/export_narababy_silas_20260327.csv` |
-| Dataset | `sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d` |
+| Run date | 2026-04-10 |
+| Export | `exports/export_narababy_silas_20260410.csv` |
+| Dataset | `sha256:8dc1ea2650b0779b6a342b90aa918bc5bd2d5412bfbef25a2df4a8e1bada504e` |
 | Command | `.venv/bin/python -m feedcast.models.analog_trajectory.analysis` |
-| Canonical headline | 71.3 |
-| Availability | 24/24 windows (100%) |
+| Canonical headline | 73.5 |
+| Availability | 26/26 windows (100%) |
 | Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
-
-> **Research integrity note:** the final recorded sweep is post-fix for a
-> bug in `_state_features()` where `LOOKBACK_HOURS` had been captured as
-> a default argument. Replay overrides now change lookback correctly.
 
 > **Staleness check:** if the current export differs from the one listed
 > here, re-run the command above to refresh results.
@@ -47,7 +43,7 @@ through the shared replay infrastructure. This produces the same
 multi-window aggregate used elsewhere in the project: 96-hour replay
 lookback, 36-hour window half-life, and episode-boundary cutoffs.
 
-**Canonical tuning** last ran as a widened full 4704-candidate sweep via
+**Canonical tuning** last ran as a full 4704-candidate sweep via
 `tune_model()` with candidate-parallel replay. The sweep covers every
 production-relevant constant:
 
@@ -61,14 +57,8 @@ production-relevant constant:
 - `ALIGNMENT`: `gap`, `time_offset`
 
 Candidates are ranked by availability tier first, then headline score.
-On the current export, every analog candidate scored all 24 windows, so
+On the current export, every analog candidate scored all 26 windows, so
 headline score decides the ranking.
-
-This widened full rerun supersedes the earlier same-day targeted
-lookback follow-up that had moved runtime to `18h`. The targeted probe
-was a reasonable boundary check, but it only reopened one axis. The
-full rerun is the clean shipping result because it lets lookback,
-weighting, neighborhood size, and recency move together.
 
 ### Objective comparison contract
 
@@ -95,7 +85,7 @@ they do not choose shipped constants.
 ### Raw vs. episode comparison
 
 The research script also compares feature distributions across raw and
-episode history at the canonical-best lookback (`9h`). This is the
+episode history at the canonical-best lookback (`24h`). This is the
 simplest way to see how episode collapse changes the state space before
 any tuning metric is applied.
 
@@ -103,13 +93,13 @@ any tuning metric is applied.
 
 ### Canonical findings
 
-The widened full canonical sweep selects:
+The full canonical sweep selects:
 
 | Parameter | Value |
 |---|---|
 | `HISTORY_MODE` | `episode` |
-| `LOOKBACK_HOURS` | `9` |
-| `FEATURE_WEIGHTS` | `hour_emphasis [1, 1, 1, 1, 2, 2]` |
+| `LOOKBACK_HOURS` | `24` |
+| `FEATURE_WEIGHTS` | `gap_hour [2, 2, 0.5, 0.5, 2, 2]` |
 | `K_NEIGHBORS` | `7` |
 | `RECENCY_HALF_LIFE_HOURS` | `120` |
 | `TRAJECTORY_LENGTH_METHOD` | `median` |
@@ -119,38 +109,33 @@ The current production configuration scores:
 
 | Metric | Score |
 |---|---|
-| Headline | 71.3 |
-| Count | 93.0 |
-| Timing | 55.4 |
+| Headline | 73.5 |
+| Count | 97.1 |
+| Timing | 56.5 |
 
-All 24 windows scored (100% availability).
+All 26 windows scored (100% availability).
 
-This widened rerun materially improves on the superseded same-export
-episode regime that had shipped after the targeted lookback follow-up.
-That targeted probe had found headline `70.19` at
-(`episode`, `18h`, `recent_only`, `k=5`, `72h`, `median`, `gap`). Once
-the full grid was reopened, the best regime moved again to the current
-`71.28` winner. That is the more important result than the exact
-decimal gain: the final winner is not just "shorter lookback"; it is a
-more coherent package of shorter lookback, stronger hour-of-day
-emphasis, larger neighborhood, and broader recency memory.
+This retune on the new export (`20260410`) materially improves over the
+prior constants (tuned on `20260327`), which had degraded to headline
+`65.4` on the new data. The two changes — longer lookback (`9h` → `24h`)
+and gap+hour emphasis (`hour_emphasis` → `gap_hour`) — are consistent
+with the baby's schedule consolidating: longer, more regular gaps make
+gap cadence and time-of-day sharper retrieval cues, while volume has
+grown noisier as a discriminator.
 
-The reopened raw-vs-episode decision now has a wider margin than before.
-The best raw-history candidate scores `69.2`, while the best
-episode-history candidate scores `71.3`. Episode history wins by about
-`2.1` headline points, with higher count (`93.0` vs `92.2`) and higher
-timing (`55.4` vs `52.3`).
+The raw-vs-episode margin widened to `+4.1` headline points (`73.5` vs
+`69.4`), up from `+2.1` on the prior export. Episode history wins on
+both count (`97.1` vs `92.0`) and timing (`56.5` vs `53.1`).
 
-Gap alignment remains the best shipping choice. The best raw-history
-candidate and the best episode-history candidate both use
-`ALIGNMENT="gap"`. Time-offset alignment still trails nearby gap-based
-configurations on the current export.
+Gap alignment remains the best shipping choice. The top 6 canonical
+candidates all use `gap` alignment; the best `time_offset` candidate
+trails at `72.8`.
 
-The top of the canonical surface is still shallow enough to warrant
-modest language. Several nearby episode candidates land between `70.9`
-and `71.3`. The winner is real, but the broader conclusion is stronger
-than the exact decimal ordering: episode history plus focused local
-matching beats raw history and blurrier retrieval.
+The top of the canonical surface is still shallow. Several nearby
+episode candidates land between `72.3` and `73.5`. The broader
+conclusion is stronger than the exact decimal ordering: episode history
+with gap+hour emphasis at a 24-hour lookback beats other regimes
+consistently.
 
 ### Diagnostic findings
 
@@ -160,42 +145,42 @@ metric:
 
 | Metric | Raw best | Episode best |
 |---|---|---|
-| `full_traj_MAE` | 1.696h | 1.126h |
-| `gap1_MAE` | 0.785h | 0.659h |
-| `traj3_MAE` | 0.802h | 0.621h |
+| `full_traj_MAE` | 1.419h | 1.067h |
+| `gap1_MAE` | 0.742h | 0.649h |
+| `traj3_MAE` | 0.741h | 0.647h |
 
 This is not just a canonical replay preference. The underlying analog
 retrieval problem is easier on episode history too.
 
 **Internal and canonical metrics agree on the architecture, not the full
 setting vector:** Both metrics prefer episode history and gap alignment.
-They disagree on weighting, lookback, and neighborhood size. The best
-episode diagnostic configuration is
-(`episode`, `48h`, `means_only`, `k=5`, `36h`, `median`, `gap`), while
-the current shipped canonical configuration is
-(`episode`, `9h`, `hour_emphasis`, `k=7`, `120h`, `median`, `gap`).
+They disagree on weighting, lookback, and recency. The best episode
+diagnostic configuration is
+(`episode`, `48h`, `means_only`, `k=5`, `36h`, `mean`, `gap`), while
+the shipped canonical configuration is
+(`episode`, `24h`, `gap_hour`, `k=7`, `120h`, `median`, `gap`).
 That divergence matters. It means local trajectory reconstruction and
 full 24-hour product quality align on architecture, but not on all
 constant values.
 
 **Feature distributions explain why episode history helps:** At the
-canonical-best 9-hour lookback, episode history produces larger and
+canonical-best 24-hour lookback, episode history produces larger and
 tighter gap/volume signals than raw history:
 
-- `last_gap`: `2.547 -> 3.017`
-- `mean_gap`: `2.644 -> 3.064`
-- `last_volume`: `3.001 -> 3.555`
-- `mean_volume`: `3.042 -> 3.547`
+- `last_gap`: `2.640 -> 3.010`
+- `mean_gap`: `2.668 -> 3.037`
+- `last_volume`: `3.279 -> 3.738`
+- `mean_volume`: `3.298 -> 3.745`
 
 Those shifts are exactly what you would expect if cluster-internal
 top-ups were being removed from the state library.
 
-**The current winner is more hour-led than the prior regime:** The
-widened full rerun moved away from `recent_only` and toward
-`hour_emphasis`. That does not mean the model has become a clock-based
-template. It means that on the current export, once state construction
-is episode-level and the lookback is short, hour-of-day provides the
-sharpest final separation among already-local analog candidates.
+**The current winner emphasizes gap and hour while deemphasizing
+volume:** The retune moved from `hour_emphasis` to `gap_hour`, which
+upweights both gap features and hour-of-day while halving the influence
+of volume. This is consistent with the baby's schedule consolidating:
+gap cadence and time-of-day are sharper discriminators among analogs
+than volume, which has grown more variable.
 
 ### Simulation-study findings
 
@@ -239,32 +224,27 @@ assertions.
 
 ## Conclusions
 
-**Disposition: Change.** Analog Trajectory should now ship the current
-evidence-backed winner:
+**Disposition: Keep.** Analog Trajectory ships the current
+evidence-backed constants:
 
 - `HISTORY_MODE = "episode"`
-- `LOOKBACK_HOURS = 9`
-- `FEATURE_WEIGHTS = hour_emphasis [1, 1, 1, 1, 2, 2]`
+- `LOOKBACK_HOURS = 24`
+- `FEATURE_WEIGHTS = gap_hour [2, 2, 0.5, 0.5, 2, 2]`
 - `K_NEIGHBORS = 7`
 - `RECENCY_HALF_LIFE_HOURS = 120`
 - `TRAJECTORY_LENGTH_METHOD = "median"`
 - `ALIGNMENT = "gap"`
 
-The important model-level conclusion is that the earlier same-day `18h`
-follow-up was directionally useful but incomplete. Once the full grid
-was reopened, the model improved again and settled on a different local
-regime. That is a better outcome than "the targeted follow-up was
-wrong": it shows the widened full sweep was actually worth running.
+The retune on the new export moved two constants — lookback (`9h` →
+`24h`) and feature weights (`hour_emphasis` → `gap_hour`) — recovering
+headline from `65.4` to `73.5`. Count improved from `93.4` to `97.1`
+and timing from `46.8` to `56.5`.
 
-The stronger architectural conclusion holds. Episode history wins both
-the local retrieval diagnostics and the canonical ship metric. Analog is
-no longer a case where research says episode-level states are cleaner
-but production must ship raw history.
-
-The process conclusion is also cleaner now. Analog no longer needs a
-proxy-gated two-stage tuning path. The project can afford the full
-canonical sweep, and the internal `full_traj_MAE` sweep should stay in
-the script only as diagnostic evidence.
+The architectural conclusions are strengthening. Episode history wins
+both the local retrieval diagnostics and the canonical ship metric,
+with the margin widening from `+2.1` on the prior export to `+4.1` on
+the current one. The process is clean: a single full canonical sweep
+selects all production constants.
 
 ## Open questions
 
@@ -285,6 +265,6 @@ the script only as diagnostic evidence.
 
 ### Cross-cutting
 
-- **Timing as shared bottleneck:** Count is `93.0`; timing is `55.4`.
+- **Timing as shared bottleneck:** Count is `97.1`; timing is `56.5`.
   Timing drift remains the main quality constraint. This pattern
   persists across all five models — see `feedcast/research/README.md`.

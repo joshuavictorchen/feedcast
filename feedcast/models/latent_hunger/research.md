@@ -23,12 +23,12 @@ are:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-04-09 |
-| Export | `exports/export_narababy_silas_20260327.csv` |
-| Dataset | `sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d` |
+| Run date | 2026-04-10 |
+| Export | `exports/export_narababy_silas_20260410.csv` |
+| Dataset | `sha256:8dc1ea2650b0779b6a342b90aa918bc5bd2d5412bfbef25a2df4a8e1bada504e` |
 | Command | `.venv/bin/python -m feedcast.models.latent_hunger.analysis` |
-| Canonical headline | 66.9 |
-| Availability | 24/24 windows (100%) |
+| Canonical headline | 66.3 |
+| Availability | 26/26 windows (100%) |
 | Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Staleness check:** if the current export differs from the one
@@ -43,17 +43,16 @@ the shared replay infrastructure. This produces a multi-window
 aggregate (lookback 96h, half-life 36h, episode-boundary cutoffs) that
 is directly comparable across all models.
 
-**Canonical tuning** last ran as a widened 16-candidate
-`SATIETY_RATE` sweep via `tune_model()`:
+**Canonical tuning** last ran as a 19-candidate `SATIETY_RATE` sweep
+via `run_replay.py` and the built-in `tune_model()` validation:
 
-`0.01`, `0.02`, `0.03`, `0.04`, `0.05`, `0.1`, `0.15`, `0.2`, `0.25`,
-`0.3`, `0.35`, `0.4`, `0.5`, `0.6`, `0.7`, `0.8`
+`0.02`, `0.03`, `0.04`, `0.05`, `0.06`, `0.08`, `0.1`, `0.15`, `0.2`,
+`0.25`, `0.3`, `0.35`, `0.4`, `0.45`, `0.5`, `0.55`, `0.6`, `0.65`,
+`0.7`, `0.8`
 
-This widened rerun supersedes the earlier "full sweep plus low-end
-follow-up" framing. Growth rate is estimated at runtime from recent
-episodes and is not overridable via constant overrides, so it is not
-part of the sweep. Candidates are ranked by availability tier first,
-then headline score.
+Growth rate is estimated at runtime from recent episodes and is not
+overridable via constant overrides, so it is not part of the sweep.
+Candidates are ranked by availability tier first, then headline score.
 
 ### Objective comparison contract
 
@@ -125,111 +124,117 @@ single change in the model's history (~20% gap MAE improvement).
 
 ### Canonical findings
 
-The pre-update baseline (sr=0.257) and the current sweep winner
-(sr=0.05) compared as follows:
+On the 20260410 export, the canonical optimum shifted upward from
+sr=0.05 to a broad plateau at sr=0.5–0.8. The prior production value
+(sr=0.05) and the new production value (sr=0.55) compare as follows:
 
-| Metric | Pre-update (sr=0.257) | Sweep winner (sr=0.05) |
+| Metric | Prior (sr=0.05) | Current (sr=0.55) |
 |---|---|---|
-| Headline | 66.3 | 66.9 |
-| Count | 92.6 | 94.0 |
-| Timing | 47.8 | 47.9 |
+| Headline | 65.8 | 66.3 |
+| Count | 96.3 | 95.3 |
+| Timing | 45.5 | 46.8 |
 
-All 24 windows scored (100% availability) for every widened-sweep
-candidate. Production remains `sr=0.05`, and the current production
-canonical score is headline 66.9, confirmed by re-running the research
-script after widening the search domain (baseline=best in
-`artifacts/research_results.txt`).
+All 26 windows scored (100% availability) for all candidates. The
+surface is very shallow above sr=0.3 — the top 5 (sr=0.4–0.8) span
+only 0.2 headline points. The improvement over sr=0.05 comes from
+timing (+1.3) at a modest count cost (−1.0).
 
-The widened-grid top 5 are `0.05`, `0.1`, `0.15`, `0.2`, and `0.25`,
-all within 0.5 headline points of each other. The surface is still
-shallow, but values below `0.05` do not improve the headline on the
-current export. The gain over the prior production value comes
-primarily from count (+1.4) with timing nearly unchanged (+0.1).
+This is a directional reversal from the 20260327 export, where sr=0.05
+was the canonical winner and rates above 0.25 were progressively worse.
+The shift confirms the open question from the prior analysis: the
+low-rate preference was export-specific, not structural.
 
-Per-window timing scores range from 28.8 to 59.2. The weakest window
-is March 26 13:56 (headline 49.5, timing 28.8) — a period immediately
-following a cluster feed (4.0oz at 13:56, 1.0oz top-up at 15:18) where
-the model over-predicts the gap after the initial large feed.
+Per-window timing scores range from 25.7 to 60.6. The weakest windows
+cluster around overnight transitions and cluster-feed periods, consistent
+with the cross-cutting timing bottleneck.
 
 ### Diagnostic findings
 
-**Multiplicative vs. additive:** Multiplicative satiety (gap1_MAE=0.720h,
-pred_std=0.600h) outperforms additive (gap1_MAE=0.742h,
-pred_std=0.202h) on the raw-data walk-forward evaluation. The critical
-difference is prediction diversity — additive collapses to near-constant
-gaps, confirming the design rationale in `design.md`.
+**Multiplicative vs. additive:** Multiplicative satiety (gap1_MAE=0.719h,
+pred_std=0.547h) outperforms additive (gap1_MAE=0.718h,
+pred_std=0.007h) on the raw-data walk-forward evaluation. The gap-MAE
+difference is negligible, but the critical signal is prediction
+diversity — additive collapses to near-constant gaps (pred_std≈0),
+confirming the design rationale in `design.md`.
 
-**Circadian modulation:** Best circadian amplitude is 0.050 with
-gap1_MAE=0.708h, a marginal improvement over no-circadian 0.720h.
-Joint refinement with circadian achieves 0.683h, but the gain does not
+**Circadian modulation:** Best circadian amplitude is 0.100 with
+gap1_MAE=0.698h, a marginal improvement over no-circadian 0.719h.
+Joint refinement with circadian achieves 0.673h, but the gain does not
 survive episode-level data (where volume already encodes time-of-day
 effects). Production holds `CIRCADIAN_AMPLITUDE=0.0`.
 
 **Episode-level impact:** Episode collapsing improves all metrics
-substantially (gap1_MAE 0.720h->0.580h, fcount_MAE 1.32->1.04). Volume-
-gap correlation weakens (0.331->0.256), confirming that raw-data
-correlation was partly a cluster artifact. This remains the strongest
-single design decision.
+substantially (gap1_MAE 0.719h→0.583h, fcount_MAE 0.97→0.87). Volume-
+gap correlation strengthens at episode level on this export
+(raw 0.284→episode 0.303), reversing the prior-export pattern where
+episode correlation was weaker. This remains the strongest single design
+decision.
 
 **Internal vs. canonical metric disagreement:** The episode-level grid
-search finds best sr=0.645, while canonical scoring finds best sr=0.05.
-The metrics disagree on direction. At sr=0.05, the satiety effect
-(`1 - exp(-rate * volume)`) is 0.049 for 1oz and 0.181 for 4oz — a
-3.7x ratio, so meaningful volume sensitivity remains. However, the
-lower rate produces more uniform gap predictions (lower pred_std),
-which improves canonical episode-count matching. The internal gap-MAE
-metric rewards stronger per-feed differentiation; the canonical metric
-rewards consistent 24h trajectory quality.
+search finds best sr=0.360, while canonical scoring places the optimum
+at sr=0.55–0.8 (broad plateau). The direction of disagreement has
+reversed from the prior export (where internal preferred ~0.645 and
+canonical preferred 0.05). On this export, canonical prefers higher
+rates than the internal diagnostic. The reversal suggests neither
+metric consistently pulls in one direction — the disagreement is
+export-dependent rather than structural.
 
-**Holdout 24h:** Predicted 7 feeds vs. 9 actual, mean timing error
-0.32h on matched pairs. The under-count is consistent with the
-canonical finding that count is the stronger metric component — the
-model's timing on matched feeds is good, but it misses cluster feeds.
+**Holdout 24h:** Predicted 7 feeds vs. 7 actual, mean timing error
+0.56h on matched pairs. Feed count is exact. Timing errors concentrate
+in the overnight stretch (21:25→20:32 err=0.89h, 00:26→23:20 err=1.09h,
+06:27→07:40 err=1.23h).
 
-**Naive baselines:** All model variants beat last-gap (0.820h) and
-mean-3-gaps (0.780h). The multiplicative model at 0.720h represents a
-12% improvement over last-gap.
+**Naive baselines:** All model variants beat last-gap (0.913h) and
+mean-3-gaps (0.837h). The multiplicative model at 0.719h represents a
+21% improvement over last-gap.
 
 ## Conclusions
 
-**Disposition: Hold.** Current `SATIETY_RATE=0.05` remains supported.
+**Disposition: Change.** `SATIETY_RATE` raised from 0.05 to 0.55.
 
-The canonical sweep selected sr=0.05 with headline +0.550
-(66.3->66.9). The widened 2026-04-09 rerun then checked whether that
-result was just a lower-bound artifact. It was not on the current
-export: rates below `0.05` underperformed, while nearby rates above
-`0.05` stayed close enough to confirm a shallow low-end plateau rather
-than a hidden lower optimum.
+On the 20260410 export, the canonical optimum shifted decisively upward.
+Every rate from 0.3 to 0.8 outperforms 0.05, with a broad plateau from
+0.5 to 0.8 (all within 0.074 headline points). The value 0.55 was
+chosen interior to the plateau for robustness.
 
-The internal diagnostics (gap1_MAE) and canonical scoring (headline)
-disagree on the optimal direction for `SATIETY_RATE`. The internal
-metric evaluates one-step-ahead gap prediction accuracy and rewards
-stronger per-feed differentiation (higher sr). The canonical metric
-evaluates 24h forecast quality including episode count matching and
-horizon weighting, and rewards consistency (lower sr). The model
-retains meaningful volume sensitivity at sr=0.05 — the satiety effect
-scales 3.7x from 1oz to 4oz — but the absolute variation in predicted
-gaps is smaller than at the internal diagnostic optimum.
+This resolves the prior open question about low-rate stability: the
+preference for sr=0.05 was export-specific, not structural. The shift
+also narrows the internal-canonical divergence — the canonical optimum
+now overlaps the range where volume sensitivity is substantive.
+
+At sr=0.55, the satiety effect is 0.42 for 1oz and 0.89 for 4oz. The
+relative ratio (2.1×) is smaller than at sr=0.05 (3.7×), but the
+absolute gap differentiation is much larger, which improves timing on
+the canonical metric (+1.3 over sr=0.05).
+
+The internal diagnostics (episode-level gap1_MAE) and canonical scoring
+now disagree in the opposite direction from the prior export: the
+episode-level internal optimum is sr=0.360, while canonical prefers
+0.55–0.8. This reversal suggests the disagreement direction is
+export-dependent rather than a fixed structural property.
 
 ## Open questions
 
 ### Model-local
 
-- **Low-rate stability across exports:** The current export no longer
-  shows a lower-bound ambiguity, but the optimum still sits in a shallow
-  low-rate plateau. If future exports shift the best value upward, that
-  would suggest the current preference is more local than structural.
-- **Internal-canonical metric divergence for this model:** The
-  disagreement between gap1_MAE (prefers ~0.6) and canonical headline
-  (prefers 0.05) is large. If future exports show the canonical optimum
-  shifting toward higher sr, that would suggest the current preference
-  is dataset-specific. Worth monitoring across exports.
+- **Plateau stability across exports:** The canonical optimum moved from
+  sr=0.05 (20260327 export) to a broad plateau at sr=0.5–0.8 (20260410
+  export). The plateau is so flat that the exact location within it is
+  not meaningful. If future exports narrow the plateau or shift its
+  center, that would indicate the baby's volume-gap dynamics are
+  still evolving.
+- **Internal-canonical divergence direction reversal:** On the 20260327
+  export, internal preferred higher sr (~0.645) and canonical preferred
+  lower (0.05). On the 20260410 export, the direction reversed: internal
+  episode-level prefers sr=0.360, canonical prefers 0.55–0.8. If the
+  direction continues to be export-dependent, the divergence itself may
+  not be structurally informative for this model.
 
 ### Cross-cutting
 
-- **Timing as shared bottleneck:** Timing (47.9) is substantially weaker
-  than count (94.0). This pattern persists across all five models — see
+- **Timing as shared bottleneck:** Timing (46.8) is substantially weaker
+  than count (95.3). This pattern persists across all five models — see
   `feedcast/research/README.md`.
-- **Internal vs. canonical metric divergence:** The gap-MAE (sr≈0.6) vs
-  canonical (sr=0.05) disagreement is part of a broader cross-model
-  pattern — see `feedcast/research/README.md`.
+- **Internal vs. canonical metric divergence:** The divergence for this
+  model is now directionally unstable across exports, which is relevant
+  to the cross-model pattern tracked in `feedcast/research/README.md`.

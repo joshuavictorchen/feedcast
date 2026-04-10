@@ -41,10 +41,11 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 HUNGER_THRESHOLD = 1.0
 
 # Multiplicative satiety rate: hunger_after = threshold * exp(-rate * volume).
-# Selected by canonical multi-window tuning (tune_model sweep over 12
-# candidates). Canonical scoring prefers a lower rate than the internal
-# gap-MAE diagnostic (~0.6). See research.md for details.
-SATIETY_RATE = 0.05
+# Selected by canonical multi-window tuning on the 20260410 export.
+# The canonical optimum shifted upward from 0.05 (20260327 export) to a
+# broad plateau at 0.5–0.8. Interior value chosen for robustness.
+# See research.md for the sweep evidence.
+SATIETY_RATE = 0.55
 
 # How many days of recent history to use for growth rate estimation.
 LOOKBACK_DAYS = 7

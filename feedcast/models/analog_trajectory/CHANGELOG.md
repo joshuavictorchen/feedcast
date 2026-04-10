@@ -2,6 +2,67 @@
 
 Tracks behavior-level changes to the Analog Trajectory model. Add newest entries first.
 
+## Retune on new export: longer lookback and gap+hour weighting | 2026-04-10
+
+### Problem
+
+The model's production constants were tuned on
+`exports/export_narababy_silas_20260327.csv` (headline 71.3). On the new
+export (`exports/export_narababy_silas_20260410.csv`), those constants
+degraded to headline 65.4, with timing dropping from 55.4 to 46.8 while
+count stayed stable at 93.4. The baby's feeding timing patterns shifted
+over the 14-day gap between exports.
+
+### Research
+
+Ran targeted single-axis sweeps to identify which constants moved, then
+a combined sweep to find the joint winner, followed by the full
+4704-candidate canonical sweep via `analysis.py` to confirm.
+
+Single-axis evidence:
+
+| Axis | Old | New | Headline delta |
+|------|-----|-----|----------------|
+| LOOKBACK_HOURS | 9 | 24 | +3.4 |
+| RECENCY_HALF_LIFE_HOURS | 120 | 240 | +2.8 |
+| K_NEIGHBORS | 7 | 7 | 0.0 |
+
+Feature weights required JSON-array overrides. Combined sweep at
+LOOKBACK=24 + RECENCY=240:
+
+| Weights | Headline |
+|---------|----------|
+| hour_emphasis [1,1,1,1,2,2] | 70.7 |
+| gap_hour [2,2,0.5,0.5,2,2] | 73.1 |
+
+The full 4704-candidate canonical sweep confirmed the final winner at
+RECENCY=120 (marginally better than 240 with the new weights):
+
+| Metric | Old production | New production |
+|--------|----------------|----------------|
+| Headline | 65.4 | 73.5 |
+| Count | 93.4 | 97.1 |
+| Timing | 46.8 | 56.5 |
+
+Episode vs raw margin widened to +4.1 (73.5 vs 69.4), up from +2.1 on
+the prior export.
+
+### Solution
+
+Ship the full canonical sweep winner:
+
+- `LOOKBACK_HOURS`: 9 → 24
+- `FEATURE_WEIGHTS`: hour_emphasis [1,1,1,1,2,2] → gap_hour [2,2,0.5,0.5,2,2]
+- `RECENCY_HALF_LIFE_HOURS`: 120 (unchanged)
+- `K_NEIGHBORS`: 7 (unchanged)
+- `TRAJECTORY_LENGTH_METHOD`: median (unchanged)
+- `ALIGNMENT`: gap (unchanged)
+- `HISTORY_MODE`: episode (unchanged)
+
+The direction of the changes is consistent with the baby's schedule
+consolidating: longer, more regular gaps make gap cadence and
+time-of-day sharper retrieval cues, while volume has grown noisier.
+
 ## Widened full-grid rerun supersedes the 18h follow-up | 2026-04-09
 
 ### Problem

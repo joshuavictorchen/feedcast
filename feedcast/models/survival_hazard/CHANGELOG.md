@@ -2,6 +2,60 @@
 
 Tracks behavior-level changes to the Survival Hazard model. Add newest entries first.
 
+## Re-tune shapes for regularizing feeding pattern | 2026-04-10
+
+### Problem
+
+The 20260410 export showed a significant regression on the production
+constants (`OVERNIGHT_SHAPE=4.75`, `DAYTIME_SHAPE=1.75`): canonical
+headline dropped from 72.7 to 65.7 across 26 windows. The model
+overpredicted episode count (9 predicted vs 7 actual in the latest
+retrospective) and timing degraded sharply (47.3 vs previous 56.6).
+The baby's feeding patterns have shifted toward fewer, more regularly
+spaced feeds — consistent with growth — and the soft shapes from the
+prior export no longer match.
+
+### Research
+
+Ran three canonical sweep rounds on `exports/export_narababy_silas_20260410.csv`:
+
+1. Initial 99-candidate grid (OVERNIGHT 3.5–7.0, DAYTIME 1.25–3.0):
+   best at boundary corner (7.0, 3.0) — headline 73.1.
+2. Extended 36-candidate grid (OVERNIGHT 6.5–9.0, DAYTIME 2.5–5.0):
+   best at (7.5, 3.0) — headline 73.3. DAYTIME interior (2.5 and 3.5
+   both worse). OVERNIGHT peaks at 7.5, drops at 8.5+ and below 6.5.
+3. Fine-grained 15-candidate confirmation (OVERNIGHT 7.0–8.0 × 0.25,
+   DAYTIME 2.75–3.25 × 0.25): flat plateau from 7.0 to 8.0 at
+   DAYTIME=3.0 (spread 0.15 points). Selected 7.5 as plateau center.
+
+The 154-candidate analysis sweep confirms baseline=best (no further
+improvement found).
+
+| Metric | Previous (`4.75`, `1.75`) | Updated (`7.5`, `3.0`) | Delta |
+|---|---|---|---|
+| Headline | 65.7 | 73.3 | +7.6 |
+| Count | 92.3 | 97.5 | +5.2 |
+| Timing | 47.3 | 55.8 | +8.5 |
+
+Availability unchanged at 26/26.
+
+The episode-level MLE on this export is overnight 6.0, daytime 3.54.
+The canonical/MLE gap has narrowed dramatically from the prior export
+(where canonical was 4.75/1.75 vs MLE 7.2/3.4) — both now agree the
+baby's feeding rhythm is more regular than the prior soft shapes
+reflected.
+
+### Solution
+
+Updated production shapes:
+
+- `OVERNIGHT_SHAPE`: `4.75 → 7.5`
+- `DAYTIME_SHAPE`: `1.75 → 3.0`
+
+Both shapes moved sharply toward the episode-level MLE, reflecting a
+baby whose feeding patterns have regularized with growth. The day-part
+split remains intact — overnight is still more regular than daytime.
+
 ## Re-tune shape parameters with wider canonical sweep | 2026-03-31
 
 ### Problem

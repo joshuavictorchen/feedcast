@@ -2,6 +2,46 @@
 
 Tracks behavior-level changes to the Latent Hunger model. Add newest entries first.
 
+## Raise SATIETY_RATE from 0.05 to 0.55 | 2026-04-10
+
+### Problem
+
+On the `20260410` export, production `SATIETY_RATE=0.05` scored headline
+65.8 — a drop from 66.9 on the prior export. The canonical optimum
+shifted upward: every rate from 0.3 to 0.8 outperformed 0.05. This
+confirmed the open question in `research.md` that the low-rate preference
+was export-specific rather than structural.
+
+### Research
+
+Ran a combined 19-candidate sweep (0.02–0.8) on the 20260410 export via
+`run_replay.py`. The landscape:
+
+| sr | headline | count | timing |
+|----|----------|-------|--------|
+| 0.05 (prior) | 65.798 | 96.254 | 45.526 |
+| 0.3 | 66.103 | 96.334 | 45.935 |
+| 0.5 | 66.265 | 95.281 | 46.727 |
+| **0.55** | **66.308** | **95.280** | **46.807** |
+| 0.6 | 66.302 | 95.278 | 46.817 |
+| 0.8 | 66.339 | 95.232 | 46.932 |
+
+Broad plateau from sr=0.5 to sr=0.8 (all within 0.074 headline points).
+A half-life sweep at sr=0.55 (72–240h) showed negligible sensitivity
+(0.2 points across the range); RECENCY_HALF_LIFE_HOURS kept at 168.
+
+### Solution
+
+Set `SATIETY_RATE=0.55`. Chosen interior to the plateau for robustness.
+Headline +0.51 (65.80→66.31), timing +1.28 (45.53→46.81), count −0.97
+(96.25→95.28). All 26 windows scored at 100% availability.
+
+The improvement comes from stronger volume sensitivity: at sr=0.55 the
+satiety effect is 0.42 for 1oz and 0.89 for 4oz (a 2.1× ratio with
+large absolute effects), versus 0.05 and 0.18 at the prior sr=0.05
+(a 3.7× ratio but small absolute effects). Larger absolute gap
+differentiation improves timing on the canonical metric.
+
 ## Tune SATIETY_RATE from canonical multi-window sweep | 2026-03-31
 
 ### Problem

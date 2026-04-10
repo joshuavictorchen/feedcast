@@ -37,16 +37,18 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 # Per-feature weights for weighted Euclidean distance.
 # Order: last_gap, mean_gap, last_volume, mean_volume, sin_hour, cos_hour.
 # Higher weight = more influence on neighbor selection.
-# "hour_emphasis" profile: hour-of-day is the strongest retrieval cue,
-# while gap and volume remain available as supporting context. Selected
-# via the widened full canonical replay sweep in analysis.py.
-FEATURE_WEIGHTS = np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
+# "gap_hour" profile: gap and hour-of-day are the strongest retrieval
+# cues, with volume deemphasized. On the current export the baby's
+# timing structure (gap cadence and time-of-day) separates analogs more
+# sharply than volume, which has grown noisier as patterns consolidate.
+FEATURE_WEIGHTS = np.array([2.0, 2.0, 0.5, 0.5, 2.0, 2.0])
 
 # Lookback window for rolling mean features (hours).
 # Events within this window contribute to mean_gap and mean_volume.
-# 9h keeps rolling means tight to the current local state and wins the
-# widened full canonical replay sweep.
-LOOKBACK_HOURS = 9
+# 24h widens rolling means to capture more of the current feeding
+# rhythm. On the current export the baby's patterns benefit from
+# broader context as gaps lengthen and the schedule consolidates.
+LOOKBACK_HOURS = 24
 
 # Number of nearest neighbors to retrieve.
 # k=7 wins the widened full canonical replay sweep on the current
@@ -61,7 +63,8 @@ MIN_PRIOR_EVENTS = 3
 
 # Half-life for recency weighting of neighbor states (hours).
 # 120h keeps useful multi-day analogs in play while still preferring
-# recent states. Selected via the widened canonical sweep.
+# recent states. Confirmed as the canonical sweep winner on the current
+# export at the new lookback and feature-weight settings.
 RECENCY_HALF_LIFE_HOURS = 120
 
 # Trajectory length aggregation method: "median" or "mean".

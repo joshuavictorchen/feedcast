@@ -2,6 +2,46 @@
 
 Tracks behavior-level changes to the Slot Drift model. Add newest entries first.
 
+## Wider lookback, tighter matching from canonical sweep | 2026-04-10
+
+### Problem
+
+The baby's daily episode count has become more variable (7–10 range vs.
+prior 7–9). The 5-day lookback was too narrow to build a stable template
+during this volatile period, and headline score degraded from 68.4 to
+63.1 on the 20260410 export.
+
+### Research
+
+588-candidate canonical sweep via `tune_model()` on
+`exports/export_narababy_silas_20260410.csv`, plus a 28-candidate
+boundary check confirming all three winning values are interior optima
+(not boundary artifacts).
+
+| Constant | Before | After |
+|---|---|---|
+| `LOOKBACK_DAYS` | 5 | 10 |
+| `DRIFT_WEIGHT_HALF_LIFE_DAYS` | 1.0 | 0.25 |
+| `MATCH_COST_THRESHOLD_HOURS` | 1.5 | 1.0 |
+
+| Metric | Before | After | Delta |
+|---|---|---|---|
+| Headline | 63.1 | 69.3 | +6.2 |
+| Count | 83.2 | 92.2 | +9.0 |
+| Timing | 48.4 | 52.4 | +4.0 |
+| Availability | 26/26 | 26/26 | 0 |
+
+### Solution
+
+Longer lookback (10 days) stabilizes the template across a period of
+higher episode-count variability — 10 days provides 5 days with the
+median episode count vs. 1 day under the old 5-day window. Shorter
+drift half-life (0.25 days) makes yesterday's drift dominate the
+projection, matching the fast-shifting timing pattern. Tighter match
+threshold (1.0h) rejects weak slot assignments that would pollute drift
+estimation. Count improved +9.0 (the primary gap this round), timing
+improved +4.0.
+
 ## Tighter constants from canonical sweep | 2026-03-29
 
 ### Problem
