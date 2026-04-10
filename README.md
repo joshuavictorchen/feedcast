@@ -99,6 +99,8 @@ python3 -m venv .venv
 
 The full pipeline requires a configured `claude` or `codex` CLI and a clean git working tree. For scripted-only runs, pass `--no-agents`.
 
+For a tracked synthetic demo input, see [`examples/README.md`](examples/README.md).
+
 1. Drop a Nara export CSV into `exports/`.
 2. Run `.venv/bin/python scripts/run_forecast.py`.
 3. Review the new run branch and the updated report at `report/report.md`.
