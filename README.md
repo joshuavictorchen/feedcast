@@ -1,20 +1,24 @@
 # Feedcast
 
-Feedcast is an experiment in agentic engineering: a forecasting repo that maintains its own models. On each run, a CLI agent (Claude or Codex) reads the latest Nara Baby export, analyzes recent feeding patterns, evaluates every base scripted model with replay-backed evidence, tunes constants when warranted, and produces an independent LLM forecast. Each run also scores the previous run's predictions against the newly observed data. The dataset is my son Silas's bottle feeds.
+Feedcast is an experiment in agentic engineering: a forecasting repo that maintains its own models. It predicts the next 24 hours of bottle feeds from Nara Baby app exports. On each run, a CLI agent (Claude or Codex) analyzes recent feeding patterns, evaluates every scripted model against replay-backed evidence, and tunes constants when warranted. The same run also produces an independent LLM forecast and scores the prior run's predictions against what actually happened.
 
-*Built by a tired dad with Claude and Codex between bottle feedings. My wife missed the daily structure we had before Silas was born, and predicting feedings was a practical place to start. Coordinated via [claodex](https://github.com/joshuavictorchen/claodex).*
+*Built by a sleep-deprived dad with Claude and Codex between bottle feedings. My wife missed the daily structure we had before Silas was born. I threw together a bottle-feed predictor from our Nara Baby exports as a quick AI agent demo to cheer her up, and it grew into what you see here. Coordinated via [claodex](https://github.com/joshuavictorchen/claodex).*
 
 ## Latest forecast
 
 ![Featured Forecast](report/schedule.png)
 
-*Latest committed featured forecast. Full report: [report/report.md](report/report.md).*
+*Latest committed featured forecast.*
+
+Each run refreshes the full report at [`report/report.md`](report/report.md) with per-model predictions, retrospective accuracy, agent trend insights, and diagnostics.
 
 *Feedcast is a single-subject experimental system on a small, shifting dataset. It is not a validated forecasting product or decision-support tool.*
 
 ## What makes this different
 
-- **Agents maintain the models.** On each run, a CLI agent (Claude or Codex) assesses every base scripted model's fit to current feeding patterns and rewrites its constants when the evidence supports it. Tuning decisions are backed by replay sweeps over recent history, and every change lands as a committed `CHANGELOG.md` entry with numeric deltas.
+Feedcast is a self-improving forecasting system: each run tunes the models that produce the next forecast.
+
+- **The models tune themselves.** On each run, a CLI agent (Claude or Codex) assesses every base scripted model's fit to current feeding patterns and rewrites its constants when the evidence supports it. Tuning decisions are backed by replay sweeps over recent history, and every change lands as a committed `CHANGELOG.md` entry with numeric deltas. See any per-model `CHANGELOG.md` for the live tuning history.
 - **The repo scores itself.** Each run compares the previous run's predictions to what actually happened in the new export. A growing history lives in `tracker.json` and the report's retrospective accuracy table.
 - **Documentation is dual-use.** Research articles, model design notes, and skill prompts are the same instructions the CLI agents read at runtime. Writing for human readers and writing for agents converge.
 - **Hypothesis diversity by design.** Four base scripted models encode distinct hypotheses about what drives feeding patterns: template drift, instance-based retrieval, mechanistic hunger, and survival hazards. A consensus blend ensembles them into a fifth deterministic forecast. A sixth forecast comes from a CLI agent running independently.
@@ -51,7 +55,20 @@ Finalize
 
 Each run produces two commits on the run branch. The tuning commit captures the model code state that produced the forecasts; its SHA is the provenance recorded in `tracker.json`. The results commit packages the report, charts, and tracker update.
 
+> Committing `report/`, `tracker.json`, and tuning diffs into the main repo is unorthodox. Feedcast does it so the commit history itself becomes the telemetry: every run leaves a branch recording what the data looked like, what the models decided, what was tuned, and how the previous forecast scored. The repo becomes an experiment log. For a single-subject learning space for agentic engineering, this beats standing up a database.
+
+## Substantial subsystems
+
+The forecasting machinery is built from four substantial subsystems, each with its own documentation and each a small project in its own right.
+
+- **Research hub** ([`feedcast/research/`](feedcast/research/)). Cross-cutting research articles, current hypotheses, shared directory conventions, and the research workflow. Current articles cover the volume-gap relationship, feed clustering (the episode boundary rule), and a simulation study on canonical tuning.
+- **Replay and tuning** ([`feedcast/replay/`](feedcast/replay/)). Multi-window replay rewinds the export to retrospective cutoffs, reruns a model at each, scores the forecasts against now-known actuals, and ranks candidate constants by canonical headline. Supports parameter sweeps, candidate-parallel execution, and a Python API.
+- **Evaluation scoring** ([`feedcast/evaluation/methodology.md`](feedcast/evaluation/methodology.md)). Hungarian-matched count F1 and a soft timing credit combined as a geometric-mean headline. Episode-level ground truth, horizon-weighted, partial-horizon aware. The same scorer backs the production tracker and the replay tool.
+- **Simulation study** ([`feedcast/research/simulation_study/`](feedcast/research/simulation_study/)). Synthetic data-generating processes verify that canonical tuning is not distorted by the production pipeline. On real data, three of four models show that their internal diagnostics and canonical replay disagree, which reveals how closely each model's hypothesis matches actual feeding patterns.
+
 ## Model lineup
+
+A feeding episode is a cluster of close-together feeds treated as a single hunger event. The repo scores at the episode level, so a bottle plus a top-up ten minutes later counts once.
 
 | Model | Hypothesis | Technique |
 | ----- | ---------- | --------- |
@@ -64,33 +81,14 @@ Each run produces two commits on the run branch. The tuning commit captures the 
 
 Each scripted model folder contains its implementation, a `design.md`, a `methodology.md`, a `research.md` with canonical evaluation results, and a `CHANGELOG.md` with every behavior change. The agent inference workspace uses a different document set: `model.py`, `prompt.md` (runtime instructions), `strategy.md` (durable approach notes), `methodology.md`, `design.md`, and `CHANGELOG.md`.
 
-## Self-improving, in practice
-
-On 2026-04-10, the baby's feeding patterns had shifted. Daily episode count became more variable (7 to 10 range versus the prior 7 to 9), and the Slot Drift model's canonical headline replay score had degraded from 68.4 to 63.1 under the old constants. The Slot Drift tuning agent ran a 588-candidate canonical sweep, widened the template lookback from 5 to 10 days, tightened the drift half-life from 1.0 to 0.25 days, and tightened the match threshold from 1.5 to 1.0 hours. Headline recovered to 69.3 (+6.2 versus the degraded baseline, +0.9 versus the prior steady state). The agent wrote the `CHANGELOG.md` entry and edited `model.py`; the pipeline committed the changes and carried the provenance SHA into `tracker.json`.
-
-Every scripted model maintains one of these logs. See [`feedcast/models/slot_drift/CHANGELOG.md`](feedcast/models/slot_drift/CHANGELOG.md) for the full entry and the accumulated tuning history.
-
-## Design choices that matter
+## Design choices
 
 - **Agent-maintained constants with provenance.** Each base scripted model's constants live in its `model.py` and are tuned by a dedicated agent on each run with replay-backed evidence. Every tuning action is a `CHANGELOG.md` entry with Problem / Research / Solution. The tuning commit SHA is carried into `tracker.json` so any forecast can be traced to the exact model code that produced it.
 - **Every run is isolated.** The pipeline creates a per-run branch `feedcast/YYYYMMDD-HHMMSS` and performs all mutations there: tuning diffs, report renders, and tracker updates. The working branch is never written to by the pipeline.
 - **Shared evaluation standard.** Every model is scored against the same bottle-only feeding episodes using Hungarian-matched count F1 and a soft timing credit, combined as a geometric-mean headline. Models can shape their own input events; the scoring ground truth is fixed.
-- **Timing is the objective.** Forecasts are scored primarily on when feeds happen. Volume is a secondary output.
+- **Timing is the objective.** Forecasts are scored primarily on when feeds happen. Count accuracy (how many feeds in the next 24 hours) is achievable on this dataset; timing accuracy (when exactly) is the hard problem and drives most of the tuning decisions. Volume is a secondary output.
 - **Parallel tuning with per-model ownership.** Up to four model-tuning agents run concurrently, one per base model. Each prompt assigns one model directory and instructs the agent to modify only files inside it. The pipeline stages all tuning edits into a single commit on the run branch, so any out-of-scope change is visible in the diff.
 - **Fail fast on agent error.** Agent failures stop the run. There is no silent fallback.
-
-## Mini-project pillars
-
-The forecasting machinery is built from four substantial subsystems, each with its own documentation and each a small project in its own right.
-
-- **Research hub** ([`feedcast/research/`](feedcast/research/)). Cross-cutting research articles, current hypotheses, shared directory conventions, and the research workflow. Current articles cover the volume-gap relationship, feed clustering (the episode boundary rule), and a simulation study on canonical tuning.
-- **Replay and tuning** ([`feedcast/replay/`](feedcast/replay/)). Multi-window replay rewinds the export to retrospective cutoffs, reruns a model at each, scores the forecasts against now-known actuals, and ranks candidate constants by canonical headline. Supports parameter sweeps, candidate-parallel execution, and a Python API.
-- **Evaluation scoring** ([`feedcast/evaluation/`](feedcast/evaluation/)). Hungarian-matched count F1 and a soft timing credit combined as a geometric-mean headline. Episode-level ground truth, horizon-weighted, partial-horizon aware. The same scorer backs the production tracker and the replay tool.
-- **Simulation study** ([`feedcast/research/simulation_study/`](feedcast/research/simulation_study/)). Synthetic data-generating processes verify that canonical tuning is not distorted by the production pipeline. On real data, three of four models show that their internal diagnostics and canonical replay disagree, which reveals how closely each model's hypothesis matches actual feeding patterns.
-
-## Why committed results?
-
-Committing `report/`, `tracker.json`, and tuning diffs is unorthodox. Feedcast does it so the commit history itself becomes the telemetry: every run leaves a branch recording what the data looked like, what the models decided, what the agents tuned, what they forecasted, and how it scored against the next export. The repo becomes an experiment log. For a single-subject learning space for agentic engineering, this beats standing up a database.
 
 ## Quick start
 
@@ -99,11 +97,11 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-The full pipeline requires a configured `claude` or `codex` CLI. For scripted-only runs, pass `--no-agents`.
+The full pipeline requires a configured `claude` or `codex` CLI and a clean git working tree. For scripted-only runs, pass `--no-agents`.
 
 1. Drop a Nara export CSV into `exports/`.
 2. Run `.venv/bin/python scripts/run_forecast.py`.
-3. Review the new branch and the updated report at `report/report.md`.
+3. Review the new run branch and the updated report at `report/report.md`.
 
 A full run takes a few minutes, most of it the agents thinking.
 
@@ -116,11 +114,17 @@ A full run takes a few minutes, most of it the agents thinking.
 
 # Scripted models only, no agents
 .venv/bin/python scripts/run_forecast.py --no-agents
+
+# Skip individual agent steps
+.venv/bin/python scripts/run_forecast.py --skip-tuning
+.venv/bin/python scripts/run_forecast.py --skip-insights
+.venv/bin/python scripts/run_forecast.py --skip-agent-inference
 ```
 
 Each run updates these artifacts on the run branch:
 
 - `report/report.md`: forecast report
+- `report/agent-insights.md`: agent trend analysis (when insights enabled)
 - `report/schedule.png`: featured schedule chart
 - `report/spaghetti.png`: all-model trajectory chart
 - `report/diagnostics.yaml`: structured diagnostics
@@ -143,7 +147,7 @@ tracker.json       run history with predictions and retrospectives
 exports/           raw Nara CSV drops (untracked)
 ```
 
-Contributor workflow for models lives in [`feedcast/models/README.md`](feedcast/models/README.md); contributor workflow for skills lives in [`skills/README.md`](skills/README.md).
+Contributor workflow for models lives in [`feedcast/models/README.md`](feedcast/models/README.md), agent inference in [`feedcast/agents/README.md`](feedcast/agents/README.md), and skills in [`skills/README.md`](skills/README.md).
 
 ## The pattern beyond baby feeds
 

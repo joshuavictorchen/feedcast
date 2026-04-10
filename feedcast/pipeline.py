@@ -82,7 +82,7 @@ def main(
         snapshot.export_path.name, cutoff.isoformat(sep=" "),
     )
 
-    # All mutations happen on a dedicated review branch
+    # All mutations happen on a dedicated run branch
     _create_run_branch(run_id)
     logger.info("Branch: feedcast/%s", run_id)
 
@@ -221,7 +221,7 @@ def _run_trend_insights(
     """Run the trend insights skill and return the agent's analysis.
 
     Publishes `report/agent-insights.md` as soon as the agent finishes, so
-    readers of the review branch see fresh insights without waiting for the
+    readers of the run branch see fresh insights without waiting for the
     rest of the pipeline. The finalize-time atomic report swap later
     rewrites the same file with identical content from the staging dir, so
     the committed state is unchanged.

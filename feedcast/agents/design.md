@@ -53,7 +53,7 @@ a distinct approach. Currently excluded from the consensus blend.
 The workspace persists across runs. Future agents read `strategy.md`,
 review recent retrospective scores, and decide whether to run `model.py`
 as-is, tune constants, restructure the algorithm, or start from
-scratch. Every change is committed on an isolated review branch.
+scratch. Every change is committed on an isolated run branch.
 
 ## Single Shared Workspace
 
