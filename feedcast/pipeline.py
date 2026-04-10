@@ -8,9 +8,7 @@ the prior run to new actuals, render the report, and update the tracker.
 from __future__ import annotations
 
 import logging
-import os
 import subprocess
-import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
@@ -50,6 +48,7 @@ from feedcast.tracker import (
 logger = logging.getLogger("feedcast.pipeline")
 
 TRACKER_PATH = Path("tracker.json")
+REPORT_DIR = Path("report")
 AGENTS_DIR = Path("feedcast/agents")
 SKILLS_DIR = Path("skills")
 
@@ -219,29 +218,41 @@ def _run_trend_insights(
     snapshot: ExportSnapshot,
     cutoff: datetime,
 ) -> str:
-    """Run the trend insights skill and return the agent's analysis."""
-    fd, tmp_name = tempfile.mkstemp(suffix=".md", prefix="trend-insights-")
-    os.close(fd)
-    tmp_path = Path(tmp_name)
-    try:
-        invoke_agent(
-            agent=agent,
-            prompt_path=SKILLS_DIR / "trend_insights" / "prompt.md",
-            context={
-                "export_path": str(snapshot.export_path),
-                "baby_age_days": str((cutoff.date() - BIRTH_DATE.date()).days),
-                "cutoff_time": cutoff.isoformat(),
-                "output_path": str(tmp_path),
-            },
+    """Run the trend insights skill and return the agent's analysis.
+
+    Publishes `report/agent-insights.md` as soon as the agent finishes, so
+    readers of the review branch see fresh insights without waiting for the
+    rest of the pipeline. The finalize-time atomic report swap later
+    rewrites the same file with identical content from the staging dir, so
+    the committed state is unchanged.
+    """
+    output_path = REPORT_DIR / "agent-insights.md"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    # Clear any prior-run content first so a failed agent write cannot be
+    # mistaken for a valid output on the read-back below.
+    output_path.unlink(missing_ok=True)
+
+    invoke_agent(
+        agent=agent,
+        prompt_path=SKILLS_DIR / "trend_insights" / "prompt.md",
+        context={
+            "export_path": str(snapshot.export_path),
+            "baby_age_days": str((cutoff.date() - BIRTH_DATE.date()).days),
+            "cutoff_time": cutoff.isoformat(),
+            "output_path": str(output_path),
+        },
+    )
+
+    insights = (
+        output_path.read_text(encoding="utf-8").strip()
+        if output_path.exists()
+        else ""
+    )
+    if not insights:
+        raise RuntimeError(
+            "Trend insights agent completed without writing any content."
         )
-        insights = tmp_path.read_text(encoding="utf-8").strip()
-        if not insights:
-            raise RuntimeError(
-                "Trend insights agent completed without writing any content."
-            )
-        return insights
-    finally:
-        tmp_path.unlink(missing_ok=True)
+    return insights
 
 
 def _run_model_tuning(
@@ -270,6 +281,8 @@ def _tune_one_model(
     """Invoke the model tuning skill for one scripted model."""
     logger.info("Model tuning [%s]: starting", model_slug)
     t0 = time.monotonic()
+    start_time = datetime.now().astimezone()
+    deadline = start_time + timedelta(seconds=AGENT_TIMEOUT_SECONDS)
     invoke_agent(
         agent=agent,
         prompt_path=SKILLS_DIR / "model_tuning" / "prompt.md",
@@ -279,6 +292,12 @@ def _tune_one_model(
             "export_path": str(snapshot.export_path),
             "last_retro_scores": _best_retro_scores(retrospective, model_slug),
             "research_hub_path": "feedcast/research",
+            "target_runtime_seconds": str(AGENT_TARGET_RUNTIME_SECONDS),
+            "target_runtime_minutes": str(AGENT_TARGET_RUNTIME_SECONDS // 60),
+            "hard_timeout_seconds": str(AGENT_TIMEOUT_SECONDS),
+            "hard_timeout_minutes": str(AGENT_TIMEOUT_SECONDS // 60),
+            "runtime_start_time": start_time.isoformat(timespec="seconds"),
+            "runtime_deadline": deadline.isoformat(timespec="seconds"),
         },
     )
     logger.info("Model tuning [%s]: done (%s)", model_slug, _elapsed(t0))

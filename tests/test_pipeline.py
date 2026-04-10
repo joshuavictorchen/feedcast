@@ -22,6 +22,7 @@ from feedcast.pipeline import (
     _run_agent_inference,
     _run_execution,
     _run_trend_insights,
+    _tune_one_model,
     main,
 )
 from feedcast.tracker import Retrospective, RetrospectiveResult
@@ -188,13 +189,89 @@ class TrendInsightsTests(unittest.TestCase):
             source_hash="sha256:fake",
         )
 
-        with patch("feedcast.pipeline.invoke_agent"):
-            with self.assertRaisesRegex(RuntimeError, "without writing any content"):
-                _run_trend_insights(
+        with tempfile.TemporaryDirectory(
+            prefix="feedcast-trend-insights-test-"
+        ) as temp_dir:
+            with patch(
+                "feedcast.pipeline.REPORT_DIR", Path(temp_dir)
+            ), patch("feedcast.pipeline.invoke_agent"):
+                with self.assertRaisesRegex(
+                    RuntimeError, "without writing any content"
+                ):
+                    _run_trend_insights(
+                        agent="claude",
+                        snapshot=snapshot,
+                        cutoff=snapshot.latest_activity_time,
+                    )
+
+    def test_trend_insights_publishes_to_report_directory(self) -> None:
+        """Successful runs write agent-insights.md into REPORT_DIR eagerly."""
+        snapshot = ExportSnapshot(
+            export_path=Path("exports/fake.csv"),
+            activities=[],
+            latest_activity_time=datetime(2026, 4, 1, 12, 0),
+            dataset_id="sha256:fake",
+            source_hash="sha256:fake",
+        )
+
+        def fake_invoke(**kwargs: object) -> None:
+            Path(kwargs["context"]["output_path"]).write_text(
+                "Recent feeds are stretching out.\n", encoding="utf-8",
+            )
+
+        with tempfile.TemporaryDirectory(
+            prefix="feedcast-trend-insights-test-"
+        ) as temp_dir:
+            report_dir = Path(temp_dir)
+            with patch(
+                "feedcast.pipeline.REPORT_DIR", report_dir
+            ), patch(
+                "feedcast.pipeline.invoke_agent", side_effect=fake_invoke
+            ):
+                result = _run_trend_insights(
                     agent="claude",
                     snapshot=snapshot,
                     cutoff=snapshot.latest_activity_time,
                 )
+
+            insights_path = report_dir / "agent-insights.md"
+            self.assertEqual(result, "Recent feeds are stretching out.")
+            self.assertTrue(insights_path.exists())
+            self.assertEqual(
+                insights_path.read_text(encoding="utf-8"),
+                "Recent feeds are stretching out.\n",
+            )
+
+    def test_trend_insights_clears_stale_prior_content(self) -> None:
+        """A prior-run file is cleared before the agent is invoked."""
+        snapshot = ExportSnapshot(
+            export_path=Path("exports/fake.csv"),
+            activities=[],
+            latest_activity_time=datetime(2026, 4, 1, 12, 0),
+            dataset_id="sha256:fake",
+            source_hash="sha256:fake",
+        )
+
+        with tempfile.TemporaryDirectory(
+            prefix="feedcast-trend-insights-test-"
+        ) as temp_dir:
+            report_dir = Path(temp_dir)
+            stale_path = report_dir / "agent-insights.md"
+            stale_path.write_text("Stale prior-run insights.\n", encoding="utf-8")
+
+            with patch(
+                "feedcast.pipeline.REPORT_DIR", report_dir
+            ), patch("feedcast.pipeline.invoke_agent"):
+                with self.assertRaisesRegex(
+                    RuntimeError, "without writing any content"
+                ):
+                    _run_trend_insights(
+                        agent="claude",
+                        snapshot=snapshot,
+                        cutoff=snapshot.latest_activity_time,
+                    )
+
+            self.assertFalse(stale_path.exists())
 
 
 # ---------------------------------------------------------------------------
@@ -331,6 +408,43 @@ class AgentInferenceRuntimeBudgetTests(unittest.TestCase):
                     snapshot=_FAKE_SNAPSHOT,
                     cutoff=_FAKE_SNAPSHOT.latest_activity_time,
                 )
+
+        context = invoke_mock.call_args.kwargs["context"]
+        self.assertEqual(
+            context["target_runtime_seconds"],
+            str(AGENT_TARGET_RUNTIME_SECONDS),
+        )
+        self.assertEqual(
+            context["target_runtime_minutes"],
+            str(AGENT_TARGET_RUNTIME_SECONDS // 60),
+        )
+        self.assertEqual(
+            context["hard_timeout_seconds"],
+            str(AGENT_TIMEOUT_SECONDS),
+        )
+        self.assertEqual(
+            context["hard_timeout_minutes"],
+            str(AGENT_TIMEOUT_SECONDS // 60),
+        )
+        self.assertIn("T", context["runtime_start_time"])
+        self.assertIn("T", context["runtime_deadline"])
+
+
+class ModelTuningRuntimeBudgetTests(unittest.TestCase):
+    """Runtime budget context passed into each model tuning prompt."""
+
+    def test_tune_one_model_passes_runtime_budget_context(self) -> None:
+        with patch(
+            "feedcast.pipeline.invoke_agent"
+        ) as invoke_mock, patch(
+            "feedcast.pipeline.load_tracker", return_value={"runs": []}
+        ):
+            _tune_one_model(
+                agent="claude",
+                snapshot=_FAKE_SNAPSHOT,
+                retrospective=Retrospective(available=False),
+                model_slug="slot_drift",
+            )
 
         context = invoke_mock.call_args.kwargs["context"]
         self.assertEqual(

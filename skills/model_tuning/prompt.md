@@ -14,6 +14,18 @@ Assess the {{model_slug}} model's recent performance and decide whether
 to tune its constants. You are looking at one scripted forecasting model
 in a baby bottle-feed prediction pipeline.
 
+## Runtime Budget
+
+You are running under an external hard timeout.
+
+- Hard timeout: {{hard_timeout_minutes}} minutes ({{hard_timeout_seconds}} seconds)
+- Conservative target: finish within {{target_runtime_minutes}} minutes ({{target_runtime_seconds}} seconds)
+- Started at: {{runtime_start_time}}
+- Hard deadline: {{runtime_deadline}}
+
+This prompt does not provide a live timer. If you need to check elapsed
+wall-clock time, do it explicitly.
+
 ## Step 1: Understand the model
 
 Read these files in the model directory (`{{model_dir}}`):
