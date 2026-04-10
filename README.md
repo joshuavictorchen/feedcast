@@ -319,6 +319,8 @@ feedcast/
     README.md                  Usage, tuning examples, and Python API
   agents/                      LLM agent inference workspace
     prompt.md                  Agent inference prompt
+    model.py                   Forecasting script (Empirical Cadence Projection)
+    strategy.md                Approach docs and evolution guidance for future agents
     design.md                  Design decisions and rationale
     methodology.md             Report-facing methodology text
     CHANGELOG.md               Reverse-chronological behavior changes

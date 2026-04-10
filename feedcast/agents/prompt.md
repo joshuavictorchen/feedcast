@@ -33,6 +33,13 @@ the baby will eat, not every possible partial feed. Predicting cluster
 internal structure (e.g., both a main feed and a top-up) is allowed but
 optional -- it will be collapsed before scoring.
 
+## Workspace
+
+Your workspace may contain artifacts from prior runs — strategy notes,
+model code, or helper scripts. If `strategy.md` exists, read it first:
+it documents the current approach, performance data, and guidance from
+prior agents. You are free to follow, modify, or discard prior work.
+
 ## Freedom
 
 You may use whatever approach you think will produce the best forecast.
