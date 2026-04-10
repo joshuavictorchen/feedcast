@@ -13,10 +13,15 @@ import subprocess
 import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
-from feedcast.agent_runner import invoke_agent, validate_agent_forecast
+from feedcast.agent_runner import (
+    AGENT_TARGET_RUNTIME_SECONDS,
+    AGENT_TIMEOUT_SECONDS,
+    invoke_agent,
+    validate_agent_forecast,
+)
 from feedcast.data import (
     BIRTH_DATE,
     DEFAULT_BREASTFEED_MERGE_WINDOW_MINUTES,
@@ -286,23 +291,43 @@ def _run_execution(
     skip_agent_inference: bool,
 ) -> tuple[list[Forecast], Forecast | None]:
     """Run scripted models and agent inference in parallel."""
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        models_future = executor.submit(
-            run_all_models, snapshot.activities, cutoff, HORIZON_HOURS,
+    t0 = time.monotonic()
+    executor = ThreadPoolExecutor(max_workers=2)
+    models_future = executor.submit(
+        run_all_models, snapshot.activities, cutoff, HORIZON_HOURS,
+    )
+    agent_future = None
+    if not skip_agent_inference:
+        agent_future = executor.submit(
+            _run_agent_inference, agent, snapshot, cutoff,
         )
-        agent_future = None
-        if not skip_agent_inference:
-            agent_future = executor.submit(
-                _run_agent_inference, agent, snapshot, cutoff,
-            )
-        # Log models as soon as they finish, before waiting on agent
+
+    # Wait for models first — they're fast. If they fail, surface the
+    # error immediately instead of waiting for the agent to finish.
+    try:
         base_forecasts = models_future.result()
-        available = sum(1 for f in base_forecasts if f.available)
-        unavailable = sum(1 for f in base_forecasts if not f.available)
+    except Exception:
+        if agent_future is not None:
+            agent_future.cancel()
+        executor.shutdown(wait=False)
+        raise
+
+    available = sum(1 for f in base_forecasts if f.available)
+    unavailable = sum(1 for f in base_forecasts if not f.available)
+    logger.info(
+        "Scripted models: done (%s, %d available, %d unavailable)",
+        _elapsed(t0), available, unavailable,
+    )
+    if agent_future is not None and not agent_future.done():
         logger.info(
-            "Scripted models: %d available, %d unavailable", available, unavailable,
+            "Execution: scripted models finished; waiting on agent inference "
+            "only (target=%dm, hard timeout=%dm)",
+            AGENT_TARGET_RUNTIME_SECONDS // 60,
+            AGENT_TIMEOUT_SECONDS // 60,
         )
-        agent_forecast = agent_future.result() if agent_future else None
+
+    agent_forecast = agent_future.result() if agent_future else None
+    executor.shutdown(wait=False)
     return base_forecasts, agent_forecast
 
 
@@ -324,7 +349,14 @@ def _run_agent_inference(
     if forecast_path.exists():
         forecast_path.unlink()
 
-    logger.info("Agent inference: starting (%s)...", agent)
+    start_time = datetime.now().astimezone()
+    deadline = start_time + timedelta(seconds=AGENT_TIMEOUT_SECONDS)
+    logger.info(
+        "Agent inference: starting (%s, target=%dm, hard timeout=%dm)...",
+        agent,
+        AGENT_TARGET_RUNTIME_SECONDS // 60,
+        AGENT_TIMEOUT_SECONDS // 60,
+    )
     t0 = time.monotonic()
     invoke_agent(
         agent=agent,
@@ -334,6 +366,12 @@ def _run_agent_inference(
             "workspace_path": str(AGENTS_DIR),
             "cutoff_time": cutoff.isoformat(),
             "horizon_hours": str(HORIZON_HOURS),
+            "target_runtime_seconds": str(AGENT_TARGET_RUNTIME_SECONDS),
+            "target_runtime_minutes": str(AGENT_TARGET_RUNTIME_SECONDS // 60),
+            "hard_timeout_seconds": str(AGENT_TIMEOUT_SECONDS),
+            "hard_timeout_minutes": str(AGENT_TIMEOUT_SECONDS // 60),
+            "runtime_start_time": start_time.isoformat(timespec="seconds"),
+            "runtime_deadline": deadline.isoformat(timespec="seconds"),
         },
     )
 
@@ -495,10 +533,12 @@ def _assert_clean_git_worktree() -> None:
 
 def _elapsed(start: float) -> str:
     """Format elapsed time since *start* as a compact human-readable string."""
-    total = int(time.monotonic() - start)
+    total = time.monotonic() - start
+    if total < 1:
+        return f"{max(1, int(total * 1000))}ms"
     if total < 60:
-        return f"{total}s"
-    minutes, secs = divmod(total, 60)
+        return f"{int(total)}s"
+    minutes, secs = divmod(int(total), 60)
     return f"{minutes}m {secs:02d}s"
 
 

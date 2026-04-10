@@ -3,16 +3,24 @@
 from __future__ import annotations
 
 import subprocess
+import tempfile
+import time
 import unittest
 from contextlib import ExitStack
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+from feedcast.agent_runner import (
+    AGENT_TARGET_RUNTIME_SECONDS,
+    AGENT_TIMEOUT_SECONDS,
+)
 from feedcast.data import ExportSnapshot, Forecast, ForecastPoint
 from feedcast.pipeline import (
     _assert_clean_git_worktree,
     _best_retro_scores,
+    _run_agent_inference,
+    _run_execution,
     _run_trend_insights,
     main,
 )
@@ -297,5 +305,79 @@ class AgentForecastOrderingTests(unittest.TestCase):
             mocks["report"].call_args.kwargs["agent_insights"],
             "Test insights",
         )
+
+
+class AgentInferenceRuntimeBudgetTests(unittest.TestCase):
+    """Runtime budget context passed into the inference prompt."""
+
+    def test_run_agent_inference_passes_runtime_budget_context(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="feedcast-agent-inference-test-"
+        ) as temp_dir:
+            agents_dir = Path(temp_dir)
+            (agents_dir / "methodology.md").write_text(
+                "Methodology\n",
+                encoding="utf-8",
+            )
+
+            with patch("feedcast.pipeline.AGENTS_DIR", agents_dir), patch(
+                "feedcast.pipeline.invoke_agent"
+            ) as invoke_mock, patch(
+                "feedcast.pipeline.validate_agent_forecast",
+                return_value=[_FAKE_POINT],
+            ):
+                _run_agent_inference(
+                    agent="claude",
+                    snapshot=_FAKE_SNAPSHOT,
+                    cutoff=_FAKE_SNAPSHOT.latest_activity_time,
+                )
+
+        context = invoke_mock.call_args.kwargs["context"]
+        self.assertEqual(
+            context["target_runtime_seconds"],
+            str(AGENT_TARGET_RUNTIME_SECONDS),
+        )
+        self.assertEqual(
+            context["target_runtime_minutes"],
+            str(AGENT_TARGET_RUNTIME_SECONDS // 60),
+        )
+        self.assertEqual(
+            context["hard_timeout_seconds"],
+            str(AGENT_TIMEOUT_SECONDS),
+        )
+        self.assertEqual(
+            context["hard_timeout_minutes"],
+            str(AGENT_TIMEOUT_SECONDS // 60),
+        )
+        self.assertIn("T", context["runtime_start_time"])
+        self.assertIn("T", context["runtime_deadline"])
+
+
+class ExecutionLoggingTests(unittest.TestCase):
+    """Execution logging should make remaining work explicit."""
+
+    def test_run_execution_logs_when_only_agent_remains(self) -> None:
+        def slow_agent(*args: object, **kwargs: object) -> Forecast:
+            time.sleep(0.1)
+            return _FAKE_AGENT
+
+        with patch(
+            "feedcast.pipeline.run_all_models",
+            return_value=[_FAKE_BASE],
+        ), patch(
+            "feedcast.pipeline._run_agent_inference",
+            side_effect=slow_agent,
+        ):
+            with self.assertLogs("feedcast.pipeline", level="INFO") as logs:
+                _run_execution(
+                    agent="claude",
+                    snapshot=_FAKE_SNAPSHOT,
+                    cutoff=_FAKE_SNAPSHOT.latest_activity_time,
+                    skip_agent_inference=False,
+                )
+
+        output = "\n".join(logs.output)
+        self.assertIn("Scripted models: done", output)
+        self.assertIn("waiting on agent inference only", output)
 if __name__ == "__main__":
     unittest.main()

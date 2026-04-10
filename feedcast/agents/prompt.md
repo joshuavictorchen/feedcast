@@ -58,6 +58,25 @@ You may:
 - Treat the rest of the repo as read-only reference material.
 - Your workspace persists across runs. Use it however you want.
 
+## Runtime Budget
+
+You are running under an external hard timeout.
+
+- Hard timeout: {{hard_timeout_minutes}} minutes ({{hard_timeout_seconds}} seconds)
+- Conservative target: finish within {{target_runtime_minutes}} minutes ({{target_runtime_seconds}} seconds)
+- Started at: {{runtime_start_time}}
+- Hard deadline: {{runtime_deadline}}
+
+This prompt does not provide a live timer. If you need to check elapsed
+wall-clock time, do it explicitly.
+
+Prefer the fastest path to a valid forecast:
+
+- If the existing workspace model is usable, run it first.
+- Write `forecast.json` as soon as you have a defensible forecast.
+- Only spend extra time on deeper repo exploration if it is likely to
+  materially improve the forecast before the deadline.
+
 ## Required Output
 
 Write `forecast.json` to your workspace before you finish.

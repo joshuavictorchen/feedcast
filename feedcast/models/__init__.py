@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable
@@ -39,6 +41,8 @@ from .survival_hazard import (
     forecast_survival_hazard,
 )
 from .shared import ForecastUnavailable
+
+logger = logging.getLogger(__name__)
 
 # Each model receives raw activities and owns its own event construction.
 ModelFn = Callable[[list[Activity], datetime, int], Forecast]
@@ -111,20 +115,42 @@ def run_all_models(
     """
     forecasts: list[Forecast] = []
     for spec in MODELS:
+        logger.info("Scripted model [%s]: starting", spec.slug)
+        start = time.monotonic()
         try:
-            forecasts.append(spec.forecast_fn(activities, cutoff, horizon_hours))
+            forecast = spec.forecast_fn(activities, cutoff, horizon_hours)
         except ForecastUnavailable as error:
-            forecasts.append(
-                Forecast(
-                    name=spec.name,
-                    slug=spec.slug,
-                    points=[],
-                    methodology=spec.methodology,
-                    diagnostics={},
-                    available=False,
-                    error_message=str(error),
-                )
+            forecast = Forecast(
+                name=spec.name,
+                slug=spec.slug,
+                points=[],
+                methodology=spec.methodology,
+                diagnostics={},
+                available=False,
+                error_message=str(error),
             )
+            logger.info(
+                "Scripted model [%s]: unavailable (%s, %s)",
+                spec.slug,
+                _elapsed(start),
+                error,
+            )
+        except Exception:
+            logger.exception(
+                "Scripted model [%s]: failed (%s)",
+                spec.slug,
+                _elapsed(start),
+            )
+            raise
+        else:
+            logger.info(
+                "Scripted model [%s]: done (%s, %d feeds)",
+                spec.slug,
+                _elapsed(start),
+                len(forecast.points),
+            )
+
+        forecasts.append(forecast)
     return forecasts
 
 
@@ -157,3 +183,14 @@ def select_featured_forecast(
             return slug
 
     raise ForecastUnavailable("No scripted forecast is available to feature.")
+
+
+def _elapsed(start: float) -> str:
+    """Format elapsed time since *start* as a compact human-readable string."""
+    total = time.monotonic() - start
+    if total < 1:
+        return f"{max(1, int(total * 1000))}ms"
+    if total < 60:
+        return f"{int(total)}s"
+    minutes, secs = divmod(int(total), 60)
+    return f"{minutes}m {secs:02d}s"

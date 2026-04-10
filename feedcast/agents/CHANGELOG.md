@@ -2,6 +2,23 @@
 
 Tracks behavior-level changes to the agent inference model. Add newest entries first.
 
+## Add explicit runtime budget and fast-path guidance | 2026-04-09
+
+### Problem
+
+Agent inference had a hard 10-minute subprocess timeout, but the prompt
+did not say so. The agent also had no explicit conservative target or
+deadline, which made slow repo-wide exploration too easy.
+
+### Solution
+
+Updated `prompt.md` to surface the hard timeout, a 5-minute target, and
+absolute start/deadline timestamps. The prompt now also states that it
+does not provide a live timer and explicitly prefers the fastest path to
+a valid forecast: run the existing workspace model first when usable,
+write `forecast.json` early, and treat deeper exploration as optional
+when time remains.
+
 ## Initial forecasting model: Empirical Cadence Projection | 2026-04-09
 
 ### Problem
