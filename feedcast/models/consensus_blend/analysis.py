@@ -102,7 +102,6 @@ def main() -> None:
     log(f"Dataset: {snapshot.dataset_id}")
     log(f"Cutoff: {cutoff}")
     log(f"Evaluation windows: {len(cutoffs)}")
-    log(f"Run: {datetime.now().isoformat(timespec='seconds')}")
     log()
 
     episodes = group_into_episodes(events)

@@ -312,7 +312,6 @@ def main() -> None:
     log(f"Export: {snapshot.export_path}")
     log(f"Dataset: {snapshot.dataset_id}")
     log(f"Cutoff: {cutoff}")
-    log(f"Run: {datetime.now().isoformat(timespec='seconds')}")
     log(f"Events (with BF merge): {len(events_merged)}")
     log(f"Events (bottle only):   {len(events_bottle_only)}")
     log()

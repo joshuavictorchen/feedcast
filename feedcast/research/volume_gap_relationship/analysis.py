@@ -66,7 +66,6 @@ def main() -> None:
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     snapshot = load_export_snapshot()
     output_capture = StringIO()
-    run_timestamp = datetime.now().isoformat(timespec="seconds")
     pairs_by_view: dict[str, list[GapPair]] = {}
 
     def log(text: str = "") -> None:
@@ -83,7 +82,6 @@ def main() -> None:
     log(f"Dataset: {snapshot.dataset_id}")
     log(f"Source hash: {snapshot.source_hash}")
     log(f"Cutoff: {snapshot.latest_activity_time.isoformat(timespec='seconds')}")
-    log(f"Run: {run_timestamp}")
     log()
 
     for view_name, merge_window_minutes in view_specs:
@@ -116,7 +114,6 @@ def main() -> None:
         "dataset_id": snapshot.dataset_id,
         "source_hash": snapshot.source_hash,
         "cutoff": snapshot.latest_activity_time.isoformat(timespec="seconds"),
-        "run_timestamp": run_timestamp,
         "views": summaries,
     }
     summary_path.write_text(json.dumps(summary_payload, indent=2) + "\n")

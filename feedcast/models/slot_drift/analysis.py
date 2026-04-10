@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import sys
 from collections import defaultdict
-from datetime import datetime
 from io import StringIO
 from pathlib import Path
 
@@ -62,7 +61,6 @@ def main() -> None:
     log(f"Dataset: {snapshot.dataset_id}")
     log(f"Cutoff: {cutoff}")
     log(f"Lookback: {LOOKBACK_DAYS} days")
-    log(f"Run: {datetime.now().isoformat(timespec='seconds')}")
     log()
 
     # Use the model's own grouping and lookback logic.

@@ -3,7 +3,6 @@ Dataset: sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d
 Cutoff: 2026-03-27 21:00:33
 Raw bottle events: 121
 Episode events: 103
-Run: 2026-04-09T15:51:25
 
 === STATE LIBRARY COMPARISON ===
 

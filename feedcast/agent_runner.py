@@ -14,8 +14,8 @@ from feedcast.data import ForecastPoint
 
 logger = logging.getLogger(__name__)
 
-AGENT_TIMEOUT_SECONDS = 600
-AGENT_TARGET_RUNTIME_SECONDS = 300
+AGENT_TIMEOUT_SECONDS = 720
+AGENT_TARGET_RUNTIME_SECONDS = 480
 _PLACEHOLDER_PATTERN = re.compile(r"{{\s*([A-Za-z0-9_]+)\s*}}")
 
 

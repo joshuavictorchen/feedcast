@@ -3,7 +3,6 @@
   "dataset_id": "sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d",
   "source_hash": "sha256:3a998a554e397820d393ecf2ba0752646d92079daa5d1524545c0be1cb42dcec",
   "cutoff": "2026-03-27T21:00:33",
-  "run_timestamp": "2026-04-09T15:48:09",
   "views": {
     "bottle_only": {
       "pair_count": 120,

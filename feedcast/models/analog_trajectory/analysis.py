@@ -102,7 +102,6 @@ def main() -> None:
     log(f"Cutoff: {cutoff}")
     log(f"Raw bottle events: {len(raw_events)}")
     log(f"Episode events: {len(episode_events)}")
-    log(f"Run: {datetime.now().isoformat(timespec='seconds')}")
     log()
 
     sweep_by_mode = {

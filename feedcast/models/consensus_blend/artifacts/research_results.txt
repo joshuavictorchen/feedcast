@@ -2,7 +2,6 @@ Export: exports/export_narababy_silas_20260327.csv
 Dataset: sha256:118402965157e786a84c2650be6c0b631ac39860edd3a09410cbfd856be0706d
 Cutoff: 2026-03-27 21:00:33
 Evaluation windows: 24
-Run: 2026-04-09T15:54:37
 
 === INTER-EPISODE GAP ANALYSIS ===
 
@@ -457,4 +456,3 @@ Radius Spread Conflict Penalty     Score    Count   Timing     Win
     60    180      150    1.00    71.756   90.762   57.916  24/24
     60    180      150    2.00    71.756   90.762   57.916  24/24
     60    180      150    5.00    71.756   90.762   57.916  24/24
-

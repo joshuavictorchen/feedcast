@@ -85,14 +85,27 @@ tools (e.g., `.replay-results/`) are fine — they are not committed.
 If you tune constants:
 
 - Update `model.py` with the new values
+- Re-run `.venv/bin/python -m feedcast.models.{{model_slug}}.analysis`
+  after the final constant values are in place so committed artifacts
+  match the shipped model
 - Add a `CHANGELOG.md` entry: what changed, why, and the evidence
   (replay scores, trend observations). Use the existing entry format.
-- Update `research.md` if the evidence base changed
+- Update `research.md` so its conclusions, last-run metadata, and cited
+  artifacts match the shipped model
+
+If committed files under `artifacts/` changed, `research.md` must change
+with them. Do not leave artifact-only diffs behind.
 
 If you observe cross-cutting insights (findings that affect other models
 or the research hub), note them in this model's `research.md` under an
 appropriate section. The user will promote cross-cutting findings to
 `feedcast/research/` manually.
+
+Before you finish, run this consistency check and fix any failures:
+
+```bash
+.venv/bin/python -m feedcast.research.consistency {{model_dir}}
+```
 
 If you decline to tune, briefly note why in your response. No file
 changes are needed.
