@@ -69,9 +69,9 @@ def _generate_slot_drift_schedule(
     return schedule
 
 
-def _expected_template_hours() -> list[float]:
-    """Return the template positions implied by the model's current lookback."""
-    recent_offsets = list(range(-slot_drift_model.LOOKBACK_DAYS, 0))
+def _expected_template_hours(complete_days_used: int) -> list[float]:
+    """Return the template positions implied by the actual history used."""
+    recent_offsets = list(range(-complete_days_used, 0))
     median_offset = float(statistics.median(recent_offsets))
     return [
         base_hour + (drift_rate * median_offset)
@@ -126,14 +126,18 @@ def test_diagnostics_recover_slot_template_and_drift_on_clean_history() -> None:
         horizon_hours=24,
     )
     diagnostics = forecast.diagnostics
+    expected_complete_days = min(
+        STRUCTURAL_HISTORY_DAYS,
+        slot_drift_model.LOOKBACK_DAYS,
+    )
 
     assert diagnostics["slot_count"] == len(TRUE_SLOT_HOURS)
-    assert diagnostics["complete_days_used"] == slot_drift_model.LOOKBACK_DAYS
+    assert diagnostics["complete_days_used"] == expected_complete_days
     assert diagnostics["filled_slots_today"] == []
     assert set(diagnostics["daily_episode_counts"].values()) == {len(TRUE_SLOT_HOURS)}
 
     for index, (actual, expected) in enumerate(
-        zip(diagnostics["template_hours"], _expected_template_hours()),
+        zip(diagnostics["template_hours"], _expected_template_hours(expected_complete_days)),
         start=1,
     ):
         assert_value_within_tolerance(
@@ -147,7 +151,7 @@ def test_diagnostics_recover_slot_template_and_drift_on_clean_history() -> None:
         zip(diagnostics["per_slot"], TRUE_DRIFT_RATES_HOURS_PER_DAY),
         start=1,
     ):
-        assert slot_diag["observations"] == slot_drift_model.LOOKBACK_DAYS
+        assert slot_diag["observations"] == expected_complete_days
         assert_value_within_tolerance(
             actual=float(slot_diag["drift_hours_per_day"]),
             expected=expected_rate,

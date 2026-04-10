@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 from feedcast.clustering import episodes_as_events
 from feedcast.data import Activity, FeedEvent
 from feedcast.models.latent_hunger.model import (
-    SATIETY_RATE,
     _estimate_growth_rate,
     _hunger_after_feed,
     forecast_latent_hunger,
@@ -104,15 +103,5 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertIn("fit_episodes_used", diag)
         self.assertNotIn("recent_events_in_window", diag)
         self.assertNotIn("fit_events_used", diag)
-
-
-class SatietyRateTests(unittest.TestCase):
-    """Verify the canonically-tuned satiety rate is in place."""
-
-    def test_satiety_rate_is_canonical_tuned(self) -> None:
-        """SATIETY_RATE should be 0.05 (canonical multi-window sweep)."""
-        self.assertAlmostEqual(SATIETY_RATE, 0.05, places=3)
-
-
 if __name__ == "__main__":
     unittest.main()

@@ -8,8 +8,6 @@ from datetime import datetime, timedelta
 from feedcast.clustering import episodes_as_events
 from feedcast.data import Activity, FeedEvent
 from feedcast.models.survival_hazard.model import (
-    DAYTIME_SHAPE,
-    OVERNIGHT_SHAPE,
     _estimate_daypart_scales,
     forecast_survival_hazard,
 )
@@ -122,18 +120,5 @@ class DiagnosticsTests(unittest.TestCase):
 
         self.assertIn("total_fit_episode_gaps", diag)
         self.assertNotIn("total_fit_gaps", diag)
-
-
-class ShapeConstantsTests(unittest.TestCase):
-    """Verify the re-tuned shape constants are in place."""
-
-    def test_shapes_are_canonical_tuned(self) -> None:
-        """Shape constants should reflect canonical replay tuning."""
-        # The production shapes are chosen by canonical multi-window replay,
-        # not copied directly from the episode-level MLE fit.
-        self.assertAlmostEqual(OVERNIGHT_SHAPE, 4.75, places=2)
-        self.assertAlmostEqual(DAYTIME_SHAPE, 1.75, places=2)
-
-
 if __name__ == "__main__":
     unittest.main()

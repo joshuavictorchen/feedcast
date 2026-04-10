@@ -6,9 +6,10 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import re
 from pathlib import Path
 
-from feedcast.research.consistency import find_consistency_issues
+from feedcast.research.consistency import _parse_baseline_params, find_consistency_issues
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -48,21 +49,30 @@ class ResearchConsistencyTests(unittest.TestCase):
             self._init_git_repo(repo_root)
 
             model_path = model_dir / "model.py"
-            model_path.write_text(
-                model_path.read_text(encoding="utf-8").replace(
-                    "LOOKBACK_DAYS = 5",
-                    "LOOKBACK_DAYS = 10",
-                ),
+            results_text = (model_dir / "artifacts/research_results.txt").read_text(
                 encoding="utf-8",
             )
+            baseline_params = _parse_baseline_params(results_text)
+            self.assertIsNotNone(baseline_params)
+            baseline_lookback = int(baseline_params["LOOKBACK_DAYS"])
+            updated_lookback = baseline_lookback + 1
+
+            updated_source, replacements = re.subn(
+                r"LOOKBACK_DAYS = \d+",
+                f"LOOKBACK_DAYS = {updated_lookback}",
+                model_path.read_text(encoding="utf-8"),
+                count=1,
+            )
+            self.assertEqual(replacements, 1)
+            model_path.write_text(updated_source, encoding="utf-8")
 
             issues = find_consistency_issues([model_dir], repo_root=repo_root)
 
         output = "\n".join(issues)
         self.assertIn("model.py changed without a matching CHANGELOG.md update", output)
         self.assertIn("model.py changed without a matching research.md update", output)
-        self.assertIn("baseline {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 1.0, 'LOOKBACK_DAYS': 5", output)
-        self.assertIn("'LOOKBACK_DAYS': 10", output)
+        self.assertIn(f"baseline {baseline_params}", output)
+        self.assertIn(f"'LOOKBACK_DAYS': {updated_lookback}", output)
 
     def test_metadata_and_volatile_artifacts_are_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

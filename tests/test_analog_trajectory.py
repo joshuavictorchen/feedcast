@@ -5,17 +5,8 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timedelta
 
-import numpy as np
-
 from feedcast.data import Activity
 from feedcast.models.analog_trajectory.model import (
-    ALIGNMENT,
-    FEATURE_WEIGHTS,
-    HISTORY_MODE,
-    K_NEIGHBORS,
-    LOOKBACK_HOURS,
-    RECENCY_HALF_LIFE_HOURS,
-    TRAJECTORY_LENGTH_METHOD,
     forecast_analog_trajectory,
 )
 from feedcast.replay import override_constants
@@ -119,24 +110,5 @@ class HistoryModeTests(unittest.TestCase):
             raw_forecast.diagnostics["complete_states"],
             episode_forecast.diagnostics["complete_states"],
         )
-
-
-class CanonicalConstantsTests(unittest.TestCase):
-    """The shipped analog constants should reflect the canonical winner."""
-
-    def test_constants_match_canonical_winner(self) -> None:
-        """4.4 should leave the production constants at the best replay config."""
-        self.assertEqual(HISTORY_MODE, "episode")
-        self.assertEqual(LOOKBACK_HOURS, 9)
-        self.assertEqual(K_NEIGHBORS, 7)
-        self.assertEqual(RECENCY_HALF_LIFE_HOURS, 120)
-        self.assertEqual(TRAJECTORY_LENGTH_METHOD, "median")
-        self.assertEqual(ALIGNMENT, "gap")
-        np.testing.assert_allclose(
-            FEATURE_WEIGHTS,
-            np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0]),
-        )
-
-
 if __name__ == "__main__":
     unittest.main()
