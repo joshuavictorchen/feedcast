@@ -1,6 +1,6 @@
 # Silas Feeding Forecast
 
-**Friday, April 10, 2026** · 42 days old · Cutoff: 9:52 AM
+**Friday, April 10, 2026** · 42 days old · Cutoff: 3:29 PM
 
 ## Next Feeds
 
@@ -12,32 +12,34 @@
 
 ## Trend Insights
 
-The most notable shift in the last two weeks is a volume dip over the past three days. From Mar 27 through Apr 6, Silas's episodes averaged right at 4.0 oz, with 79% of feeds coming in at 4 oz or more. Starting Apr 7 and especially Apr 8–10, the typical feed has dropped to 3.0–3.5 oz — only 44% of episodes are hitting 4 oz now. Daily totals haven't fallen as sharply (still 28–31 oz on full days) because he's compensating with slightly more frequent feeds, but the per-feed size is distinctly smaller. Whether this is a brief dip or the start of a new baseline is worth watching over the next few days.
+The dominant trend over the past two weeks is a gradual drop in per-feed volume. Through the first week (Mar 27 to Apr 2), Silas averaged 4.0 oz per episode, with 85% of feeds at 4 oz or more. That held fairly steady through Apr 6, but starting Apr 7 the typical feed settled to 3.0–3.5 oz. Over the last three days (Apr 8–10), only 27% of episodes reach 4 oz, and Apr 10's five feeds have all landed at exactly 3.4–3.5 oz. Despite smaller feeds, daily totals remain in the 28–31 oz range because he's maintaining the same feeding frequency. Whether this is a transient dip or a new baseline is the main thing to watch.
 
-On the structural side, feeds continue to consolidate. Multi-feed episodes — a main bottle followed by a top-up within about an hour — dropped from 13% in the first week to 7% in the second, and the last four days have had almost none. He's eating in clean, single-feed episodes now rather than snacking. Feed spacing remains remarkably stable at a 3-hour average throughout the window, day and night. Overnight gaps are still in the 3–4.5 hour range with no reliable trend toward longer stretches; the longest gaps (4.7h on Apr 4, 5.1h on Apr 5) remain one-offs rather than a consistent pattern. One oddity: Apr 6 featured a midday cluster of three small feeds (2.5, 2.0, 1.8 oz between 9:30 AM and 12:40 PM), which is the opposite of the consolidation trend — but it hasn't recurred since.
+The other clear trend is the disappearance of top-up feeds. In week one, 13% of episodes were multi-feed clusters (a main bottle followed by a small top-up within an hour). That dropped to 7% in week two, and the last four days have had none. He's eating in clean single feeds now. Feed spacing has been remarkably stable throughout: roughly every 3 hours, day and night, with no meaningful change across the full 14 days. Overnight gaps land in a 3.5–4.5 hour range with occasional longer stretches (5.1h on Apr 5, 4.7h on Apr 4), but these haven't become a pattern yet. At 6 weeks, there's a modest day/night difference in gap length but no sign of a consolidated longer overnight sleep stretch.
 
-| Period | Avg Episode Vol | Daily Intake | Multi-Feed Episodes | Avg Gap |
+| Period | Avg Episode Vol | Daily Intake | Multi-Feed Eps | Avg Gap |
 |--------|:-:|:-:|:-:|:-:|
 | Mar 27 – Apr 2 (week 1) | 4.0 oz | 29–37 oz | 13% | 3.0 h |
-| Apr 3 – Apr 9 (week 2) | 3.8 oz | 28–35 oz | 7% | 3.0 h |
-| Apr 7 – Apr 10 (last 3–4d) | 3.6 oz | 28–31 oz | 0% | 3.0 h |
+| Apr 3 – Apr 9 (week 2) | 3.8 oz | 28–34 oz | 7% | 3.0 h |
+| Apr 8 – Apr 10 (last 3d) | 3.5 oz | 28–31 oz | 0% | 2.9 h |
 
 ## Prior Run Retrospective
 
-Comparing prior run `20260410-113849` predicted episodes
+Comparing prior run `20260410-133026` predicted episodes
 against actual feeding episodes observed in the current export
 (observed horizon:
-24.0h,
-coverage: 100%).
+5.6h,
+coverage: 23%).
 
 | Model | Score | Count | Timing | Episodes (Pred/Actual/Matched) | Status |
 | ----- | ----- | ----- | ------ | ------------------------------ | ------ |
-| Slot Drift | 64.4 | 93.2 | 44.6 | 6/7/6 | Full 24h observed |
-| Analog Trajectory | 57.6 | 94.3 | 35.1 | 8/7/7 | Full 24h observed |
-| Latent Hunger State | 54.0 | 91.8 | 31.7 | 8/7/7 | Full 24h observed |
-| Survival Hazard | 55.5 | 87.3 | 35.3 | 9/7/7 | Full 24h observed |
-| Consensus Blend | 49.0 | 92.5 | 25.9 | 8/7/7 | Full 24h observed |
-| Agent Inference | 55.1 | 94.3 | 32.2 | 8/7/7 | Full 24h observed |
+| Slot Drift | 82.7 | 68.7 | 99.5 | 1/2/1 | Partial horizon (5.6h observed) |
+| Analog Trajectory | 76.3 | 100.0 | 58.3 | 2/2/2 | Partial horizon (5.6h observed) |
+| Latent Hunger State | 66.5 | 68.7 | 64.5 | 1/2/1 | Partial horizon (5.6h observed) |
+| Survival Hazard | 82.3 | 100.0 | 67.7 | 2/2/2 | Partial horizon (5.6h observed) |
+| Consensus Blend | 92.1 | 100.0 | 84.9 | 2/2/2 | Partial horizon (5.6h observed) |
+| Agent Inference | 81.1 | 100.0 | 65.8 | 2/2/2 | Partial horizon (5.6h observed) |
+Scores are normalized to the observed window. Coverage shows how much of
+the 24-hour horizon has actually resolved so far.
 
 ## Historical Retrospective Accuracy
 
@@ -46,12 +48,12 @@ reflect the model versions that made those earlier predictions.
 
 | Model | Comparisons | Full 24h Runs | Mean Score | Mean Count | Mean Timing | Avg Coverage |
 | ----- | ----------- | ------------- | ---------- | ---------- | ----------- | ------------ |
-| Slot Drift | 1 | 1 | 64.4 | 93.2 | 44.6 | 100% |
-| Analog Trajectory | 1 | 1 | 57.6 | 94.3 | 35.1 | 100% |
-| Survival Hazard | 1 | 1 | 55.5 | 87.3 | 35.3 | 100% |
-| Agent Inference | 1 | 1 | 55.1 | 94.3 | 32.2 | 100% |
-| Latent Hunger State | 1 | 1 | 54.0 | 91.8 | 31.7 | 100% |
-| Consensus Blend | 1 | 1 | 49.0 | 92.5 | 25.9 | 100% |
+| Slot Drift | 2 | 1 | 68.6 | 87.5 | 57.2 | 62% |
+| Analog Trajectory | 2 | 1 | 61.9 | 95.6 | 40.5 | 62% |
+| Survival Hazard | 2 | 1 | 61.7 | 90.2 | 42.7 | 62% |
+| Agent Inference | 2 | 1 | 61.1 | 95.6 | 40.0 | 62% |
+| Consensus Blend | 2 | 1 | 58.9 | 94.3 | 39.5 | 62% |
+| Latent Hunger State | 2 | 1 | 56.9 | 86.5 | 39.3 | 62% |
 
 ## Methodologies
 
@@ -225,6 +227,6 @@ fitted values, empirical comparisons, and replay evidence live in
 
 ---
 
-*Export: `export_narababy_silas_20260410.csv` · Dataset: `sha256:8dc1ea26...`
-· Commit: `e357ed6`
-· Generated: 2026-04-10 13:53:49*
+*Export: `export_narababy_silas_20260410(1).csv` · Dataset: `sha256:944bf861...`
+· Commit: `0ae36ba`
+· Generated: 2026-04-10 18:17:16*
