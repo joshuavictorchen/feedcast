@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import sys
 from pathlib import Path
@@ -53,6 +54,12 @@ def cli() -> None:
         help="Skip all agent steps (equivalent to --skip-tuning --skip-insights --skip-agent-inference).",
     )
     args = parser.parse_args()
+
+    logging.basicConfig(
+        format="%(asctime)s %(message)s",
+        datefmt="%H:%M:%S",
+        level=logging.INFO,
+    )
 
     main(
         export_path=args.export_path,

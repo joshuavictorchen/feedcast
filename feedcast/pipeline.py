@@ -7,9 +7,11 @@ the prior run to new actuals, render the report, and update the tracker.
 
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
@@ -40,6 +42,8 @@ from feedcast.tracker import (
     summarize_retrospective_history,
 )
 
+logger = logging.getLogger("feedcast.pipeline")
+
 TRACKER_PATH = Path("tracker.json")
 AGENTS_DIR = Path("feedcast/agents")
 SKILLS_DIR = Path("skills")
@@ -69,29 +73,62 @@ def main(
     snapshot = load_export_snapshot(export_path=export_path)
     cutoff = snapshot.latest_activity_time
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    logger.info(
+        "Pre-flight: %s, cutoff %s",
+        snapshot.export_path.name, cutoff.isoformat(sep=" "),
+    )
 
     # All mutations happen on a dedicated review branch
     _create_run_branch(run_id)
+    logger.info("Branch: feedcast/%s", run_id)
 
     # Compute retrospective early — tuning agents need prior scores, and
     # the same result is reused for the report and tracker later.
     retrospective = compute_retrospective(TRACKER_PATH, snapshot)
+    if retrospective.available:
+        n_scored = sum(
+            1 for r in retrospective.results if r.score is not None
+        )
+        logger.info(
+            "Retrospective: %d models scored (%.0fh observed)",
+            n_scored, retrospective.observed_horizon_hours,
+        )
+    else:
+        logger.info("Retrospective: not available (same dataset or no prior run)")
 
     # Trend insights (agent analyzes recent feeding patterns)
     agent_insights: str | None = None
     if not skip_insights:
+        logger.info("Trend insights: starting...")
+        t0 = time.monotonic()
         agent_insights = _run_trend_insights(agent, snapshot, cutoff)
+        logger.info("Trend insights: done (%s)", _elapsed(t0))
+    else:
+        logger.info("Trend insights: skipped")
 
     # Model tuning (agent assesses and optionally tunes each scripted model)
     if not skip_tuning:
+        slugs = [spec.slug for spec in MODELS]
+        logger.info("Model tuning: %d models in parallel (%s)...", len(slugs), ", ".join(slugs))
+        t0 = time.monotonic()
         _run_model_tuning(agent, snapshot, retrospective)
+        logger.info("Model tuning: all done (%s)", _elapsed(t0))
+    else:
+        logger.info("Model tuning: skipped")
 
     # Tuning commit — capture the SHA as provenance for tracker and report.
     # The worktree will be dirty again after execution produces outputs.
     _git_commit_all("Agent tuning", allow_empty=True)
     tuning_sha = _git_short_sha()
+    logger.info("Tuning commit: %s", tuning_sha)
 
     # Execute scripted models and agent inference in parallel
+    logger.info(
+        "Execution: scripted models%s...",
+        " + agent inference" if not skip_agent_inference else "",
+    )
+    if skip_agent_inference:
+        logger.info("Agent inference: skipped")
     base_forecasts, agent_forecast = _run_execution(
         agent=agent,
         snapshot=snapshot,
@@ -108,6 +145,10 @@ def main(
         base_forecasts, pipeline_events, cutoff, HORIZON_HOURS,
     )
     featured_slug = select_featured_forecast([*base_forecasts, consensus_forecast])
+    blend_count = len(consensus_forecast.points) if consensus_forecast.available else 0
+    logger.info(
+        "Consensus blend: %d feeds, featured=%s", blend_count, featured_slug,
+    )
 
     # Agent forecast is in the report and tracker but excluded from the
     # consensus blend — append after blend computation.
@@ -133,6 +174,7 @@ def main(
     )
 
     # Render report and persist tracker
+    logger.info("Generating report...")
     report_dir = generate_report(
         snapshot=snapshot,
         all_forecasts=all_forecasts,
@@ -146,9 +188,11 @@ def main(
         agent_insights=agent_insights,
     )
     save_run(TRACKER_PATH, run_entry)
+    logger.info("Report: %s", report_dir / "report.md")
 
     # Results commit — report, tracker, forecast.json, methodology changes
     _git_commit_all("Pipeline results")
+    logger.info("Results committed")
 
     _print_summary(
         snapshot=snapshot,
@@ -219,6 +263,8 @@ def _tune_one_model(
     model_slug: str,
 ) -> None:
     """Invoke the model tuning skill for one scripted model."""
+    logger.info("Model tuning [%s]: starting", model_slug)
+    t0 = time.monotonic()
     invoke_agent(
         agent=agent,
         prompt_path=SKILLS_DIR / "model_tuning" / "prompt.md",
@@ -230,6 +276,7 @@ def _tune_one_model(
             "research_hub_path": "feedcast/research",
         },
     )
+    logger.info("Model tuning [%s]: done (%s)", model_slug, _elapsed(t0))
 
 
 def _run_execution(
@@ -248,7 +295,13 @@ def _run_execution(
             agent_future = executor.submit(
                 _run_agent_inference, agent, snapshot, cutoff,
             )
+        # Log models as soon as they finish, before waiting on agent
         base_forecasts = models_future.result()
+        available = sum(1 for f in base_forecasts if f.available)
+        unavailable = sum(1 for f in base_forecasts if not f.available)
+        logger.info(
+            "Scripted models: %d available, %d unavailable", available, unavailable,
+        )
         agent_forecast = agent_future.result() if agent_future else None
     return base_forecasts, agent_forecast
 
@@ -271,6 +324,8 @@ def _run_agent_inference(
     if forecast_path.exists():
         forecast_path.unlink()
 
+    logger.info("Agent inference: starting (%s)...", agent)
+    t0 = time.monotonic()
     invoke_agent(
         agent=agent,
         prompt_path=AGENTS_DIR / "prompt.md",
@@ -285,6 +340,7 @@ def _run_agent_inference(
     points = validate_agent_forecast(
         forecast_path, snapshot.latest_activity_time, HORIZON_HOURS,
     )
+    logger.info("Agent inference: done (%s, %d feeds)", _elapsed(t0), len(points))
 
     return Forecast(
         name=AGENT_INFERENCE_NAME,
@@ -435,6 +491,15 @@ def _assert_clean_git_worktree() -> None:
             "Refusing to run with a dirty git worktree. Commit or stash changes "
             "first."
         )
+
+
+def _elapsed(start: float) -> str:
+    """Format elapsed time since *start* as a compact human-readable string."""
+    total = int(time.monotonic() - start)
+    if total < 60:
+        return f"{total}s"
+    minutes, secs = divmod(total, 60)
+    return f"{minutes}m {secs:02d}s"
 
 
 def _repo_root() -> Path:
