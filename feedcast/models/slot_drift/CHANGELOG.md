@@ -2,6 +2,81 @@
 
 Tracks behavior-level changes to the Slot Drift model. Add newest entries first.
 
+## Shorter lookback, near-uniform drift weighting | 2026-04-11
+
+### Problem
+
+The LOOKBACK=10 regime, tuned for a period of higher episode-count
+variability, is no longer optimal. The competing LOOKBACK=5 regime
+first identified on the 20260410(2) export (+0.9 headline) has
+strengthened to +2.1 on the 20260411 export. Timing remains the
+weaker component (55.2 vs count 91.8), and the LOOKBACK=5 regime
+improves it by +4.1.
+
+### Research
+
+588-candidate canonical sweep via `tune_model()` on
+`exports/export_narababy_silas_20260411.csv`, plus a 3-candidate
+boundary check extending DRIFT to 8.0, 10.0, and 14.0 (resolving the
+prior DRIFT=7.0 boundary concern).
+
+DRIFT gradient at LOOKBACK=5, THRESHOLD=2.0:
+
+| DRIFT | Headline |
+|-------|----------|
+| 3.0   | 72.2     |
+| 4.0   | 72.6     |
+| 5.0   | 72.9     |
+| 7.0   | 73.1     |
+| 8.0   | 73.1     |
+| 10.0  | 73.2     |
+| 14.0  | 73.0     |
+
+The plateau spans DRIFT=7.0 through 14.0 (range 0.2). The peak at
+DRIFT=10.0 confirms DRIFT=7.0 is not a boundary artifact.
+
+THRESHOLD gradient at LOOKBACK=5, DRIFT=7.0:
+
+| THRESHOLD | Headline |
+|-----------|----------|
+| 1.75      | <71.5    |
+| 2.0       | 73.1     |
+| 2.5       | 71.9     |
+| 3.0       | 71.9     |
+
+THRESHOLD=2.0 is an interior peak.
+
+| Constant | Before | After |
+|---|---|---|
+| `LOOKBACK_DAYS` | 10 | 5 |
+| `DRIFT_WEIGHT_HALF_LIFE_DAYS` | 0.80 | 7.0 |
+| `MATCH_COST_THRESHOLD_HOURS` | 1.5 | 2.0 |
+
+| Metric | Before | After | Delta |
+|---|---|---|---|
+| Headline | 71.0 | 73.1 | +2.1 |
+| Count | 91.8 | 91.1 | -0.7 |
+| Timing | 55.2 | 59.3 | +4.1 |
+| Availability | 24/24 | 24/24 | 0 |
+
+### Solution
+
+Shorter lookback (5 days) focuses the template on the most recent
+pattern. The 7.0-day drift half-life produces near-uniform weighting
+over the 5-day window (oldest day receives ~61% of yesterday's weight),
+effectively averaging slot positions rather than extrapolating linear
+drift. This reflects the baby's feeding pattern stabilizing enough that
+active drift tracking adds noise rather than signal. Looser threshold
+(2.0h) admits more matches for template refinement. Timing improved +4.1
+(the primary gain), count traded down -0.7.
+
+The LOOKBACK=5 regime was identified as a competing alternative on the
+prior export (+0.9) and has strengthened on this export (+2.1). The
+prior concern about DRIFT=7.0 being a boundary value is resolved: an
+extended sweep shows a flat plateau from 7.0 through 14.0 with a
+gentle peak around 10.0. DRIFT=7.0 is on the ascending edge of that
+plateau.
+
 ## Relaxed drift and threshold as pattern stabilizes | 2026-04-10
 
 ### Problem

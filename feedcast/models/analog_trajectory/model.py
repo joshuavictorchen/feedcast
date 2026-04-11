@@ -37,23 +37,24 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 # Per-feature weights for weighted Euclidean distance.
 # Order: last_gap, mean_gap, last_volume, mean_volume, sin_hour, cos_hour.
 # Higher weight = more influence on neighbor selection.
-# "gap_hour" profile: gap and hour-of-day are the strongest retrieval
-# cues, with volume deemphasized. On the current export the baby's
-# timing structure (gap cadence and time-of-day) separates analogs more
-# sharply than volume, which has grown noisier as patterns consolidate.
-FEATURE_WEIGHTS = np.array([2.0, 2.0, 0.5, 0.5, 2.0, 2.0])
+# "means_only" profile: rolling means (mean_gap, mean_volume) are the
+# strongest retrieval cues, with instant values (last_gap, last_volume)
+# deemphasized and hour features at baseline. On the current export the
+# baby's mean feeding rhythm separates analogs more sharply than any
+# single recent gap or hour-of-day feature.
+FEATURE_WEIGHTS = np.array([0.5, 2.0, 0.5, 2.0, 1.0, 1.0])
 
 # Lookback window for rolling mean features (hours).
 # Events within this window contribute to mean_gap and mean_volume.
-# 24h widens rolling means to capture more of the current feeding
-# rhythm. On the current export the baby's patterns benefit from
-# broader context as gaps lengthen and the schedule consolidates.
-LOOKBACK_HOURS = 24
+# 12h focuses rolling means on the most recent half-day of feeding.
+# Paired with means_only weighting and broad recency, this captures
+# the current rhythm tightly without oversmoothing across stale events.
+LOOKBACK_HOURS = 12
 
 # Number of nearest neighbors to retrieve.
-# k=7 wins the widened full canonical replay sweep on the current
-# export, slightly improving timing over the smaller neighborhoods.
-K_NEIGHBORS = 7
+# k=5 wins the full canonical replay sweep on the current export,
+# balancing retrieval precision against timing accuracy.
+K_NEIGHBORS = 5
 
 # Minimum number of historical states with complete trajectories.
 MIN_COMPLETE_STATES = 10
@@ -62,10 +63,11 @@ MIN_COMPLETE_STATES = 10
 MIN_PRIOR_EVENTS = 3
 
 # Half-life for recency weighting of neighbor states (hours).
-# 120h keeps useful multi-day analogs in play while still preferring
-# recent states. Confirmed as the canonical sweep winner on the current
-# export at the new lookback and feature-weight settings.
-RECENCY_HALF_LIFE_HOURS = 120
+# 240h keeps a broad range of historical analogs available. Paired with
+# shorter lookback (12h) and means_only weighting, the broader recency
+# compensates by letting more states contribute to the blend. Note: 240h
+# is a boundary winner in the current grid [36, 72, 120, 240].
+RECENCY_HALF_LIFE_HOURS = 240
 
 # Trajectory length aggregation method: "median" or "mean".
 # "median" remains best under canonical replay.

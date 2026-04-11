@@ -22,12 +22,12 @@ episode slots and tracks their drift. The key research questions are:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-04-10 |
-| Export | `exports/export_narababy_silas_20260410(2).csv` |
-| Dataset | `sha256:ff8b0a112f77742af35b44e97652b6108915a609526619b808546434315927b8` |
+| Run date | 2026-04-11 |
+| Export | `exports/export_narababy_silas_20260411.csv` |
+| Dataset | `sha256:138b5d3ad7d106444951acc6c56154bcd1ae94184f58a566f83c032ad41ef5ec` |
 | Command | `.venv/bin/python -m feedcast.models.slot_drift.analysis` |
-| Canonical headline | 71.1 |
-| Availability | 25/25 windows (100%) |
+| Canonical headline | 73.1 |
+| Availability | 24/24 windows (100%) |
 | Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Staleness check:** if the current export differs from the one
@@ -42,23 +42,23 @@ shared replay infrastructure. This produces a multi-window aggregate
 (lookback 96h, half-life 36h, episode-boundary cutoffs) that is
 directly comparable across all models.
 
-**Canonical tuning** last ran as targeted sweeps (84 + 24 + 54 + 9
-candidates) followed by a 588-candidate joint sweep via `tune_model()`
-across the full search domain on the 20260410(2) export:
+**Canonical tuning** last ran as a 588-candidate joint sweep via
+`tune_model()` on the 20260411 export, plus a 3-candidate boundary
+check extending DRIFT beyond the standard grid:
 
 - `DRIFT_WEIGHT_HALF_LIFE_DAYS`: `0.25`, `0.5`, `0.75`, `1.0`, `1.25`,
-  `1.5`, `2.0`, `2.5`, `3.0`, `4.0`, `5.0`, `7.0`
+  `1.5`, `2.0`, `2.5`, `3.0`, `4.0`, `5.0`, `7.0` (standard grid),
+  plus `8.0`, `10.0`, `14.0` (boundary check)
 - `MATCH_COST_THRESHOLD_HOURS`: `1.0`, `1.25`, `1.5`, `1.75`, `2.0`,
   `2.5`, `3.0`
 - `LOOKBACK_DAYS`: `3`, `4`, `5`, `6`, `7`, `10`, `14`
 
-The targeted sweeps identified DRIFT=0.80, LOOKBACK=10, THRESHOLD=1.5
-as the interior peak in the LOOKBACK=10 regime (0.75→69.8, 0.80→71.1,
-0.85→70.8; THRESHOLD 1.25→67.7, 1.5→71.1, 1.75→63.6). The full sweep
-found a competing regime at LOOKBACK=5, DRIFT=7.0, THRESHOLD=2.0
-(headline 72.0, +0.9 above baseline), but DRIFT=7.0 is a boundary
-value with a flattening gradient (4.0→71.7, 5.0→71.9, 7.0→72.0) and
-LOOKBACK=5 is more exposed to single-day outliers.
+The sweep identified LOOKBACK=5, DRIFT=7.0, THRESHOLD=2.0 as the
+winner (headline 73.1). The boundary check confirmed a flat plateau
+from DRIFT=7.0 through 14.0 (7.0→73.1, 8.0→73.1, 10.0→73.2,
+14.0→73.0), resolving the prior concern that DRIFT=7.0 was a boundary
+artifact. THRESHOLD=2.0 is interior (1.75→<71.5, 2.0→73.1, 2.5→71.9).
+LOOKBACK=5 is the clear regime winner: all top 10 candidates use it.
 
 `MIN_COMPLETE_DAYS` is not swept because it is a minimum-data guard,
 not a tuning knob.
@@ -117,101 +117,95 @@ Aggregate scores (weighted by recency, 36h half-life):
 
 | Metric | Score |
 |---|---|
-| Headline | 71.1 |
-| Count | 90.2 |
-| Timing | 56.4 |
+| Headline | 73.1 |
+| Count | 91.1 |
+| Timing | 59.3 |
 
-All 25 windows scored (100% availability).
+All 24 windows scored (100% availability).
 
-The current production constants (`DRIFT_WEIGHT_HALF_LIFE_DAYS=0.80`,
-`LOOKBACK_DAYS=10`, `MATCH_COST_THRESHOLD_HOURS=1.5`) are the interior
-peak in the LOOKBACK=10 regime. The 588-candidate full sweep found a
-competing regime at LOOKBACK=5, DRIFT=7.0, THRESHOLD=2.0 (headline
-72.0, +0.9), but DRIFT=7.0 is a boundary value. Within the LOOKBACK=10
-regime, the nearest challengers are DRIFT=0.85 (headline 70.8) and
-DRIFT=0.75 (headline 69.8).
+The current production constants (`DRIFT_WEIGHT_HALF_LIFE_DAYS=7.0`,
+`LOOKBACK_DAYS=5`, `MATCH_COST_THRESHOLD_HOURS=2.0`) are the sweep
+winner. The boundary check (DRIFT=8.0, 10.0, 14.0 at LOOKBACK=5,
+THRESHOLD=2.0) shows a flat plateau from 7.0 through 14.0 with a gentle
+peak at 10.0 (73.2). The next challengers within the LOOKBACK=5 regime
+are DRIFT=5.0 (72.9) and DRIFT=4.0 (72.6). THRESHOLD=2.0 is interior
+(1.75→<71.5, 2.0→73.1, 2.5→71.9).
 
-These constants were updated from the prior values (DRIFT=0.25,
-LOOKBACK=10, THRESHOLD=1.0, headline=65.7 on 20260410(2) export). The
-prior aggressive 0.25-day half-life had degraded from its original 69.3
-headline on the earlier 20260410 export as the baby's timing pattern
-began stabilizing, making the aggressive recency weighting
-counterproductive.
+The LOOKBACK=10 regime, which was the prior winner, now scores 71.0 at
+its best (DRIFT=0.80, THRESHOLD=1.5). The LOOKBACK=5 regime's advantage
+widened from +0.9 on the 20260410(2) export to +2.1 on this export.
 
-Per-window timing scores range from 46.7 to 78.4. Timing improved
-substantially (+8.9) from the prior constants, narrowing the
-count-vs-timing gap.
+Per-window timing scores range from 37.1 to 73.7. The wider range
+reflects the shorter lookback's sensitivity to recent pattern, with
+high-weight recent windows (April 9-10) scoring substantially better
+than the April 8 cluster.
 
 ### Diagnostic findings
 
-**Episode template stability:** 7 slots from a median of 8 episodes
-per day (10 days), using the episode-level template. Five of 10 days
-matched the median episode count of 7 and were used for template
-construction. Daily episode counts range from 7 to 10, with April 6
-as the high outlier (10 episodes, no clustering).
+**Episode template stability:** 8 slots from a median of 8 episodes per
+day (5 days), using the episode-level template. One of 5 days matched
+the median episode count of 8 (April 8) and was used for initial
+template construction. Template refinement via all-day matching
+compensates for the narrow initial seed. Daily episode counts range from
+7 to 10, with April 6 as the high outlier (10 episodes, no clustering).
 
-**Alignment quality with 1.5h threshold:** Most days have 0–4 unmatched
+**Alignment quality with 2.0h threshold:** Most days have 0–2 unmatched
 episodes at the episode level. Maximum assignment cost per day ranges
-from 0.49h to 1.49h. The looser threshold (vs. prior 1.0h) admits more
-matches for drift estimation while still rejecting clearly misplaced
-feeds.
+from 0.00h to 1.45h. The 2.0h threshold admits enough matches for
+template refinement while still rejecting outlier feeds.
 
-**Raw vs. episode comparison:** Raw feeds produce a median of 8 per
-day (mean 8.6); episodes produce a median of 8 (mean 7.9). Episode
-collapsing removes 0–3 cluster-internal feeds per day, with April 5
-showing the largest reduction (10 raw → 7 episodes, three 2-feed
-clusters).
+**Raw vs. episode comparison:** Raw feeds produce a median of 9 per day
+(mean 8.6); episodes produce a median of 8 (mean 8.2). Episode
+collapsing removes 0–2 cluster-internal feeds per day, with April 10
+showing the largest reduction (9 raw to 7 episodes, one 3-feed
+cluster).
 
 ## Conclusions
 
 **Disposition: Change.** Constants updated to
-`DRIFT_WEIGHT_HALF_LIFE_DAYS=0.80`, `LOOKBACK_DAYS=10`,
-`MATCH_COST_THRESHOLD_HOURS=1.5`.
+`DRIFT_WEIGHT_HALF_LIFE_DAYS=7.0`, `LOOKBACK_DAYS=5`,
+`MATCH_COST_THRESHOLD_HOURS=2.0`.
 
-The prior aggressive 0.25-day drift half-life degraded as the baby's
-feeding pattern began stabilizing. Headline dropped from 69.3 to 65.7
-on the 20260410(2) export, with timing falling from 52.4 to 47.5. The
-0.25-day half-life assigns ~94% of weight to the most recent day,
-which over-reacts to day-to-day noise once timing shifts become smaller
-and more consistent.
+The LOOKBACK=5/high-DRIFT regime, first identified as a competing
+alternative on the 20260410(2) export (+0.9), has strengthened to +2.1
+on the 20260411 export. All top 10 sweep candidates use LOOKBACK=5. The
+prior DRIFT=7.0 boundary concern is resolved: an extended sweep through
+DRIFT=14.0 shows a flat plateau from 7.0 through 14.0, with the gentle
+peak at 10.0 (73.2 vs. 73.1 at 7.0).
 
-The new 0.80-day half-life gives about 42% weight to yesterday's drift,
-smoothing the estimate across 2-3 days of effective history. The looser
-1.5h threshold admits more matches for drift estimation. Together these
-changes improved timing by +8.9 (the primary gain this round) while
-count traded down only -1.5. LOOKBACK=10 is unchanged: the 7-10
-episode-count variability still benefits from the wider stabilizing
-window.
+The 7.0-day drift half-life with a 5-day lookback produces near-uniform
+weighting (oldest day receives ~61% of yesterday's weight). This
+effectively averages slot positions over the recent window rather than
+extrapolating linear drift. The shift reflects the baby's feeding
+pattern stabilizing: active drift tracking now adds noise rather than
+signal.
 
-A competing regime at LOOKBACK=5, DRIFT=7.0, THRESHOLD=2.0 scored
-72.0 (+0.9 above baseline). This regime effectively disables drift
-tracking (7-day half-life ≈ uniform weighting) and uses a very short,
-loosely matched window. It was not chosen because DRIFT=7.0 is a
-boundary value and LOOKBACK=5 is more vulnerable to single-day
-outliers, but it should be monitored on future exports.
-
-The timing score (56.4) remains the weaker component relative to count
-(90.2), consistent with the cross-cutting finding.
+Timing improved +4.1 (55.2 to 59.3), continuing as the primary gain
+channel. Count traded down -0.7 (91.8 to 91.1). The timing score
+(59.3) remains the weaker component relative to count (91.1), consistent
+with the cross-cutting finding, but the gap has narrowed to 31.8 points
+from 36.6 on the prior export.
 
 ## Open questions
 
 ### Model-local
 
-- **Drift half-life trajectory:** The drift half-life has oscillated
-  across exports (3.0→1.0→0.25→0.80), tracking the baby's pattern
-  stability. The 0.80-day value is moderate and interior, but the
-  competing LOOKBACK=5/DRIFT=7.0 regime suggests the pattern may be
-  stabilizing enough that drift tracking adds limited value. Future
-  exports should check whether the optimal drift continues to lengthen
-  or stabilizes.
-- **LOOKBACK=5 vs. LOOKBACK=10:** LOOKBACK=10 has been stable for two
-  consecutive tunes, but the LOOKBACK=5/DRIFT=7.0 regime scored within
-  0.9 of the winner on this export. If episode-count variability
-  decreases (currently 7-10), the shorter window with its better count
-  score (93.6 vs 90.2) may reassert itself.
+- **Drift half-life trajectory:** The drift half-life has followed the
+  trajectory 3.0→1.0→0.25→0.80→7.0, reflecting a progression from
+  aggressive recency weighting toward near-uniform averaging as the
+  baby's pattern stabilizes. The 7.0-day half-life effectively disables
+  drift tracking within the 5-day window. Future exports should monitor
+  whether this remains optimal or whether drift tracking regains value as
+  new pattern shifts emerge (growth spurts, schedule changes).
+- **Template seed fragility at LOOKBACK=5:** Only 1 of 5 days matched
+  the median episode count (8), providing a narrow initial template
+  seed. Template refinement compensates, but a period where no day
+  within the 5-day window matches the median could degrade template
+  quality. Monitor on exports where episode-count variability increases.
 
 ### Cross-cutting
 
-- **Timing as shared bottleneck:** Count (90.2) substantially outperforms
-  timing (56.4). This pattern persists across all five models — see
-  `feedcast/research/README.md`.
+- **Timing as shared bottleneck:** Count (91.1) substantially outperforms
+  timing (59.3). This pattern persists across all five models — see
+  `feedcast/research/README.md`. The gap has narrowed from 36.6 to 31.8
+  points on this export.

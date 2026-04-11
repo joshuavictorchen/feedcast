@@ -1,27 +1,27 @@
-Export: exports/export_narababy_silas_20260410.csv
-Dataset: sha256:8dc1ea2650b0779b6a342b90aa918bc5bd2d5412bfbef25a2df4a8e1bada504e
-Cutoff: 2026-04-10 09:52:59
-Events (bottle only):   238
-Events (with BF merge): 238
+Export: exports/export_narababy_silas_20260411.csv
+Dataset: sha256:138b5d3ad7d106444951acc6c56154bcd1ae94184f58a566f83c032ad41ef5ec
+Cutoff: 2026-04-11 09:45:00
+Events (bottle only):   248
+Events (with BF merge): 248
 
 === GAP DISTRIBUTION ===
 
-Total gaps: 237
-Mean: 2.662h  Std: 0.963h
+Total gaps: 247
+Mean: 2.650h  Std: 0.976h
 Min: 0.356h  Max: 5.155h
-Median: 2.832h
-Coefficient of variation: 0.362
+Median: 2.826h
+Coefficient of variation: 0.368
 
 Gap histogram (0.5h bins):
-  [0.0, 0.5):   3 ###
-  [0.5, 1.0):  15 ###############
-  [1.0, 1.5):  17 #################
+  [0.0, 0.5):   4 ####
+  [0.5, 1.0):  16 ################
+  [1.0, 1.5):  18 ##################
   [1.5, 2.0):  17 #################
-  [2.0, 2.5):  35 ###################################
-  [2.5, 3.0):  49 #################################################
-  [3.0, 3.5):  63 ###############################################################
-  [3.5, 4.0):  27 ###########################
-  [4.0, 4.5):   7 #######
+  [2.0, 2.5):  37 #####################################
+  [2.5, 3.0):  50 ##################################################
+  [3.0, 3.5):  65 #################################################################
+  [3.5, 4.0):  28 ############################
+  [4.0, 4.5):   8 ########
   [4.5, 5.0):   3 ###
   [5.0, 5.5):   1 #
   [5.5+):     0 
@@ -29,97 +29,97 @@ Gap histogram (0.5h bins):
 === WEIBULL FIT — BASELINE ===
 
 All data (uniform weights):
-  shape=3.1111  scale=2.9696
-  median=2.640h  mean=2.656h
-  neg_loglik=329.09  success=True
+  shape=3.0465  scale=2.9587
+  median=2.623h  mean=2.644h
+  neg_loglik=346.85  success=True
 
 Recency-weighted (half-life=168h):
-  shape=3.3847  scale=3.0663
-  median=2.752h  mean=2.754h
+  shape=3.1456  scale=3.0247
+  median=2.692h  mean=2.707h
 
 Last 5d (recency-weighted):
-  shape=3.9997  scale=3.1622  median=2.885h  (n=42)
+  shape=3.4675  scale=3.0974  median=2.787h  (n=42)
 Last 7d (recency-weighted):
-  shape=3.6005  scale=3.1435  median=2.839h  (n=59)
+  shape=3.0377  scale=3.0587  median=2.711h  (n=61)
 
 Shape > 1 means hazard increases with elapsed time.
-  shape=3.38: increasing hazard
+  shape=3.15: increasing hazard
   This means: the longer you wait, the more likely the next feed
 
 === WEIBULL + VOLUME COVARIATE ===
 
 Recency-weighted with volume covariate:
-  shape=3.4513  scale=2.4522  beta=0.0633
+  shape=3.2277  scale=2.3254  beta=0.0747
   success=True
 
 Volume effect on median gap:
-  vol=1.0oz: effective_scale=2.612  median=2.349h
-  vol=2.0oz: effective_scale=2.783  median=2.503h
-  vol=3.0oz: effective_scale=2.965  median=2.666h
-  vol=4.0oz: effective_scale=3.159  median=2.840h
+  vol=1.0oz: effective_scale=2.506  median=2.237h
+  vol=2.0oz: effective_scale=2.700  median=2.410h
+  vol=3.0oz: effective_scale=2.909  median=2.597h
+  vol=4.0oz: effective_scale=3.135  median=2.799h
 
 Likelihood ratio test (1 df):
-  baseline neg_loglik: 108.66
-  +volume neg_loglik:  106.88
-  LR statistic: 3.567 (>3.84 for p<0.05)
-  Volume not significant at p<0.05
+  baseline neg_loglik: 115.97
+  +volume neg_loglik:  113.73
+  LR statistic: 4.464 (>3.84 for p<0.05)
+  Volume significant at p<0.05
 
 === WEIBULL BY DAY-PART ===
 
-Overnight (20-08) (n=105):
-  shape=4.8841  scale=3.3565  median=3.114h
-Daytime (08-20) (n=132):
-  shape=2.8498  scale=2.7870  median=2.451h
+Overnight (20-08) (n=109):
+  shape=4.8951  scale=3.3742  median=3.131h
+Daytime (08-20) (n=138):
+  shape=2.5870  scale=2.6968  median=2.341h
 
 === DISCRETE-TIME HAZARD ===
 
 Discrete hazard rates (recency-weighted):
-  [ 0.0,  0.5): h=0.015 
-  [ 0.5,  1.0): h=0.048 ##
-  [ 1.0,  1.5): h=0.067 ###
-  [ 1.5,  2.0): h=0.070 ###
-  [ 2.0,  2.5): h=0.206 ##########
-  [ 2.5,  3.0): h=0.346 #################
-  [ 3.0,  3.5): h=0.567 ############################
-  [ 3.5,  4.0): h=0.651 ################################
-  [ 4.0,  5.0): h=0.853 ##########################################
-  [ 5.0,  6.0): h=0.645 ################################
+  [ 0.0,  0.5): h=0.025 #
+  [ 0.5,  1.0): h=0.055 ##
+  [ 1.0,  1.5): h=0.073 ###
+  [ 1.5,  2.0): h=0.064 ###
+  [ 2.0,  2.5): h=0.213 ##########
+  [ 2.5,  3.0): h=0.334 ################
+  [ 3.0,  3.5): h=0.559 ###########################
+  [ 3.5,  4.0): h=0.633 ###############################
+  [ 4.0,  5.0): h=0.869 ###########################################
+  [ 5.0,  6.0): h=0.635 ###############################
   [ 6.0,  inf): h=0.500 #########################
 
 Discrete median survival: 2.750h
-Weibull median survival: 2.752h
+Weibull median survival: 2.692h
 
 Walk-forward discrete-time hazard (gap1 MAE):
-  Discrete gap1_MAE: 0.726h (n=231)
+  Discrete gap1_MAE: 0.758h (n=241)
 
 === WALK-FORWARD WEIBULL COMPARISON ===
 
-Weibull shape=3.385 lookback=5d: gap1=0.733h  gap3=0.732h  fcount=1.02  (n=231)
-Weibull shape=3.385 lookback=7d: gap1=0.733h  gap3=0.732h  fcount=1.02  (n=231)
-Weibull shape=3.111 lookback=5d: gap1=0.743h  gap3=0.742h  fcount=1.12  (n=231)
-Weibull shape=3.111 lookback=7d: gap1=0.743h  gap3=0.742h  fcount=1.04  (n=231)
+Weibull shape=3.146 lookback=5d: gap1=0.772h  gap3=0.764h  fcount=1.10  (n=241)
+Weibull shape=3.146 lookback=7d: gap1=0.772h  gap3=0.764h  fcount=1.04  (n=241)
+Weibull shape=3.047 lookback=5d: gap1=0.775h  gap3=0.767h  fcount=1.17  (n=241)
+Weibull shape=3.047 lookback=7d: gap1=0.775h  gap3=0.767h  fcount=1.14  (n=241)
 
-Weibull+vol shape=3.451 beta=0.063: gap1=0.851h  gap3=0.873h  fcount=1.97
-Weibull+vol shape=3.451 beta=0.032: gap1=0.716h  gap3=0.726h  fcount=1.28
-Weibull+vol shape=3.385 beta=0.063: gap1=0.842h  gap3=0.865h  fcount=1.91
-Weibull+vol shape=3.385 beta=0.032: gap1=0.714h  gap3=0.723h  fcount=1.25
+Weibull+vol shape=3.228 beta=0.075: gap1=0.941h  gap3=0.959h  fcount=2.10
+Weibull+vol shape=3.228 beta=0.037: gap1=0.756h  gap3=0.759h  fcount=1.33
+Weibull+vol shape=3.146 beta=0.075: gap1=0.929h  gap3=0.947h  fcount=2.08
+Weibull+vol shape=3.146 beta=0.037: gap1=0.752h  gap3=0.755h  fcount=1.33
 
 === DAY-PART SPLIT WALK-FORWARD ===
 
 Day-part split Weibull:
-  overnight shape=4.884  daytime shape=2.850
-  gap1_MAE=0.671h  gap3_MAE=0.668h  fcount_MAE=1.00  (n=228)
+  overnight shape=4.895  daytime shape=2.587
+  gap1_MAE=0.705h  gap3_MAE=0.703h  fcount_MAE=1.00  (n=238)
 
 === NAIVE BASELINE COMPARISON ===
 
 Model                                      gap1_MAE
 -----------------------------------------------------
-Naive last-gap                                0.913
-Naive mean-3-gaps                             0.837
-Discrete-time hazard                          0.726
-Weibull baseline (no vol)                     0.733
-Weibull + volume                              0.851
-Day-part split Weibull                        0.671
+Naive last-gap                                0.937
+Naive mean-3-gaps                             0.906
+Discrete-time hazard                          0.758
+Weibull baseline (no vol)                     0.772
+Weibull + volume                              0.941
+Day-part split Weibull                        0.705
 
 === MOST RECENT 24H PREDICTION (holdout, shipped model) ===
 
@@ -127,27 +127,27 @@ Reproduces the shipped model exactly: fixed shapes from constants,
 runtime scale estimation, conditional survival for first feed.
 Only pre-holdout-cutoff events are used (true holdout).
 
-Holdout cutoff: 04/09 09:52
-Last event (anchor): 04/09 09:23 vol=3.5oz
-Elapsed since anchor: 0.49h
-Overnight: shape=7.5 scale=3.3502 median=3.190h
-Daytime:   shape=3.0 scale=2.8792 median=2.548h
+Holdout cutoff: 04/10 09:45
+Last event (anchor): 04/10 07:40 vol=3.5oz
+Elapsed since anchor: 2.07h
+Overnight: shape=7.5 scale=3.4966 median=3.330h
+Daytime:   shape=3.0 scale=2.9095 median=2.575h
 
-First feed: conditional remaining = 2.068h (daypart=daytime)
+First feed: conditional remaining = 1.273h (daypart=overnight)
 
-Predicted 8 feeds, actual 8 feeds
+Predicted 8 feeds, actual 11 feeds
 
-  pred=11:57  actual=12:10  err=0.22h
-  pred=14:29  actual=15:45  err=1.25h
-  pred=17:02  actual=18:16  err=1.23h
-  pred=19:35  actual=20:32  err=0.94h
-  pred=22:08  actual=23:20  err=1.20h
-  pred=01:20  actual=03:26  err=2.10h
-  pred=04:31  actual=07:40  err=3.16h
-  pred=07:42  actual=09:52  err=2.17h
+  pred=11:01  actual=09:52  err=1.14h
+  pred=13:35  actual=12:16  err=1.32h
+  pred=16:10  actual=15:29  err=0.68h
+  pred=18:44  actual=18:33  err=0.19h
+  pred=21:19  actual=20:16  err=1.05h
+  pred=00:39  actual=22:38  err=2.01h
+  pred=03:58  actual=02:46  err=1.20h
+  pred=07:18  actual=06:30  err=0.81h
 
-Paired 8, mean timing error: 1.53h
-Feed count error: 0
+Paired 8, mean timing error: 1.05h
+Feed count error: 3
 
 === EPISODE-LEVEL ANALYSIS ===
 
@@ -156,62 +156,62 @@ Episode grouping collapses close-together feeds into single episodes,
 removing these artifacts. This section re-derives all key findings on
 episode-level data for comparison with the raw baseline above.
 
-Raw events: 238
-Episode events: 210
-Collapsed: 28 feeds absorbed into clusters
+Raw events: 248
+Episode events: 217
+Collapsed: 31 feeds absorbed into clusters
 
 Episode gap distribution:
-  Total gaps: 209
-  Mean: 3.018h  Std: 0.766h
+  Total gaps: 216
+  Mean: 3.028h  Std: 0.764h
   Min: 1.247h  Max: 5.196h
-  Median: 3.023h
-  Overnight gaps: 95
-  Daytime gaps: 114
+  Median: 3.037h
+  Overnight gaps: 98
+  Daytime gaps: 118
 
 Episode gap histogram (0.5h bins):
   [0.0, 0.5):   0 
   [0.5, 1.0):   0 
   [1.0, 1.5):   6 ######
   [1.5, 2.0):  12 ############
-  [2.0, 2.5):  32 ################################
-  [2.5, 3.0):  50 ##################################################
-  [3.0, 3.5):  63 ###############################################################
-  [3.5, 4.0):  25 #########################
-  [4.0, 4.5):  14 ##############
+  [2.0, 2.5):  33 #################################
+  [2.5, 3.0):  51 ###################################################
+  [3.0, 3.5):  65 #################################################################
+  [3.5, 4.0):  26 ##########################
+  [4.0, 4.5):  16 ################
   [4.5, 5.0):   4 ####
   [5.0, 5.5):   3 ###
   [5.5+):     0 
 
 Episode-level Weibull fits by day-part:
-  Overnight (20-08) (n=95):
-    shape=6.0008  scale=3.4776  median=3.272h
-  Daytime (08-20) (n=114):
-    shape=3.5400  scale=3.1432  median=2.834h
+  Overnight (20-08) (n=98):
+    shape=6.0428  scale=3.5046  median=3.298h
+  Daytime (08-20) (n=118):
+    shape=3.6506  scale=3.1751  median=2.872h
 
 Raw vs episode shape comparison:
   Daypart          Raw shape   Ep shape    Delta
-  Overnight            4.884      6.001   +1.117
-  Daytime              2.850      3.540   +0.690
+  Overnight            4.895      6.043   +1.148
+  Daytime              2.587      3.651   +1.064
 
 Episode-level day-part walk-forward:
-  half_life= 48h: gap1_MAE=0.588h  fcount_MAE=1.61  (n=200)
-  half_life= 72h: gap1_MAE=0.594h  fcount_MAE=1.27  (n=200)
-  half_life=120h: gap1_MAE=0.599h  fcount_MAE=1.09  (n=200)
-  half_life=168h: gap1_MAE=0.600h  fcount_MAE=1.03  (n=200) <-- current
+  half_life= 48h: gap1_MAE=0.601h  fcount_MAE=1.38  (n=207)
+  half_life= 72h: gap1_MAE=0.601h  fcount_MAE=1.18  (n=207)
+  half_life=120h: gap1_MAE=0.602h  fcount_MAE=1.01  (n=207)
+  half_life=168h: gap1_MAE=0.602h  fcount_MAE=0.95  (n=207) <-- current
 
 Episode-level volume covariate — significance test:
-  Baseline: shape=4.2494  scale=3.3112
-  +Volume:  shape=4.3732  scale=2.3907  beta=0.0845
-  LR statistic: 5.716 (>3.84 for p<0.05)
+  Baseline: shape=4.3499  scale=3.3390
+  +Volume:  shape=4.5119  scale=2.3977  beta=0.0847
+  LR statistic: 7.301 (>3.84 for p<0.05)
   Volume significant at p<0.05
 
 Episode-level volume walk-forward (tested AFT overlay, day-part split, half-life=168h):
-  beta=0.000: gap1_MAE=0.600h  fcount_MAE=1.03  (n=200) <-- no-volume baseline
-  beta=0.030: gap1_MAE=0.691h  fcount_MAE=1.37  (n=200)
-  beta=0.060: gap1_MAE=0.942h  fcount_MAE=1.57  (n=200)
-  beta=0.085: gap1_MAE=1.245h  fcount_MAE=2.32  (n=200) <-- MLE
-  beta=0.120: gap1_MAE=1.811h  fcount_MAE=3.03  (n=200)
-  beta=0.150: gap1_MAE=2.379h  fcount_MAE=3.25  (n=200)
+  beta=0.000: gap1_MAE=0.602h  fcount_MAE=0.95  (n=207) <-- no-volume baseline
+  beta=0.030: gap1_MAE=0.672h  fcount_MAE=1.31  (n=207)
+  beta=0.060: gap1_MAE=0.922h  fcount_MAE=1.54  (n=207)
+  beta=0.085: gap1_MAE=1.242h  fcount_MAE=2.26  (n=207) <-- MLE
+  beta=0.120: gap1_MAE=1.825h  fcount_MAE=2.97  (n=207)
+  beta=0.150: gap1_MAE=2.410h  fcount_MAE=3.23  (n=207)
 
 Conclusion: the tested scalar AFT volume overlay is not shipped.
 The LR signal is real, but this formulation worsens walk-forward
@@ -225,12 +225,12 @@ feed's volume_oz. Breastfeed merge increases a bottle event's
 volume, which could change episode boundaries. This section
 compares bottle-only vs breastfeed-merged episode structures.
 
-Bottle-only episodes: 210
-Merged episodes:      210
+Bottle-only episodes: 217
+Merged episodes:      217
 Episode count differs: no
 
 Boundary differences: 0
-Volume differences: 3 (out of 210 episodes)
+Volume differences: 3 (out of 217 episodes)
 
 Episode boundaries are identical. Merge policy does not affect
 episode structure on this dataset. Only episode volumes differ,
@@ -245,38 +245,36 @@ CANONICAL MULTI-WINDOW EVALUATION
 Production-constant evaluation via score_model (same
 infrastructure as the replay CLI).
 
-Aggregate:  headline=73.3  count=97.5  timing=55.8
-Windows:    26 scored / 26 total (100.0% availability)
+Aggregate:  headline=67.7  count=97.0  timing=48.7
+Windows:    24 scored / 24 total (100.0% availability)
 Half-life:  36.0h  Lookback: 96.0h
 
 Per-window breakdown:
   Cutoff                  Weight    Head   Count    Time  Status
-  2026-04-06T11:19:55     0.2571    76.5    91.2    64.3  scored
-  2026-04-06T12:38:39     0.2636    55.3    94.9    32.2  scored
-  2026-04-06T15:22:52     0.2779    49.1    94.8    25.4  scored
-  2026-04-06T17:30:34     0.2895    73.2   100.0    53.6  scored
-  2026-04-06T20:14:09     0.3051    76.0   100.0    57.7  scored
-  2026-04-06T23:33:00     0.3253    76.6   100.0    58.7  scored
-  2026-04-07T02:04:34     0.3415    74.3   100.0    55.2  scored
-  2026-04-07T05:56:15     0.3678    82.1   100.0    67.4  scored
-  2026-04-07T09:20:52     0.3928    77.8   100.0    60.6  scored
-  2026-04-07T11:35:15     0.4101    75.1   100.0    56.4  scored
-  2026-04-07T14:11:23     0.4312    50.6    94.9    27.0  scored
-  2026-04-07T17:39:53     0.4610    81.9   100.0    67.1  scored
-  2026-04-07T20:19:33     0.4852    75.4    95.1    59.7  scored
-  2026-04-08T00:05:11     0.5217    82.9   100.0    68.7  scored
-  2026-04-08T03:18:32     0.5551    81.8   100.0    66.9  scored
-  2026-04-08T06:40:35     0.5922    77.5    95.3    63.0  scored
-  2026-04-08T09:45:13     0.6284    78.5   100.0    61.6  scored
-  2026-04-08T12:58:20     0.6686    71.1   100.0    50.6  scored
-  2026-04-08T14:59:15     0.6950    77.6    95.2    63.2  scored
-  2026-04-08T17:40:09     0.7318    69.6    95.2    50.8  scored
-  2026-04-08T19:51:35     0.7634    44.7    90.9    21.9  scored
-  2026-04-09T00:16:39     0.8311    80.9   100.0    65.4  scored
-  2026-04-09T03:31:04     0.8847    78.6   100.0    61.9  scored
-  2026-04-09T06:30:28     0.9371    76.8    95.3    61.9  scored
-  2026-04-09T09:23:51     0.9907    72.9    94.8    56.0  scored
-  2026-04-09T09:52:59     1.0000    73.8   100.0    54.5  scored
+  2026-04-07T11:35:15     0.2590    75.1   100.0    56.4  scored
+  2026-04-07T14:11:23     0.2723    50.6    94.9    27.0  scored
+  2026-04-07T17:39:53     0.2912    81.9   100.0    67.1  scored
+  2026-04-07T20:19:33     0.3065    75.4    95.1    59.7  scored
+  2026-04-08T00:05:11     0.3295    82.9   100.0    68.7  scored
+  2026-04-08T03:18:32     0.3506    81.8   100.0    66.9  scored
+  2026-04-08T06:40:35     0.3740    77.5    95.3    63.0  scored
+  2026-04-08T09:45:13     0.3969    78.5   100.0    61.6  scored
+  2026-04-08T12:58:20     0.4223    71.1   100.0    50.6  scored
+  2026-04-08T14:59:15     0.4390    77.6    95.2    63.2  scored
+  2026-04-08T17:40:09     0.4622    69.6    95.2    50.8  scored
+  2026-04-08T19:51:35     0.4821    44.7    90.9    21.9  scored
+  2026-04-09T00:16:39     0.5249    80.9   100.0    65.4  scored
+  2026-04-09T03:31:04     0.5587    78.6   100.0    61.9  scored
+  2026-04-09T06:30:28     0.5918    76.8    95.3    61.9  scored
+  2026-04-09T09:23:51     0.6257    72.9    94.8    56.0  scored
+  2026-04-09T12:10:16     0.6600    67.1    95.3    47.2  scored
+  2026-04-09T15:45:13     0.7072    70.5   100.0    49.7  scored
+  2026-04-09T18:16:28     0.7423    76.5    95.2    61.4  scored
+  2026-04-09T20:32:19     0.7754    66.0    95.2    45.8  scored
+  2026-04-09T23:20:30     0.8184    53.7    94.3    30.6  scored
+  2026-04-10T03:26:01     0.8855    72.7    94.2    56.1  scored
+  2026-04-10T07:40:52     0.9609    47.8   100.0    22.9  scored
+  2026-04-10T09:45:00     1.0000    47.8   100.0    22.8  scored
 
 === CANONICAL PARAMETER TUNING ===
 
@@ -286,37 +284,37 @@ Sweeps OVERNIGHT_SHAPE and DAYTIME_SHAPE via tune_model
 Candidates evaluated: 154
 
                      Headline   Count  Timing  Windows
-Baseline                 73.3    97.5    55.8   26/26
-Best                     73.3    97.5    55.8   26/26
+Baseline                 67.7    97.0    48.7   24/24
+Best                     67.8    97.7    48.5   24/24
 
 Baseline params: {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 7.5}
-Best params:     {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 7.5}
-Headline delta:  +0.000
+Best params:     {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 8.0}
+Headline delta:  +0.123
 Availability delta: +0
 
 Top 5 candidates:
-  1. {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 7.5}  headline=73.3  count=97.5  timing=55.8
-  2. {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 8.0}  headline=73.2  count=97.9  timing=55.7
-  3. {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 7.0}  headline=73.1  count=97.2  timing=55.7
-  4. {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 6.5}  headline=73.0  count=97.2  timing=55.5
-  5. {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 6.0}  headline=72.2  count=96.7  timing=54.7
+  1. {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 8.0}  headline=67.8  count=97.7  timing=48.5
+  2. {'DAYTIME_SHAPE': 3.5, 'OVERNIGHT_SHAPE': 8.0}  headline=67.7  count=98.6  timing=47.8
+  3. {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 7.5}  headline=67.7  count=97.0  timing=48.7
+  4. {'DAYTIME_SHAPE': 3.5, 'OVERNIGHT_SHAPE': 7.5}  headline=67.6  count=98.6  timing=47.7
+  5. {'DAYTIME_SHAPE': 1.5, 'OVERNIGHT_SHAPE': 3.0}  headline=67.5  count=89.9  timing=51.4
 
 === FINAL SUMMARY ===
 
 --- Raw pre-episode baseline ---
-  Overnight shape: 4.8841  Daytime shape: 2.8498
-  Day-part walk-forward gap1_MAE: 0.671h
-  Volume significant: no (LR=3.567)
+  Overnight shape: 4.8951  Daytime shape: 2.5870
+  Day-part walk-forward gap1_MAE: 0.705h
+  Volume significant: yes (LR=4.464)
 
 --- Episode-level MLE (descriptive fit) ---
-  Overnight shape: 6.0008  Daytime shape: 3.5400
-  Volume significant: yes (LR=5.716)
+  Overnight shape: 6.0428  Daytime shape: 3.6506
+  Volume significant: yes (LR=7.301)
 
 --- Canonical replay tuning ---
-  Baseline headline: 73.255
-  Best headline:     73.255
+  Baseline headline: 67.672
+  Best headline:     67.795
   Baseline params:   {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 7.5}
-  Best params:       {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 7.5}
+  Best params:       {'DAYTIME_SHAPE': 3.0, 'OVERNIGHT_SHAPE': 8.0}
 
 Model implementation uses:
   Episode-level history via episodes_as_events()
