@@ -130,7 +130,7 @@ defended in `research.md`.
 
 See [`feedcast/replay/README.md`](../replay/README.md) for CLI usage
 and tuning examples. See
-[`feedcast/evaluation/methodology.md`](../evaluation/methodology.md)
+[`feedcast/evaluation/README.md`](../evaluation/README.md)
 for scoring design rationale.
 
 ## Working Framing
