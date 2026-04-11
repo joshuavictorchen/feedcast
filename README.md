@@ -1,27 +1,23 @@
 # Feedcast
 
-Feedcast is an experiment in agentic engineering: a forecasting repo that maintains its own models. It predicts the next 24 hours of bottle feeds from Nara Baby app exports. On each run, a CLI agent (Claude or Codex) analyzes recent feeding patterns, evaluates every scripted model against replay-backed evidence, and tunes constants when warranted. The same run also produces an independent LLM forecast and scores the prior run's predictions against what actually happened.
+Feedcast is an experiment in agentic engineering: a forecasting repo that maintains its own models. It predicts the next 24 hours of bottle feeds from Nara Baby app exports. On each run, a CLI agent (Claude or Codex) analyzes recent feeding patterns, evaluates prediction models against replay-backed evidence, and tunes parameters when warranted. The same run also produces an independent LLM forecast and scores the prior run's predictions against what actually happened.
 
-*Built by a sleep-deprived dad with Claude and Codex between bottle feedings. My wife missed the daily structure we had before Silas was born. I threw together a bottle-feed predictor from our Nara Baby exports as a quick AI agent demo to cheer her up, and it grew into what you see here. Coordinated via [claodex](https://github.com/joshuavictorchen/claodex).*
+*Built by a sleep-deprived dad with Claude and Codex between bottle feedings. My wife missed the daily structure we had before Silas was born. I threw together a bottle-feed predictor from our Nara Baby exports as a quick agentic AI demo to cheer her up, and it grew into what you see here. Coordinated via [claodex](https://github.com/joshuavictorchen/claodex).*
 
 ## Latest forecast
 
 ![Featured Forecast](report/schedule.png)
 
-*Latest committed featured forecast.*
-
-Each run refreshes the full report at [`report/report.md`](report/report.md) with per-model predictions, retrospective accuracy, agent trend insights, and diagnostics.
-
-*Feedcast is a single-subject experimental system on a small, shifting dataset. It is not a validated forecasting product or decision-support tool.*
+*Feedcast is a single-subject experimental system on a small, shifting dataset. See the full report at [`report/report.md`](report/report.md) with agent trend insights, per-model predictions, retrospective accuracy, and diagnostics.*
 
 ## What makes this different
 
 Feedcast is a self-improving forecasting system: each run tunes the models that produce the next forecast.
 
-- **The models tune themselves.** On each run, a CLI agent (Claude or Codex) assesses every base scripted model's fit to current feeding patterns and rewrites its constants when the evidence supports it. Tuning decisions are backed by replay sweeps over recent history, and every change lands as a committed `CHANGELOG.md` entry with numeric deltas. See any per-model `CHANGELOG.md` for the live tuning history.
+- **The models tune themselves.** On each run, a CLI agent (Claude or Codex) assesses every base model's fit to current feeding patterns and rewrites its constants when the evidence supports it. Tuning decisions are backed by replay sweeps over recent history, and every change lands as a committed `CHANGELOG.md` entry with numeric deltas. See any per-model `CHANGELOG.md` for the live tuning history.
 - **The repo scores itself.** Each run compares the previous run's predictions to what actually happened in the new export. A growing history lives in `tracker.json` and the report's retrospective accuracy table.
 - **Documentation is dual-use.** Research articles, model design notes, and skill prompts are the same instructions the CLI agents read at runtime. Writing for human readers and writing for agents converge.
-- **Hypothesis diversity by design.** Four base scripted models encode distinct hypotheses about what drives feeding patterns: template drift, instance-based retrieval, mechanistic hunger, and survival hazards. A consensus blend ensembles them into a fifth deterministic forecast. A sixth forecast comes from a CLI agent running independently.
+- **Hypothesis diversity by design.** Four base models encode distinct hypotheses about what drives feeding patterns: template drift, instance-based retrieval, mechanistic hunger, and survival hazards. A consensus blend ensembles them into a fifth deterministic forecast. A sixth forecast comes from a CLI agent running independently.
 
 ## Pipeline
 
@@ -33,8 +29,7 @@ Pre-flight
 
 Trend Insights                                   [agent · skippable]
   └── Analyze a 7-day baseline, then zoom in on
-      the newest data for fresh signal
-      → summary held in memory for the report
+      the newest data for fresh signals
 
 Model Tuning                                     [agent ×4 parallel · skippable]
   └── One agent per base model assesses recent
@@ -56,6 +51,7 @@ Finalize
 
 Each run produces two commits on the run branch. The tuning commit captures the model code state that produced the forecasts; its SHA is the provenance recorded in `tracker.json`. The results commit packages the report, charts, and tracker update.
 
+> [!NOTE]
 > Committing `report/`, `tracker.json`, and tuning diffs into the main repo is unorthodox. Feedcast does it so the commit history itself becomes the telemetry: every run leaves a branch recording what the data looked like, what the models decided, what was tuned, and how the previous forecast scored. The repo becomes an experiment log. For a single-subject learning space for agentic engineering, this beats standing up a database.
 
 ## Substantial subsystems
@@ -90,6 +86,10 @@ Each scripted model folder contains its implementation, a `design.md`, a `method
 - **Timing is the objective.** Forecasts are scored primarily on when feeds happen. Count accuracy (how many feeds in the next 24 hours) is achievable on this dataset; timing accuracy (when exactly) is the hard problem and drives most of the tuning decisions. Volume is a secondary output.
 - **Parallel tuning with per-model ownership.** Up to four model-tuning agents run concurrently, one per base model. Each prompt assigns one model directory and instructs the agent to modify only files inside it. The pipeline stages all tuning edits into a single commit on the run branch, so any out-of-scope change is visible in the diff.
 - **Fail fast on agent error.** Agent failures stop the run. There is no silent fallback.
+
+## The pattern beyond baby feeds
+
+Feedcast's architecture is domain-agnostic: a scripted model lineup with diverse hypotheses, a shared evaluation standard, an agent loop that assesses and tunes with evidence-backed commits, and a persistent record of every run. Substitute any periodic time-series drop with a measurable forecast objective and the scaffold transfers. Baby feeds are a good testbed because the dataset is small, shifting, and single-subject, and the forecast horizon is short enough to score against the next data drop.
 
 ## Quick start
 
@@ -151,10 +151,6 @@ exports/           raw Nara CSV drops (untracked)
 ```
 
 Contributor workflow for models lives in [`feedcast/models/README.md`](feedcast/models/README.md), agent inference in [`feedcast/agents/README.md`](feedcast/agents/README.md), and skills in [`skills/README.md`](skills/README.md).
-
-## The pattern beyond baby feeds
-
-Feedcast's architecture is domain-agnostic: a scripted model lineup with diverse hypotheses, a shared evaluation standard, an agent loop that assesses and tunes with evidence-backed commits, and a persistent record of every run. Substitute any periodic time-series drop with a measurable forecast objective and the scaffold transfers. Baby feeds are a good testbed because the dataset is small, shifting, and single-subject, and the forecast horizon is short enough to score against the next data drop.
 
 ## Glossary
 
