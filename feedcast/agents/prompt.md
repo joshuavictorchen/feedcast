@@ -116,3 +116,6 @@ Write it from first principles for a fresh reader:
 
 Use the scripted model `methodology.md` files as the style bar:
 concise, current-state, and mechanism-first.
+
+- Keep it to a single section. A leading `# Agent Inference` title is
+  fine, but do not add `##` or deeper sub-headers.
