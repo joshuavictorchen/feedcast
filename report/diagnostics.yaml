@@ -1,5 +1,5 @@
-run_id: 20260410-192301
-cutoff: '2026-04-10T18:33:17'
+run_id: 20260411-121840
+cutoff: '2026-04-11T09:45:00'
 featured_slug: consensus_blend
 forecasts:
 - name: Slot Drift
@@ -12,24 +12,23 @@ forecasts:
   diagnostics:
     slot_count: 7
     template_hours:
-    - 2.18
-    - 5.54
-    - 9.19
-    - 11.47
-    - 14.28
-    - 17.78
-    - 20.03
+    - 2.94
+    - 6.26
+    - 9.43
+    - 11.58
+    - 14.66
+    - 17.86
+    - 20.05
     template_times:
-    - 02:11
-    - 05:32
-    - 09:11
-    - '11:28'
-    - '14:16'
-    - '17:47'
-    - '20:01'
+    - 02:56
+    - 06:15
+    - 09:25
+    - '11:34'
+    - '14:39'
+    - '17:51'
+    - '20:03'
     complete_days_used: 10
     daily_episode_counts:
-      '2026-03-31': 7
       '2026-04-01': 7
       '2026-04-02': 8
       '2026-04-03': 9
@@ -39,54 +38,51 @@ forecasts:
       '2026-04-07': 7
       '2026-04-08': 8
       '2026-04-09': 9
+      '2026-04-10': 7
     per_slot:
     - slot: 1
-      template: 02:11
-      projected: 01:45
-      drift_hours_per_day: -0.103
-      avg_volume_oz: 4.0
-      observations: 4
+      template: 02:56
+      projected: 03:36
+      drift_hours_per_day: 0.128
+      avg_volume_oz: 3.41
+      observations: 9
     - slot: 2
-      template: 05:32
-      projected: 06:47
-      drift_hours_per_day: 0.285
-      avg_volume_oz: 3.0
-      observations: 5
+      template: 06:15
+      projected: 07:55
+      drift_hours_per_day: 0.426
+      avg_volume_oz: 3.46
+      observations: 9
     - slot: 3
-      template: 09:11
-      projected: 09:07
-      drift_hours_per_day: -0.271
-      avg_volume_oz: 3.53
-      observations: 7
+      template: 09:25
+      projected: 09:57
+      drift_hours_per_day: 0.142
+      avg_volume_oz: 3.55
+      observations: 8
     - slot: 4
-      template: '11:28'
+      template: '11:34'
       projected: '12:27'
-      drift_hours_per_day: 0.291
-      avg_volume_oz: 3.0
-      observations: 7
+      drift_hours_per_day: 0.112
+      avg_volume_oz: 3.33
+      observations: 9
     - slot: 5
-      template: '14:16'
-      projected: '16:32'
-      drift_hours_per_day: 0.778
-      avg_volume_oz: 3.06
-      observations: 7
+      template: '14:39'
+      projected: '15:47'
+      drift_hours_per_day: 0.214
+      avg_volume_oz: 3.62
+      observations: 9
     - slot: 6
-      template: '17:47'
-      projected: '18:48'
-      drift_hours_per_day: 0.534
-      avg_volume_oz: 3.96
-      observations: 9
+      template: '17:51'
+      projected: '18:49'
+      drift_hours_per_day: 0.296
+      avg_volume_oz: 5.8
+      observations: 8
     - slot: 7
-      template: '20:01'
-      projected: '21:04'
-      drift_hours_per_day: 0.547
-      avg_volume_oz: 3.5
-      observations: 9
+      template: '20:03'
+      projected: '20:48'
+      drift_hours_per_day: 0.182
+      avg_volume_oz: 3.58
+      observations: 8
     per_day_match_quality:
-      '2026-03-31':
-        total_episodes: 7
-        matched: 6
-        unmatched: 1
       '2026-04-01':
         total_episodes: 7
         matched: 3
@@ -97,46 +93,49 @@ forecasts:
         unmatched: 1
       '2026-04-03':
         total_episodes: 9
-        matched: 4
-        unmatched: 5
+        matched: 7
+        unmatched: 2
       '2026-04-04':
         total_episodes: 7
-        matched: 4
-        unmatched: 3
+        matched: 5
+        unmatched: 2
       '2026-04-05':
         total_episodes: 7
         matched: 4
         unmatched: 3
       '2026-04-06':
         total_episodes: 10
-        matched: 4
-        unmatched: 6
+        matched: 7
+        unmatched: 3
       '2026-04-07':
         total_episodes: 7
         matched: 7
         unmatched: 0
       '2026-04-08':
         total_episodes: 8
-        matched: 4
-        unmatched: 4
+        matched: 7
+        unmatched: 1
       '2026-04-09':
         total_episodes: 9
-        matched: 5
-        unmatched: 4
+        matched: 7
+        unmatched: 2
+      '2026-04-10':
+        total_episodes: 7
+        matched: 6
+        unmatched: 1
     filled_slots_today:
+    - 0
     - 1
     - 2
-    - 3
-    - 5
 - name: Analog Trajectory
   slug: analog_trajectory
   available: true
   error_message: null
-  raw_point_count: 7
-  episode_count: 7
+  raw_point_count: 8
+  episode_count: 8
   collapsed_attachments: 0
   diagnostics:
-    complete_states: 203
+    complete_states: 208
     k_neighbors: 7
     lookback_hours: 24
     recency_half_life_hours: 120
@@ -150,91 +149,91 @@ forecasts:
       mean_volume: 0.5
       sin_hour: 2.0
       cos_hour: 2.0
-    elapsed_since_last_history_event_hours: 0.0
+    elapsed_since_last_history_event_hours: 0.543
     query_features:
-      last_gap: 3.061
-      mean_gap: 3.035
-      last_volume: 4.75
-      mean_volume: 3.681
-      sin_hour: -0.989
-      cos_hour: 0.145
+      last_gap: 2.701
+      mean_gap: 3.191
+      last_volume: 4.5
+      mean_volume: 4.256
+      sin_hour: 0.668
+      cos_hour: -0.744
     feature_normalization:
       last_gap:
-        mean: 3.007
-        std: 0.763
+        mean: 3.01
+        std: 0.766
       mean_gap:
-        mean: 3.038
-        std: 0.279
+        mean: 3.039
+        std: 0.276
       last_volume:
-        mean: 3.739
-        std: 0.814
+        mean: 3.734
+        std: 0.805
       mean_volume:
-        mean: 3.739
-        std: 0.418
+        mean: 3.734
+        std: 0.414
       sin_hour:
-        mean: -0.046
-        std: 0.713
+        mean: -0.035
+        std: 0.711
       cos_hour:
-        mean: -0.063
-        std: 0.696
+        mean: -0.065
+        std: 0.699
     neighbors:
-    - state_time: '2026-03-24T18:02:52'
-      distance: 0.882
-      recency_weight: 0.094
-      weight: 0.106
-      trajectory_length: 6
-    - state_time: '2026-03-29T17:11:08'
-      distance: 0.985
-      recency_weight: 0.188
-      weight: 0.189
+    - state_time: '2026-04-08T09:45:13'
+      distance: 1.226
+      recency_weight: 0.66
+      weight: 0.534
       trajectory_length: 8
-    - state_time: '2026-03-26T17:56:35'
-      distance: 1.116
-      recency_weight: 0.125
-      weight: 0.111
+    - state_time: '2026-04-02T08:48:40'
+      distance: 1.524
+      recency_weight: 0.286
+      weight: 0.186
       trajectory_length: 8
-    - state_time: '2026-03-16T20:19:24'
-      distance: 1.291
-      recency_weight: 0.032
-      weight: 0.024
-      trajectory_length: 7
-    - state_time: '2026-04-07T17:39:53'
-      distance: 1.321
-      recency_weight: 0.656
-      weight: 0.493
-      trajectory_length: 7
-    - state_time: '2026-04-09T18:16:28'
-      distance: 1.326
-      recency_weight: 0.869
-      weight: 0.651
-      trajectory_length: 7
-    - state_time: '2026-04-04T19:20:03'
-      distance: 1.352
-      recency_weight: 0.437
-      weight: 0.321
+    - state_time: '2026-04-05T07:22:35'
+      distance: 1.562
+      recency_weight: 0.429
+      weight: 0.273
       trajectory_length: 6
+    - state_time: '2026-03-26T10:55:29'
+      distance: 1.562
+      recency_weight: 0.11
+      weight: 0.07
+      trajectory_length: 8
+    - state_time: '2026-03-29T11:35:24'
+      distance: 1.824
+      recency_weight: 0.167
+      weight: 0.091
+      trajectory_length: 8
+    - state_time: '2026-03-29T08:13:07'
+      distance: 1.83
+      recency_weight: 0.163
+      weight: 0.089
+      trajectory_length: 8
+    - state_time: '2026-04-10T09:52:59'
+      distance: 1.869
+      recency_weight: 0.871
+      weight: 0.464
+      trajectory_length: 7
 - name: Latent Hunger State
   slug: latent_hunger
   available: true
   error_message: null
-  raw_point_count: 8
-  episode_count: 8
+  raw_point_count: 7
+  episode_count: 7
   collapsed_attachments: 0
   diagnostics:
-    growth_rate: 0.301
-    satiety_rate: 0.55
+    growth_rate: 0.166
+    satiety_rate: 0.18
     circadian_amplitude: 0.0
     circadian_phase_hour: 0.0
     hunger_threshold: 1.0
     sim_volume_oz: 4.0
-    current_hunger: 0.073
-    elapsed_since_last_hours: 0.0
-    recent_episodes_in_window: 56
-    fit_episodes_used: 55
+    current_hunger: 0.535
+    elapsed_since_last_hours: 0.543
+    recent_episodes_in_window: 55
+    fit_episodes_used: 54
     implied_growth_rate_range:
-      min: 0.164
-      max: 0.508
-      std: 0.071
+      min: 0.087
+      max: 0.249
+      std: 0.038
     lookback_days: 7
     recency_half_life_hours: 168
 - name: Survival Hazard
@@ -246,25 +245,25 @@ forecasts:
   collapsed_attachments: 0
   diagnostics:
     overnight_shape: 7.5
-    overnight_scale: 3.491
-    overnight_median_hours: 3.325
-    overnight_fit_gaps: 25
+    overnight_scale: 3.585
+    overnight_median_hours: 3.414
+    overnight_fit_gaps: 24
     daytime_shape: 3.0
-    daytime_scale: 3.113
-    daytime_median_hours: 2.755
+    daytime_scale: 3.148
+    daytime_median_hours: 2.786
     daytime_fit_gaps: 30
-    elapsed_since_last_hours: 0.0
+    elapsed_since_last_hours: 0.543
     first_gap_daypart: daytime
     sim_volume_oz: 4.0
-    total_fit_episode_gaps: 55
+    total_fit_episode_gaps: 54
     lookback_days: 7
     recency_half_life_hours: 168
     uncertainty_25_75_overnight:
-      p25_hours: 2.957
-      p75_hours: 3.647
+      p25_hours: 3.036
+      p75_hours: 3.744
     uncertainty_25_75_daytime:
-      p25_hours: 2.055
-      p75_hours: 3.471
+      p25_hours: 2.078
+      p75_hours: 3.511
 - name: Consensus Blend
   slug: consensus_blend
   available: true
@@ -280,8 +279,8 @@ forecasts:
     - survival_hazard
     component_forecast_counts:
       slot_drift: 6
-      analog_trajectory: 7
-      latent_hunger: 8
+      analog_trajectory: 8
+      latent_hunger: 7
       survival_hazard: 7
     unavailable_components: {}
     algorithm: exact-majority-set-packing
@@ -290,10 +289,10 @@ forecasts:
     max_candidate_spread_minutes: 150
     selection_conflict_window_minutes: 135
     spread_penalty_per_hour: 5.0
-    candidate_count: 36
+    candidate_count: 31
     selected_candidate_count: 7
     selected_candidates:
-    - time: '2026-04-10 21:19:05.531602'
+    - time: '2026-04-11 12:16:10.075028'
       support: 4
       spread_minutes: 33.0
       models:
@@ -301,48 +300,48 @@ forecasts:
       - latent_hunger
       - slot_drift
       - survival_hazard
-    - time: '2026-04-11 00:40:02.194580'
+    - time: '2026-04-11 15:12:48.456364'
       support: 4
-      spread_minutes: 64.7
+      spread_minutes: 65.7
       models:
       - analog_trajectory
       - latent_hunger
       - slot_drift
       - survival_hazard
-    - time: '2026-04-11 03:57:33.143920'
+    - time: '2026-04-11 18:09:07.441617'
+      support: 4
+      spread_minutes: 80.8
+      models:
+      - analog_trajectory
+      - latent_hunger
+      - slot_drift
+      - survival_hazard
+    - time: '2026-04-11 20:34:50.921426'
+      support: 4
+      spread_minutes: 93.5
+      models:
+      - analog_trajectory
+      - latent_hunger
+      - slot_drift
+      - survival_hazard
+    - time: '2026-04-12 00:15:56.415528'
       support: 3
-      spread_minutes: 35.4
+      spread_minutes: 68.4
       models:
       - analog_trajectory
       - latent_hunger
       - survival_hazard
-    - time: '2026-04-11 07:10:51.173733'
+    - time: '2026-04-12 03:41:58.886111'
       support: 4
-      spread_minutes: 82.2
-      models:
-      - analog_trajectory
-      - latent_hunger
-      - slot_drift
-      - survival_hazard
-    - time: '2026-04-11 10:01:35.115185'
-      support: 4
-      spread_minutes: 114.5
+      spread_minutes: 49.0
       models:
       - analog_trajectory
       - latent_hunger
       - slot_drift
       - survival_hazard
-    - time: '2026-04-11 13:03:31.129525'
+    - time: '2026-04-12 06:55:49.496744'
       support: 4
-      spread_minutes: 74.7
-      models:
-      - analog_trajectory
-      - latent_hunger
-      - slot_drift
-      - survival_hazard
-    - time: '2026-04-11 16:15:53.539445'
-      support: 4
-      spread_minutes: 118.1
+      spread_minutes: 104.7
       models:
       - analog_trajectory
       - latent_hunger
@@ -360,60 +359,60 @@ retrospective:
   available: true
   same_dataset: false
   dataset_id_short: null
-  prior_run_id: 20260410-180114
-  observed_horizon_hours: 3.0608333333333335
+  prior_run_id: 20260410-192301
+  observed_horizon_hours: 15.195277777777777
   results:
   - name: Slot Drift
     slug: slot_drift
-    score: 24.777
+    score: 57.197
     count_score: 100.0
-    timing_score: 6.139
-    predicted_episode_count: 1
-    actual_episode_count: 1
-    matched_episode_count: 1
-    status: Partial horizon (3.1h observed)
+    timing_score: 32.715
+    predicted_episode_count: 4
+    actual_episode_count: 4
+    matched_episode_count: 4
+    status: Partial horizon (15.2h observed)
   - name: Analog Trajectory
     slug: analog_trajectory
-    score: 68.759
-    count_score: 100.0
-    timing_score: 47.278
-    predicted_episode_count: 1
-    actual_episode_count: 1
-    matched_episode_count: 1
-    status: Partial horizon (3.1h observed)
+    score: 34.536
+    count_score: 76.074
+    timing_score: 15.679
+    predicted_episode_count: 4
+    actual_episode_count: 4
+    matched_episode_count: 3
+    status: Partial horizon (15.2h observed)
   - name: Latent Hunger State
     slug: latent_hunger
-    score: 83.715
-    count_score: 100.0
-    timing_score: 70.083
-    predicted_episode_count: 1
-    actual_episode_count: 1
-    matched_episode_count: 1
-    status: Partial horizon (3.1h observed)
+    score: 69.297
+    count_score: 87.878
+    timing_score: 54.645
+    predicted_episode_count: 5
+    actual_episode_count: 4
+    matched_episode_count: 4
+    status: Partial horizon (15.2h observed)
   - name: Survival Hazard
     slug: survival_hazard
-    score: 79.274
-    count_score: 100.0
-    timing_score: 62.843
-    predicted_episode_count: 1
-    actual_episode_count: 1
-    matched_episode_count: 1
-    status: Partial horizon (3.1h observed)
+    score: 41.337
+    count_score: 76.122
+    timing_score: 22.447
+    predicted_episode_count: 4
+    actual_episode_count: 4
+    matched_episode_count: 3
+    status: Partial horizon (15.2h observed)
   - name: Consensus Blend
     slug: consensus_blend
-    score: 81.464
-    count_score: 100.0
-    timing_score: 66.364
-    predicted_episode_count: 1
-    actual_episode_count: 1
-    matched_episode_count: 1
-    status: Partial horizon (3.1h observed)
+    score: 42.805
+    count_score: 76.139
+    timing_score: 24.065
+    predicted_episode_count: 4
+    actual_episode_count: 4
+    matched_episode_count: 3
+    status: Partial horizon (15.2h observed)
   - name: Agent Inference
     slug: agent_inference
-    score: 68.079
-    count_score: 100.0
-    timing_score: 46.347
-    predicted_episode_count: 1
-    actual_episode_count: 1
-    matched_episode_count: 1
-    status: Partial horizon (3.1h observed)
+    score: 48.729
+    count_score: 74.672
+    timing_score: 31.8
+    predicted_episode_count: 4
+    actual_episode_count: 4
+    matched_episode_count: 3
+    status: Partial horizon (15.2h observed)
