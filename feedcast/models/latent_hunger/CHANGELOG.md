@@ -2,6 +2,51 @@
 
 Tracks behavior-level changes to the Latent Hunger model. Add newest entries first.
 
+## Raise SATIETY_RATE from 0.18 to 0.55 | 2026-04-11
+
+### Problem
+
+On the `20260411` export, production `SATIETY_RATE=0.18` scored headline
+62.6, a 3.7-point drop from 66.3 on the prior export. The decline
+affected all satiety rates (the constant-gap limit at sr>3 only reached
+64.8), indicating a broader pattern shift. Within that context, the
+canonical landscape climbed monotonically from sr=0.05 to the
+constant-gap limit, with sr=0.18 sitting near the bottom of the range.
+
+### Research
+
+Ran a combined sweep (0.05-5.0) on the `20260411` export via
+`run_replay.py`. The landscape:
+
+| sr | headline | count | timing |
+|----|----------|-------|--------|
+| 0.18 (prior) | 62.629 | 94.682 | 41.872 |
+| 0.40 | 63.028 | 94.923 | 42.263 |
+| **0.55** | **63.109** | **94.801** | **42.441** |
+| 0.70 | 63.158 | 94.785 | 42.524 |
+| 0.80 | 63.279 | 94.773 | 42.708 |
+| 2.0 | 64.691 | 94.923 | 44.691 |
+| 5.0 (limit) | 64.796 | 94.923 | 44.850 |
+
+The 0.40-0.70 range forms a gentle plateau (63.0-63.2) where volume
+sensitivity is still meaningful. Above sr=0.80 the curve steepens as
+the model converges toward a constant-gap predictor: at sr>3, all feeds
+produce near-complete hunger resets and volume no longer differentiates
+gap predictions. The full +2.2 headline gain to the constant-gap limit
+was not adopted because it neutralizes the model's design hypothesis.
+
+### Solution
+
+Set `SATIETY_RATE=0.55`. Interior to the 0.40-0.70 plateau. Headline
++0.48 (62.63->63.11), timing +0.57 (41.87->42.44), count +0.12
+(94.68->94.80). All 24 windows scored at 100% availability.
+
+This is the fourth satiety-rate optimum shift in two weeks
+(0.05->0.55->0.18->0.55). The value 0.55 was chosen because it has been
+at or near optimal on 3 of the last 4 exports, sits in the moderate zone
+that preserves volume sensitivity (2.1x ratio between 1oz and 4oz
+satiety effects), and avoids chasing the constant-gap limit.
+
 ## Lower SATIETY_RATE from 0.55 to 0.18 | 2026-04-10
 
 ### Problem

@@ -11,9 +11,9 @@ is a full canonical replay sweep through `tune_model()`. The local
 | --------- | --------- |
 | HISTORY_MODE | Episode-level history removes cluster noise from the state library, improving both local retrieval quality and canonical replay headline |
 | LOOKBACK_HOURS | A 24-hour lookback captures the current feeding rhythm without smoothing across older patterns too aggressively |
-| FEATURE_WEIGHTS | Gap cadence and hour-of-day are the sharpest retrieval cues on the current export; volume is deemphasized as the baby's schedule consolidates |
+| FEATURE_WEIGHTS | Rolling means (mean_gap, mean_volume) are the sharpest retrieval cues on the current export; instantaneous values and hour-of-day are deemphasized |
 | K_NEIGHBORS | Balances count accuracy against timing precision under canonical replay |
-| RECENCY_HALF_LIFE_HOURS | Broad recency weighting keeps useful multi-day analogs available without letting much older states dominate |
+| RECENCY_HALF_LIFE_HOURS | Broad recency weighting keeps a wide range of historical analogs available, compensating for the shorter lookback window |
 | TRAJECTORY_LENGTH_METHOD | Median is more robust than mean on variable-length neighbor trajectories |
 | ALIGNMENT | Gap-based blending outperforms time-offset alignment under both diagnostic and canonical evaluation |
 
@@ -39,20 +39,19 @@ Each state uses six features:
 - `sin_hour`
 - `cos_hour`
 
-The shipped weight profile puts the strongest weight on gap cadence and
-hour-of-day, with volume deemphasized. The internal diagnostic sweep
-and canonical replay disagree on the best profile — canonical replay
-prefers `gap_hour`, while the internal diagnostic prefers
-`means_only`. That divergence is why the canonical metric, not
-`full_traj_MAE`, owns production constants. See `research.md` for the
+The shipped weight profile puts the strongest weight on rolling means
+(mean_gap, mean_volume), with instantaneous values and hour-of-day
+deemphasized. Both the internal diagnostic sweep and canonical replay
+now agree on `means_only` as the best weight profile, though they
+still differ on lookback and recency. See `research.md` for the
 specific comparison.
 
 ## Lookback and recency
 
-A 24-hour lookback window complements the weight profile: the model
-uses rolling means over recent hours. Longer windows smooth away
-changes in rhythm that matter for the next 24-hour forecast, while
-shorter windows leave too little context as the baby's gaps lengthen.
+A 12-hour lookback window focuses rolling means on the most recent
+half-day of feeding. Paired with means_only weighting and broad
+recency (240h), this captures the current rhythm tightly without
+oversmoothing across stale events.
 
 Neighbor weights are `recency / (distance + epsilon)`. The recency
 half-life is set broad enough to keep useful analogs available without

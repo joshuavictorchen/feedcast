@@ -23,12 +23,12 @@ day-part-specific Weibull hazards. The key research questions are:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-04-10 |
-| Export | `exports/export_narababy_silas_20260410.csv` |
-| Dataset | `sha256:8dc1ea2650b0779b6a342b90aa918bc5bd2d5412bfbef25a2df4a8e1bada504e` |
+| Run date | 2026-04-11 |
+| Export | `exports/export_narababy_silas_20260411.csv` |
+| Dataset | `sha256:138b5d3ad7d106444951acc6c56154bcd1ae94184f58a566f83c032ad41ef5ec` |
 | Command | `.venv/bin/python -m feedcast.models.survival_hazard.analysis` |
-| Canonical headline | 73.3 |
-| Availability | 26/26 windows (100%) |
+| Canonical headline | 67.7 |
+| Availability | 24/24 windows (100%) |
 | Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Staleness check:** if the current export differs from the one
@@ -115,40 +115,30 @@ arm depends on the later event's volume.
 
 ### Canonical findings
 
-The current production constants score:
+The current production constants (`OVERNIGHT_SHAPE=7.5`,
+`DAYTIME_SHAPE=3.0`) score:
 
 | Metric | Score |
 |---|---|
-| Headline | 73.3 |
-| Count | 97.5 |
-| Timing | 55.8 |
+| Headline | 67.7 |
+| Count | 97.0 |
+| Timing | 48.7 |
 
-All 26 windows scored (100% availability).
+All 24 windows scored (100% availability). Headline regressed from
+73.3 on the prior export (20260410), driven almost entirely by timing
+(55.8 → 48.7). Count remained strong (97.5 → 97.0).
 
-The production constants were updated from `OVERNIGHT_SHAPE=4.75`,
-`DAYTIME_SHAPE=1.75` to `OVERNIGHT_SHAPE=7.5`, `DAYTIME_SHAPE=3.0`
-(see `CHANGELOG.md` for provenance). The canonical comparison on the
-current export is:
+The 154-candidate canonical sweep confirms the current constants as
+near-best. The best candidate (`OVERNIGHT_SHAPE=8.0`,
+`DAYTIME_SHAPE=3.0`) gains only +0.12 headline over baseline. The top
+5 candidates span 67.5 to 67.8 — the surface is flat, with no
+actionable improvement available from shape changes alone.
 
-| Metric | Pre-update (`4.75`, `1.75`) | Current (`7.5`, `3.0`) |
-|---|---|---|
-| Headline | 65.7 | 73.3 |
-| Count | 92.3 | 97.5 |
-| Timing | 47.3 | 55.8 |
-
-Availability stayed at 26/26. Both count (+5.2) and timing (+8.5)
-improved substantially.
-
-The 154-candidate canonical sweep confirms the new constants as
-baseline=best. The top of the surface is a flat plateau at
-`DAYTIME_SHAPE=3.0` with `OVERNIGHT_SHAPE` ranging from 7.0 to 8.0
-(spread 0.15 headline points). `DAYTIME_SHAPE` is the sharper driver:
-2.75 and 3.25 are both materially worse.
-
-The weakest canonical windows are concentrated in daytime timing.
-The windows with the weakest timing are 2026-04-08 19:51 (timing 21.9),
-2026-04-06 15:22 (25.4), and 2026-04-07 14:11 (27.0). Timing remains
-the weaker component despite the improvement.
+The weakest canonical windows are concentrated on 2026-04-10: the two
+latest windows (07:40 and 09:45) both score headline 47.8 with timing
+22.8–22.9. These carry the highest recency weights (0.96 and 1.0) and
+drive the aggregate regression. Earlier windows (April 7–9) score in
+the 66–82 range, consistent with prior performance.
 
 ### Diagnostic findings
 
@@ -158,33 +148,31 @@ and naive baselines on one-step walk-forward gap MAE:
 
 | Model | gap1 MAE |
 |---|---|
-| Naive last-gap | 0.913h |
-| Naive mean-3-gaps | 0.837h |
-| Discrete hazard | 0.726h |
-| Plain Weibull | 0.733h |
-| Day-part split Weibull | 0.671h |
+| Naive last-gap | 0.937h |
+| Naive mean-3-gaps | 0.906h |
+| Discrete hazard | 0.758h |
+| Plain Weibull | 0.772h |
+| Day-part split Weibull | 0.705h |
 
 This still supports the overnight/daytime regime split in `design.md`.
 
-**Episode history remains essential:** Raw bottle-only events (238)
-collapse to 210 episode events, absorbing 28 cluster feeds. The direct
+**Episode history remains essential:** Raw bottle-only events (248)
+collapse to 217 episode events, absorbing 31 cluster feeds. The direct
 day-part Weibull fits sharpen materially after collapsing:
-overnight `4.88 -> 6.00`, daytime `2.85 -> 3.54`. That is the cleanest
+overnight `4.90 -> 6.04`, daytime `2.59 -> 3.65`. That is the cleanest
 evidence that raw feeds were contaminating the gap distribution with
 cluster-internal noise.
 
-**Internal fit vs canonical replay have converged materially:** The
-episode-level MLE fit prefers shapes (`6.00`, `3.54`), while canonical
-replay selects (`7.5`, `3.0`). The gap has narrowed dramatically
-compared to the prior export (where canonical was `4.75`/`1.75` vs MLE
-`7.23`/`3.42` — a factor-of-two divergence). On the current export,
-overnight canonical is slightly higher than MLE (7.5 vs 6.0), while
-daytime canonical is slightly lower (3.0 vs 3.54). The two sources of
-evidence now broadly agree that the baby's feeding rhythm is regular.
+**Internal fit vs canonical replay remain broadly converged:** The
+episode-level MLE fit prefers shapes (`6.04`, `3.65`), while canonical
+replay selects (`7.5`, `3.0`). The convergence first observed on the
+prior export (where MLE was `6.00`/`3.54`) is durable: MLE shapes
+barely moved despite 10 new events. Overnight canonical remains above
+MLE (7.5 vs 6.04), daytime canonical remains below (3.0 vs 3.65).
 
 The remaining divergence likely has two contributors:
 
-1. *Data window.* The episode-level fit uses all 209 gaps in the full
+1. *Data window.* The episode-level fit uses all 216 gaps in the full
    export. Canonical replay optimizes over the last ~96h with 36h
    half-life. The baby's feeding patterns are still shifting with growth,
    so full-history MLE and recent-window replay describe slightly
@@ -192,26 +180,26 @@ The remaining divergence likely has two contributors:
 
 2. *Model compensation.* The production forecaster chains deterministic
    medians, re-estimates scale at runtime, and uses conditional survival
-   for the first feed. These mechanics can still pull optimal shapes away
-   from the MLE, but the effect is smaller than before.
+   for the first feed. These mechanics pull optimal shapes away from
+   the MLE, but the effect is modest and stable across exports.
 
-The dramatic narrowing of the MLE/canonical gap between exports is
-significant. On the prior export, the factor-of-two divergence raised
-the question of whether the model structure itself needed rethinking.
-The current convergence suggests the prior divergence was primarily
-non-stationarity: the baby's recent patterns have caught up to the
-regularity that the full-history MLE always saw.
+The stability of convergence across two consecutive exports is
+meaningful. On the 20260327 export, MLE/canonical diverged by a
+factor of two (MLE 7.2/3.4 vs canonical 4.75/1.75). On 20260410 and
+20260411, both sources agree that the baby's rhythm is regular. This
+suggests the prior divergence was non-stationarity, not an
+architectural deficiency.
 
 **Half-life trade-off stays real:** In the episode-level walk-forward
-diagnostic, `48h` is best on gap1 MAE (`0.588h`) while the current
-`168h` is best on feed-count MAE (`1.03`). This is one reason the model
-should not blindly inherit its production settings from a single local
-diagnostic metric.
+diagnostic, `48h` is best on gap1 MAE (`0.601h`) while the current
+`168h` is best on feed-count MAE (`0.95`). The gap1 difference is
+negligible (0.001h), while the feed-count advantage of `168h` is
+substantial (0.95 vs 1.38).
 
 **Volume overlay remains rejected:** On episode-level data, the scalar
-AFT volume overlay is statistically significant by LR test (`5.716`),
+AFT volume overlay is statistically significant by LR test (`7.301`),
 but every positive beta worsens walk-forward performance relative to the
-no-volume baseline. This is a strong repeat of the earlier result:
+no-volume baseline. This is a consistent repeat of prior results:
 "volume is real" does not imply "this overlay helps."
 
 **Breastfeed merge still does nothing structural:** Bottle-only and
@@ -220,55 +208,61 @@ current export. Only 3 episode volumes change, and because the current
 production model does not use a volume covariate, merge policy has no
 effect on its forecasts.
 
-**Holdout sanity check: count is perfect, timing lags.** The shipped
-model predicts 8 feeds vs. 8 actual in the most recent 24h holdout,
-with 1.53h mean timing error on matched pairs. Count is now perfectly
-calibrated. Timing errors accumulate through the day, with the largest
-errors on overnight feeds (2–3h), consistent with the canonical pattern
-of timing as the weaker component.
+**Holdout: count regressed, timing improved.** The shipped model
+predicts 8 feeds vs. 11 actual in the most recent 24h holdout, with
+1.05h mean timing error on the 8 matched pairs. Feed count error is 3
+(the model missed 3 feeds). Timing per matched pair improved from 1.53h
+on the prior export, but the count miss is a significant regression from
+the prior export's perfect 8-vs-8 match. The baby fed more frequently on
+this holdout day than the model's 7-day lookback window predicted.
 
 ## Conclusions
 
-**Disposition: Change.** `OVERNIGHT_SHAPE` updated from `4.75` to
-`7.5`; `DAYTIME_SHAPE` updated from `1.75` to `3.0`.
+**Disposition: Keep.** `OVERNIGHT_SHAPE=7.5` and `DAYTIME_SHAPE=3.0`
+are retained. The 154-candidate canonical sweep finds no shape change
+that meaningfully improves the headline (best improvement: +0.12).
 
-The canonical replay evidence is clear: the prior soft shapes
-degraded sharply on the new export (headline 65.7, down from 72.7),
-and the retune recovers to 73.3 — slightly above the prior export's
-best. The improvement is broad: count (+5.2) and timing (+8.5) both
-gained substantially.
+The canonical headline regressed from 73.3 to 67.7 on this export,
+driven by timing (55.8 → 48.7) while count stayed strong (97.0). The
+regression concentrates in the two most recent windows (April 10, both
+scoring 47.8), which carry the highest recency weight. The 24h holdout
+confirms the pattern: the model predicted 8 feeds but the baby had 11,
+suggesting the baby fed more frequently on that day than the model's
+7-day lookback window anticipated.
 
-The most notable finding is that canonical replay and episode-level MLE
-have converged. The prior export showed a factor-of-two divergence
-(canonical 4.75/1.75 vs MLE 7.2/3.4); the current export shows close
-agreement (canonical 7.5/3.0 vs MLE 6.0/3.5). This convergence
-suggests the prior divergence was primarily non-stationarity — the
-baby's recent patterns have regularized to match what the full-history
-MLE always described. The open question about whether the model
-structure needed rethinking is partially answered: the divergence was
-data-driven, not architecture-driven.
+The regression is not addressable through shape parameter changes. The
+sweep surface is flat across all tested shapes. The cause is likely
+day-to-day variability (or a short-term frequency increase) that
+affects runtime scale estimation, not the fixed shape constants.
 
-The model's remaining tension is familiar: count is very strong (97.5),
-timing is better but still weaker (55.8), and the weakest windows are
-concentrated in daytime timing. This is a cross-model pattern, not
-specific to Survival Hazard.
+The MLE/canonical convergence observed on the prior export is durable:
+episode-level MLE (`6.04`, `3.65`) and canonical replay (`7.5`, `3.0`)
+continue to broadly agree across consecutive exports. The model's
+structural integrity is sound; the regression reflects a harder
+prediction window, not a constant mismatch.
 
 ## Open questions
 
 ### Model-local
 
-- **How stable is the MLE/canonical convergence?** The prior export
-  showed a factor-of-two divergence; this export shows close agreement.
-  Monitoring across future exports will reveal whether the convergence
-  is durable (the baby's patterns have genuinely stabilized) or
-  transient (a coincidence of the current data window). If divergence
-  returns, the follow-ups from the prior round — windowed MLE and
-  component ablation — remain relevant.
-- **Should half-life be re-tuned canonically with the new shapes?**
-  Episode-level diagnostics still show a gap1/feed-count trade-off
-  across `48h-168h`. The current `168h` choice may remain right under
-  the canonical metric, but that has not been swept jointly with the
-  new shapes.
+- **MLE/canonical convergence is stable across two consecutive
+  exports.** The prior factor-of-two divergence (20260327 export) has
+  not returned. This makes it more likely that the baby's patterns have
+  genuinely stabilized than that the convergence was coincidental. If
+  divergence returns on a future export, the follow-ups from the prior
+  round (windowed MLE and component ablation) remain relevant.
+- **Is the holdout count miss (8 vs 11) a one-day anomaly or a trend?**
+  The model predicted 8 feeds on the most recent holdout day; the baby
+  had 11. If subsequent exports show a sustained move toward more
+  frequent feeding, the runtime scale estimation or lookback window may
+  need revisiting. The canonical sweep says shape changes do not help,
+  so any adaptation would need to come through scale-related constants
+  (`LOOKBACK_DAYS`, `RECENCY_HALF_LIFE_HOURS`) or model structure.
+- **Should half-life be re-tuned canonically?** Episode-level
+  diagnostics still show a gap1/feed-count trade-off across
+  `48h–168h`, but the gap1 difference is now negligible (0.001h). The
+  current `168h` has not been swept canonically since the 20260410
+  shape retune.
 - **Can volume help under a different formulation?** The scalar AFT
   overlay is decisively bad. A residual or regime-specific volume term
   may still be worth testing, but it should be treated as a new model
@@ -276,11 +270,13 @@ specific to Survival Hazard.
 
 ### Cross-cutting
 
-- **Internal vs. canonical metric divergence has narrowed for this
-  model:** Episode-level MLE (6.0/3.5) and canonical replay (7.5/3.0)
-  now broadly agree, unlike the prior export where they diverged by a
-  factor of two. This is worth tracking as a cross-model signal — if
-  other models also show convergence on newer data, the stacked
-  generalization question may need re-framing.
-- **Timing as shared bottleneck:** Timing (55.8) lags count (97.5). This
+- **MLE/canonical convergence is now confirmed across two exports for
+  this model:** Episode-level MLE (`6.04`/`3.65`) and canonical replay
+  (`7.5`/`3.0`) continue to broadly agree. This is worth tracking as a
+  cross-model signal; if other models show similar convergence on newer
+  data, the stacked generalization question may need re-framing.
+- **Timing as shared bottleneck:** Timing (48.7) lags count (97.0). This
   pattern persists across all models — see `feedcast/research/README.md`.
+  The timing regression on this export (55.8 → 48.7) concentrates in the
+  most recent windows, which may reflect a particularly variable day
+  rather than a structural shift.

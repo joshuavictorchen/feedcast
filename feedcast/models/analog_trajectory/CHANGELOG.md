@@ -2,6 +2,67 @@
 
 Tracks behavior-level changes to the Analog Trajectory model. Add newest entries first.
 
+## Retune on new export: means-only weighting with shorter lookback and broader recency | 2026-04-11
+
+### Problem
+
+The model's production constants (tuned on
+`exports/export_narababy_silas_20260410.csv`, headline 73.5) degraded to
+headline 67.6 on the new export
+(`exports/export_narababy_silas_20260411.csv`). Timing dropped from 56.5
+to 48.9 while count stayed stable at 96.3. The most recent replay
+windows (Apr 10) scored particularly poorly on timing (22-24), dragging
+the recency-weighted aggregate down.
+
+### Research
+
+Ran single-axis sweeps on all constants first. Each axis individually
+returned the current value as best, indicating the degradation comes from
+the data (harder recent windows), not from any single mistuned constant.
+
+The full 4704-candidate canonical sweep via `analysis.py` found a joint
+combination that recovers +2.1 headline points:
+
+| Metric | Old production | New production |
+|--------|----------------|----------------|
+| Headline | 67.6 | 69.7 |
+| Count | 96.3 | 95.1 |
+| Timing | 48.9 | 51.7 |
+
+The most recent windows improved substantially:
+
+| Window | Old headline | New headline | Old timing | New timing |
+|--------|-------------|-------------|------------|------------|
+| Apr 10 09:45 | 46.3 | 67.9 | 23.8 | 51.4 |
+| Apr 10 07:40 | 47.1 | 71.8 | 22.2 | 55.1 |
+| Apr 09 18:16 | 59.0 | 81.3 | 34.8 | 66.1 |
+
+Episode vs raw margin narrowed slightly to +2.6 (69.7 vs 67.1), down
+from +4.1 on the prior export.
+
+Note: `RECENCY_HALF_LIFE_HOURS=240` is a boundary winner in the current
+grid [36, 72, 120, 240]. Future sweeps should check whether higher
+values improve further.
+
+### Solution
+
+Ship the full canonical sweep winner:
+
+- `LOOKBACK_HOURS`: 24 -> 12
+- `FEATURE_WEIGHTS`: gap_hour [2,2,0.5,0.5,2,2] -> means_only [0.5,2,0.5,2,1,1]
+- `K_NEIGHBORS`: 7 -> 5
+- `RECENCY_HALF_LIFE_HOURS`: 120 -> 240
+- `TRAJECTORY_LENGTH_METHOD`: median (unchanged)
+- `ALIGNMENT`: gap (unchanged)
+- `HISTORY_MODE`: episode (unchanged)
+
+The direction of the changes is internally coherent: shorter lookback
+focuses rolling means on the most recent half-day, while broader recency
+keeps more historical analogs available to compensate. The means_only
+profile emphasizes mean_gap and mean_volume over instantaneous values,
+which separates analogs better on the current export where the baby's
+mean rhythm is more stable than any single recent gap.
+
 ## Retune on new export: longer lookback and gap+hour weighting | 2026-04-10
 
 ### Problem
