@@ -24,7 +24,7 @@ Replay builds on the shared evaluation infrastructure in
 by `evaluate_multi_window()` in `windows.py`. Replay adds model
 execution, parameter override machinery, and artifact persistence on
 top. See
-[`feedcast/evaluation/methodology.md`](../evaluation/methodology.md)
+[`feedcast/evaluation/README.md`](../evaluation/README.md)
 for the full scoring design.
 
 ## Input policy

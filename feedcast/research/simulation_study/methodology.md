@@ -301,7 +301,7 @@ infrastructure and add model-specific DGP logic and assertions.
 ## Relationship to Production Evaluation
 
 This methodology complements the canonical evaluation methodology
-documented in [`feedcast/evaluation/methodology.md`](../../evaluation/methodology.md).
+documented in [`feedcast/evaluation/README.md`](../../evaluation/README.md).
 The two serve different purposes:
 
 | | Production evaluation | Simulation study |

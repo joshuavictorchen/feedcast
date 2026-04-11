@@ -21,38 +21,23 @@ Zooming out to the 7-day window, the main story remains the gradual drop in per-
 | Apr 3-7 | 4.0 oz | 28-35 oz | 78% | 4 of 26 (15%) | 3.0 h |
 | Apr 8-10 | 3.5 oz | 28-31 oz | 30% | 0 of 23 (0%) | 3.0 h |
 
-## Prior Run Retrospective
+## Retrospective Accuracy
 
-Comparing prior run `20260410-180114` predicted episodes
-against actual feeding episodes observed in the current export
-(observed horizon:
-3.1h,
-coverage: 13%).
+The "Last Run" column scores prior run `20260410-180114` against actuals observed in the current export (horizon 3.1h, coverage 13%).
+The "Historical" column is the weighted mean across 3 stored retrospectives (1 full 24h, avg coverage 45%), reflecting the model versions that made those earlier predictions.
+Higher is better (0-100 scale).
 
-| Model | Score | Count | Timing | Episodes (Pred/Actual/Matched) | Status |
-| ----- | ----- | ----- | ------ | ------------------------------ | ------ |
-| Slot Drift | 24.8 | 100.0 | 6.1 | 1/1/1 | Partial horizon (3.1h observed) |
-| Analog Trajectory | 68.8 | 100.0 | 47.3 | 1/1/1 | Partial horizon (3.1h observed) |
-| Latent Hunger State | 83.7 | 100.0 | 70.1 | 1/1/1 | Partial horizon (3.1h observed) |
-| Survival Hazard | 79.3 | 100.0 | 62.8 | 1/1/1 | Partial horizon (3.1h observed) |
-| Consensus Blend | 81.5 | 100.0 | 66.4 | 1/1/1 | Partial horizon (3.1h observed) |
-| Agent Inference | 68.1 | 100.0 | 46.3 | 1/1/1 | Partial horizon (3.1h observed) |
-Scores are normalized to the observed window. Coverage shows how much of
-the 24-hour horizon has actually resolved so far.
+| Model | Last Run | Historical |
+| ----- | -------: | ---------: |
+| Latent Hunger State | 83.7 | 60.0 |
+| Consensus Blend | 81.5 | 61.5 |
+| Survival Hazard | 79.3 | 63.7 |
+| Analog Trajectory | 68.8 | 62.7 |
+| Agent Inference | 68.1 | 61.9 |
+| Slot Drift | 24.8 | 63.6 |
 
-## Historical Retrospective Accuracy
-
-Aggregated from stored prior-run retrospectives. These scores
-reflect the model versions that made those earlier predictions.
-
-| Model | Comparisons | Full 24h Runs | Mean Score | Mean Count | Mean Timing | Avg Coverage |
-| ----- | ----------- | ------------- | ---------- | ---------- | ----------- | ------------ |
-| Survival Hazard | 3 | 1 | 63.7 | 91.4 | 45.1 | 45% |
-| Slot Drift | 3 | 1 | 63.6 | 89.0 | 51.3 | 45% |
-| Analog Trajectory | 3 | 1 | 62.7 | 96.1 | 41.3 | 45% |
-| Agent Inference | 3 | 1 | 61.9 | 96.1 | 40.7 | 45% |
-| Consensus Blend | 3 | 1 | 61.5 | 94.9 | 42.6 | 45% |
-| Latent Hunger State | 3 | 1 | 60.0 | 88.0 | 42.8 | 45% |
+Last Run scores are normalized to the observed window. Count and timing
+breakdowns are in `diagnostics.yaml`.
 
 ## Methodologies
 
@@ -243,4 +228,4 @@ fitted values, empirical comparisons, and replay evidence live in
 
 *Export: `export_narababy_silas_20260410(2).csv` · Dataset: `sha256:ff8b0a11...`
 · Commit: `d5dc331`
-· Generated: 2026-04-10 19:40:41*
+· Generated: 2026-04-11 12:08:50*

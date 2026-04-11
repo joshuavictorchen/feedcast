@@ -145,19 +145,7 @@ def _render_report(
             _prepare_methodology_row(forecast, featured_slug)
             for forecast in _ordered_methodology_forecasts(all_forecasts)
         ],
-        "retrospective": _prepare_retrospective(retrospective),
-        "historical_accuracy": [
-            {
-                "name": row.name,
-                "comparisons": row.comparison_count,
-                "full_horizon": row.full_horizon_count,
-                "score_display": _fmt_score(row.mean_score),
-                "count_display": _fmt_score(row.mean_count_score),
-                "timing_display": _fmt_score(row.mean_timing_score),
-                "coverage_display": _fmt_ratio(row.mean_coverage_ratio),
-            }
-            for row in historical_accuracy
-        ],
+        "retrospective": _prepare_retrospective(retrospective, historical_accuracy),
         "agent_insights": _strip_leading_heading(agent_insights),
         "source_file": snapshot.export_path.name,
         "dataset_id_short": snapshot.dataset_id[:15] + "...",
@@ -224,8 +212,60 @@ def _strip_leading_heading(markdown: str | None) -> str | None:
     return without_heading.strip() or normalized
 
 
-def _prepare_retrospective(retrospective: Retrospective) -> dict[str, Any]:
-    """Convert the retrospective dataclass into template-ready fields."""
+def _prepare_retrospective(
+    retrospective: Retrospective,
+    historical_accuracy: list[HistoricalAccuracySummary],
+) -> dict[str, Any]:
+    """Build the unified retrospective section context.
+
+    The report presents one combined "Retrospective Accuracy" table that
+    shows each model's most recent headline score alongside its weighted
+    historical mean. This helper joins the prior-run retrospective with
+    the historical accuracy aggregation by slug and returns a single
+    template-ready dict holding intro metadata and sorted rows.
+
+    Rows are sorted by the prior-run headline descending so the strongest
+    latest result sits at the top. Failed models (score=None) sink to the
+    bottom, and models that appear only in the historical side (e.g., a
+    retired model still in the tracker) follow in historical order. The
+    sort is stable, so ties preserve their incoming order.
+    """
+    retro_by_slug = {result.slug: result for result in retrospective.results}
+    hist_by_slug = {row.slug: row for row in historical_accuracy}
+
+    # Slugs from the prior run come first (in pipeline order); any
+    # historical-only slugs follow in their incoming order.
+    ordered_slugs: list[str] = [result.slug for result in retrospective.results]
+    for row in historical_accuracy:
+        if row.slug not in retro_by_slug:
+            ordered_slugs.append(row.slug)
+
+    rows: list[dict[str, Any]] = []
+    for slug in ordered_slugs:
+        retro_result = retro_by_slug.get(slug)
+        hist_row = hist_by_slug.get(slug)
+        name = retro_result.name if retro_result is not None else hist_row.name
+        last_score = retro_result.score if retro_result is not None else None
+        hist_score = hist_row.mean_score if hist_row is not None else None
+        rows.append(
+            {
+                "name": name,
+                "_last_sort_key": last_score,
+                "last_display": _fmt_score(last_score),
+                "hist_display": _fmt_score(hist_score),
+            }
+        )
+
+    rows.sort(
+        key=lambda row: (
+            row["_last_sort_key"] is not None,
+            row["_last_sort_key"] if row["_last_sort_key"] is not None else 0.0,
+        ),
+        reverse=True,
+    )
+    for row in rows:
+        row.pop("_last_sort_key")
+
     return {
         "available": retrospective.available,
         "same_dataset": retrospective.same_dataset,
@@ -237,21 +277,35 @@ def _prepare_retrospective(retrospective: Retrospective) -> dict[str, Any]:
             if retrospective.available
             else None
         ),
-        "results": [
-            {
-                "name": result.name,
-                "score_display": _fmt_score(result.score),
-                "count_display": _fmt_score(result.count_score),
-                "timing_display": _fmt_score(result.timing_score),
-                "feeds_display": (
-                    f"{result.predicted_episode_count}/{result.actual_episode_count}/{result.matched_episode_count}"
-                    if result.score is not None
-                    else "n/a"
-                ),
-                "status": result.status,
-            }
-            for result in retrospective.results
-        ],
+        "historical": _historical_meta(historical_accuracy),
+        "rows": rows if retrospective.available else [],
+    }
+
+
+def _historical_meta(
+    rows: list[HistoricalAccuracySummary],
+) -> dict[str, Any] | None:
+    """Summarize the aggregated-history metadata for the section intro.
+
+    The intro prose reports sample size and average coverage as a single
+    fact rather than per-row columns. When rows disagree (e.g., a newly
+    added model with fewer comparisons), the max of each integer field is
+    used so the headline number reflects the deepest history the tracker
+    has, and the coverage percentage is the mean of available per-row
+    coverage ratios.
+    """
+    if not rows:
+        return None
+    coverage_ratios = [
+        row.mean_coverage_ratio for row in rows if row.mean_coverage_ratio is not None
+    ]
+    mean_coverage = (
+        sum(coverage_ratios) / len(coverage_ratios) if coverage_ratios else None
+    )
+    return {
+        "comparison_count": max(row.comparison_count for row in rows),
+        "full_horizon_count": max(row.full_horizon_count for row in rows),
+        "coverage_display": _fmt_ratio(mean_coverage),
     }
 
 

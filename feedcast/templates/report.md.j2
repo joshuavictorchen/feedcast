@@ -16,7 +16,7 @@
 {{ agent_insights }}
 
 {% endif %}
-## Prior Run Retrospective
+## Retrospective Accuracy
 
 {% if not retrospective.available -%}
 {% if retrospective.same_dataset -%}
@@ -26,36 +26,22 @@ No new actuals since the prior run
 No prior run available yet.
 {% endif -%}
 {% else -%}
-Comparing prior run `{{ retrospective.prior_run_id }}` predicted episodes
-against actual feeding episodes observed in the current export
-(observed horizon:
-{{ "%.1f" | format(retrospective.observed_horizon_hours) }}h,
-coverage: {{ retrospective.coverage_display }}).
-
-| Model | Score | Count | Timing | Episodes (Pred/Actual/Matched) | Status |
-| ----- | ----- | ----- | ------ | ------------------------------ | ------ |
-{% for result in retrospective.results -%}
-| {{ result.name }} | {{ result.score_display }} | {{ result.count_display }} | {{ result.timing_display }} | {{ result.feeds_display }} | {{ result.status }} |
-{% endfor %}
-{% if retrospective.observed_horizon_hours < 24 %}
-Scores are normalized to the observed window. Coverage shows how much of
-the 24-hour horizon has actually resolved so far.
-{% endif -%}
+The "Last Run" column scores prior run `{{ retrospective.prior_run_id }}` against actuals observed in the current export (horizon {{ "%.1f" | format(retrospective.observed_horizon_hours) }}h, coverage {{ retrospective.coverage_display }}).
+{% if retrospective.historical %}
+The "Historical" column is the weighted mean across {{ retrospective.historical.comparison_count }} stored retrospective{{ 's' if retrospective.historical.comparison_count != 1 else '' }} ({{ retrospective.historical.full_horizon_count }} full 24h, avg coverage {{ retrospective.historical.coverage_display }}), reflecting the model versions that made those earlier predictions.
 {% endif %}
+Higher is better (0-100 scale).
 
-## Historical Retrospective Accuracy
-
-{% if historical_accuracy -%}
-Aggregated from stored prior-run retrospectives. These scores
-reflect the model versions that made those earlier predictions.
-
-| Model | Comparisons | Full 24h Runs | Mean Score | Mean Count | Mean Timing | Avg Coverage |
-| ----- | ----------- | ------------- | ---------- | ---------- | ----------- | ------------ |
-{% for row in historical_accuracy -%}
-| {{ row.name }} | {{ row.comparisons }} | {{ row.full_horizon }} | {{ row.score_display }} | {{ row.count_display }} | {{ row.timing_display }} | {{ row.coverage_display }} |
+| Model | Last Run | Historical |
+| ----- | -------: | ---------: |
+{% for row in retrospective.rows -%}
+| {{ row.name }} | {{ row.last_display }} | {{ row.hist_display }} |
 {% endfor %}
-{% else -%}
-No completed retrospective history yet.
+
+{% if retrospective.observed_horizon_hours < 24 -%}
+Last Run scores are normalized to the observed window. Count and timing
+breakdowns are in `diagnostics.yaml`.
+{% endif -%}
 {% endif %}
 
 ## Methodologies
