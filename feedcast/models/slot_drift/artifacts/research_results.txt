@@ -1,6 +1,6 @@
-Export: exports/export_narababy_silas_20260410.csv
-Dataset: sha256:8dc1ea2650b0779b6a342b90aa918bc5bd2d5412bfbef25a2df4a8e1bada504e
-Cutoff: 2026-04-10 09:52:59
+Export: exports/export_narababy_silas_20260410(2).csv
+Dataset: sha256:ff8b0a112f77742af35b44e97652b6108915a609526619b808546434315927b8
+Cutoff: 2026-04-10 18:33:17
 Lookback: 10 days
 
 === DAILY FEED COUNTS ===
@@ -34,18 +34,18 @@ Days used for template: [datetime.date(2026, 4, 1), datetime.date(2026, 4, 2), d
   Slot 7: 17:55 (17.92h)
   Slot 8: 20:25 (20.42h)
 
-=== TRIAL ALIGNMENT (threshold=1.0h) ===
+=== TRIAL ALIGNMENT (threshold=1.5h) ===
 
-2026-03-31 (9 feeds): 6 matched, 3 unmatched, max_cost=0.87h
-2026-04-01 (8 feeds): 3 matched, 5 unmatched, max_cost=0.70h
+2026-03-31 (9 feeds): 8 matched, 1 unmatched, max_cost=1.24h
+2026-04-01 (8 feeds): 5 matched, 3 unmatched, max_cost=1.32h
 2026-04-02 (8 feeds): 8 matched, 0 unmatched, max_cost=0.65h
-2026-04-03 (9 feeds): 4 matched, 5 unmatched, max_cost=0.79h
-2026-04-04 (8 feeds): 5 matched, 3 unmatched, max_cost=0.65h
-2026-04-05 (10 feeds): 5 matched, 5 unmatched, max_cost=0.95h
+2026-04-03 (9 feeds): 7 matched, 2 unmatched, max_cost=1.25h
+2026-04-04 (8 feeds): 7 matched, 1 unmatched, max_cost=1.12h
+2026-04-05 (10 feeds): 6 matched, 4 unmatched, max_cost=1.19h
 2026-04-06 (10 feeds): 6 matched, 4 unmatched, max_cost=0.75h
-2026-04-07 (7 feeds): 5 matched, 2 unmatched, max_cost=0.90h
-2026-04-08 (8 feeds): 5 matched, 3 unmatched, max_cost=0.83h
-2026-04-09 (9 feeds): 3 matched, 6 unmatched, max_cost=0.66h
+2026-04-07 (7 feeds): 7 matched, 0 unmatched, max_cost=1.19h
+2026-04-08 (8 feeds): 6 matched, 2 unmatched, max_cost=1.48h
+2026-04-09 (9 feeds): 5 matched, 4 unmatched, max_cost=1.19h
 
 
 ============================================================
@@ -82,18 +82,18 @@ Days used for episode template: [datetime.date(2026, 3, 31), datetime.date(2026,
   Slot 6: 17:39 (17.66h)
   Slot 7: 20:19 (20.33h)
 
-=== EPISODE TRIAL ALIGNMENT (threshold=1.0h) ===
+=== EPISODE TRIAL ALIGNMENT (threshold=1.5h) ===
 
 2026-03-31 (7 episodes): 6 matched, 1 unmatched, max_cost=0.88h
 2026-04-01 (7 episodes): 3 matched, 4 unmatched, max_cost=0.49h
-2026-04-02 (8 episodes): 6 matched, 2 unmatched, max_cost=0.66h
-2026-04-03 (9 episodes): 4 matched, 5 unmatched, max_cost=0.95h
-2026-04-04 (7 episodes): 4 matched, 3 unmatched, max_cost=0.99h
-2026-04-05 (7 episodes): 4 matched, 3 unmatched, max_cost=0.81h
-2026-04-06 (10 episodes): 4 matched, 6 unmatched, max_cost=0.93h
+2026-04-02 (8 episodes): 7 matched, 1 unmatched, max_cost=1.01h
+2026-04-03 (9 episodes): 6 matched, 3 unmatched, max_cost=1.45h
+2026-04-04 (7 episodes): 6 matched, 1 unmatched, max_cost=1.37h
+2026-04-05 (7 episodes): 6 matched, 1 unmatched, max_cost=1.19h
+2026-04-06 (10 episodes): 6 matched, 4 unmatched, max_cost=1.49h
 2026-04-07 (7 episodes): 7 matched, 0 unmatched, max_cost=0.79h
-2026-04-08 (8 episodes): 3 matched, 5 unmatched, max_cost=0.80h
-2026-04-09 (9 episodes): 4 matched, 5 unmatched, max_cost=0.83h
+2026-04-08 (8 episodes): 6 matched, 2 unmatched, max_cost=1.28h
+2026-04-09 (9 episodes): 6 matched, 3 unmatched, max_cost=1.44h
 
 Slot counts differ: raw=8, episode=7. Direct template comparison not possible.
 
@@ -105,38 +105,37 @@ CANONICAL MULTI-WINDOW EVALUATION
 Production-constant evaluation via score_model (same
 infrastructure as the replay CLI).
 
-Aggregate:  headline=69.3  count=92.2  timing=52.4
-Windows:    26 scored / 26 total (100.0% availability)
+Aggregate:  headline=71.1  count=90.2  timing=56.4
+Windows:    25 scored / 25 total (100.0% availability)
 Half-life:  36.0h  Lookback: 96.0h
 
 Per-window breakdown:
   Cutoff                  Weight    Head   Count    Time  Status
-  2026-04-06T11:19:55     0.2571    66.7    83.7    53.1  scored
-  2026-04-06T12:38:39     0.2636    71.6    93.1    55.0  scored
-  2026-04-06T15:22:52     0.2779    69.8    86.9    56.0  scored
-  2026-04-06T17:30:34     0.2895    68.1    90.9    51.0  scored
-  2026-04-06T20:14:09     0.3051    69.6    85.1    56.9  scored
-  2026-04-06T23:33:00     0.3253    74.7   100.0    55.9  scored
-  2026-04-07T02:04:34     0.3415    73.9    94.3    58.0  scored
-  2026-04-07T05:56:15     0.3678    73.0    88.9    60.0  scored
-  2026-04-07T09:20:52     0.3928    67.7    93.2    49.2  scored
-  2026-04-07T11:35:15     0.4101    67.0    92.5    48.6  scored
-  2026-04-07T14:11:23     0.4312    69.0    83.0    57.3  scored
-  2026-04-07T17:39:53     0.4610    61.7    86.1    44.2  scored
-  2026-04-07T20:19:33     0.4852    62.9   100.0    39.5  scored
-  2026-04-08T00:05:11     0.5217    63.3   100.0    40.0  scored
-  2026-04-08T03:18:32     0.5551    64.6   100.0    41.7  scored
-  2026-04-08T06:40:35     0.5922    64.9    94.9    44.4  scored
-  2026-04-08T09:45:13     0.6284    65.7    94.4    45.8  scored
-  2026-04-08T12:58:20     0.6686    72.5    93.9    56.0  scored
-  2026-04-08T14:59:15     0.6950    73.1    87.7    60.9  scored
-  2026-04-08T17:40:09     0.7318    67.6    91.8    49.8  scored
-  2026-04-08T19:51:35     0.7634    69.8    90.9    53.7  scored
-  2026-04-09T00:16:39     0.8311    72.3    95.1    54.9  scored
-  2026-04-09T03:31:04     0.8847    74.9    94.7    59.3  scored
-  2026-04-09T06:30:28     0.9371    70.2    88.9    55.4  scored
-  2026-04-09T09:23:51     0.9907    71.6    92.9    55.2  scored
-  2026-04-09T09:52:59     1.0000    69.8    88.3    55.2  scored
+  2026-04-06T20:14:09     0.2582    66.6    70.4    62.9  scored
+  2026-04-06T23:33:00     0.2752    71.5    84.4    60.6  scored
+  2026-04-07T02:04:34     0.2890    70.4    85.7    57.8  scored
+  2026-04-07T05:56:15     0.3113    78.9    79.4    78.4  scored
+  2026-04-07T09:20:52     0.3324    72.5    82.5    63.6  scored
+  2026-04-07T11:35:15     0.3470    68.9    87.8    54.0  scored
+  2026-04-07T14:11:23     0.3649    73.9    91.7    59.6  scored
+  2026-04-07T17:39:53     0.3901    64.6    83.9    49.8  scored
+  2026-04-07T20:19:33     0.4106    68.5    84.1    55.7  scored
+  2026-04-08T00:05:11     0.4415    69.8   100.0    48.7  scored
+  2026-04-08T03:18:32     0.4697    71.1   100.0    50.5  scored
+  2026-04-08T06:40:35     0.5012    74.6    94.3    59.0  scored
+  2026-04-08T09:45:13     0.5318    66.6    88.5    50.1  scored
+  2026-04-08T12:58:20     0.5658    73.6    93.2    58.1  scored
+  2026-04-08T14:59:15     0.5881    73.9    87.0    62.8  scored
+  2026-04-08T17:40:09     0.6193    65.7    90.9    47.4  scored
+  2026-04-08T19:51:35     0.6460    66.3    89.9    48.9  scored
+  2026-04-09T00:16:39     0.7033    73.6    95.1    57.0  scored
+  2026-04-09T03:31:04     0.7486    66.5    89.4    49.5  scored
+  2026-04-09T06:30:28     0.7930    68.6    93.5    50.3  scored
+  2026-04-09T09:23:51     0.8384    73.1    92.9    57.5  scored
+  2026-04-09T12:10:16     0.8843    68.9    92.2    51.5  scored
+  2026-04-09T15:45:13     0.9475    75.0    92.3    61.0  scored
+  2026-04-09T18:16:28     0.9946    74.5    85.8    64.7  scored
+  2026-04-09T18:33:17     1.0000    74.9    91.5    61.3  scored
 
 
 
@@ -148,23 +147,23 @@ Parameter sweep via tune_model (same infrastructure as the
 replay CLI). Sweeps DRIFT_WEIGHT_HALF_LIFE_DAYS,
 MATCH_COST_THRESHOLD_HOURS, and LOOKBACK_DAYS jointly.
 
-Baseline: {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.25, 'LOOKBACK_DAYS': 10, 'MATCH_COST_THRESHOLD_HOURS': 1.0}
-  headline=69.3  count=92.2  timing=52.4  scored=26/26
+Baseline: {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.8, 'LOOKBACK_DAYS': 10, 'MATCH_COST_THRESHOLD_HOURS': 1.5}
+  headline=71.1  count=90.2  timing=56.4  scored=25/25
 
-Best: {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.25, 'LOOKBACK_DAYS': 10, 'MATCH_COST_THRESHOLD_HOURS': 1.0}
-  headline=69.3  count=92.2  timing=52.4  scored=26/26
-  headline_delta=+0.0  availability_delta=+0
+Best: {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 7.0, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 2.0}
+  headline=72.0  count=93.6  timing=56.1  scored=25/25
+  headline_delta=+0.8  availability_delta=+0
 
 Top 10 of 588 candidates:
   Rank   Headline   Count  Timing  Scored  Params
-  1          69.3    92.2    52.4  26/26   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.25, 'LOOKBACK_DAYS': 10, 'MATCH_COST_THRESHOLD_HOURS': 1.0}
-  2          69.0    88.9    53.8  26/26   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.75, 'LOOKBACK_DAYS': 10, 'MATCH_COST_THRESHOLD_HOURS': 1.5}
-  3          69.0    91.8    52.1  26/26   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.5, 'LOOKBACK_DAYS': 10, 'MATCH_COST_THRESHOLD_HOURS': 1.0}
-  4          68.3    93.1    50.6  26/26   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.75, 'LOOKBACK_DAYS': 7, 'MATCH_COST_THRESHOLD_HOURS': 2.5}
-  5          68.3    89.7    52.2  26/26   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.25, 'LOOKBACK_DAYS': 14, 'MATCH_COST_THRESHOLD_HOURS': 2.5}
-  6          68.1    93.1    50.5  26/26   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.75, 'LOOKBACK_DAYS': 7, 'MATCH_COST_THRESHOLD_HOURS': 3.0}
-  7          68.0    93.4    50.1  26/26   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 1.0, 'LOOKBACK_DAYS': 7, 'MATCH_COST_THRESHOLD_HOURS': 2.5}
-  8          67.9    93.1    50.3  26/26   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.75, 'LOOKBACK_DAYS': 14, 'MATCH_COST_THRESHOLD_HOURS': 2.5}
-  9          67.9    91.6    50.6  26/26   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 0.75, 'LOOKBACK_DAYS': 10, 'MATCH_COST_THRESHOLD_HOURS': 1.0}
-  10         67.9    89.3    51.8  26/26   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 1.0, 'LOOKBACK_DAYS': 10, 'MATCH_COST_THRESHOLD_HOURS': 1.25}
+  1          72.0    93.6    56.1  25/25   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 7.0, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 2.0}
+  2          71.9    94.2    55.7  25/25   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 5.0, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 2.0}
+  3          71.7    94.2    55.4  25/25   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 4.0, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 2.0}
+  4          71.3    93.6    55.2  25/25   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 3.0, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 2.0}
+  5          70.5    91.8    55.1  25/25   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 2.5, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 2.0}
+  6          70.0    91.5    54.4  25/25   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 2.0, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 2.0}
+  7          69.9    91.2    54.6  25/25   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 7.0, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 2.5}
+  8          69.9    91.2    54.6  25/25   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 7.0, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 3.0}
+  9          69.9    91.5    54.3  25/25   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 5.0, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 2.5}
+  10         69.9    91.5    54.3  25/25   {'DRIFT_WEIGHT_HALF_LIFE_DAYS': 5.0, 'LOOKBACK_DAYS': 5, 'MATCH_COST_THRESHOLD_HOURS': 3.0}
 

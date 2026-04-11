@@ -2,6 +2,52 @@
 
 Tracks behavior-level changes to the Slot Drift model. Add newest entries first.
 
+## Relaxed drift and threshold as pattern stabilizes | 2026-04-10
+
+### Problem
+
+The 0.25-day drift half-life and 1.0h match threshold, tuned for a
+volatile period, degraded on the 20260410(2) export: headline dropped
+from 69.3 to 65.7, with timing falling from 52.4 to 47.5. The baby's
+feeding pattern is stabilizing, and the aggressive recency weighting was
+over-reacting to day-to-day noise.
+
+### Research
+
+Targeted sweeps (84 + 24 + 54 + 9 candidates) plus a 588-candidate
+canonical sweep via `tune_model()` on
+`exports/export_narababy_silas_20260410(2).csv`.
+
+| Constant | Before | After |
+|---|---|---|
+| `DRIFT_WEIGHT_HALF_LIFE_DAYS` | 0.25 | 0.80 |
+| `MATCH_COST_THRESHOLD_HOURS` | 1.0 | 1.5 |
+| `LOOKBACK_DAYS` | 10 | 10 |
+
+| Metric | Before | After | Delta |
+|---|---|---|---|
+| Headline | 65.7 | 71.1 | +5.4 |
+| Count | 91.7 | 90.2 | -1.5 |
+| Timing | 47.5 | 56.4 | +8.9 |
+| Availability | 25/25 | 25/25 | 0 |
+
+DRIFT=0.80 is an interior peak (0.75→69.8, 0.80→71.1, 0.85→70.8).
+THRESHOLD=1.5 is interior (1.25→67.7, 1.5→71.1, 1.75→63.6). A
+competing regime at LOOKBACK=5, DRIFT=7.0, THRESHOLD=2.0 scored 72.0
+(+0.9 above baseline) but DRIFT=7.0 is a boundary value with a
+flattening gradient, and LOOKBACK=5 is more vulnerable to single-day
+outliers during the current 7-10 episode-count variability.
+
+### Solution
+
+Longer drift half-life (0.80 days) gives about 42% weight to
+yesterday's drift vs. ~6% at the prior 0.25 setting, smoothing out
+day-to-day noise now that the baby's timing pattern is more consistent.
+Looser threshold (1.5h) admits more matches for drift estimation without
+letting noise dominate. Timing improved +8.9 (the primary gain), count
+traded down -1.5. LOOKBACK=10 unchanged: episode-count variability
+(7-10 range) still benefits from the wider stabilizing window.
+
 ## Wider lookback, tighter matching from canonical sweep | 2026-04-10
 
 ### Problem

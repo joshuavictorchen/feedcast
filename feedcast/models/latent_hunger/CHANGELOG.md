@@ -2,6 +2,47 @@
 
 Tracks behavior-level changes to the Latent Hunger model. Add newest entries first.
 
+## Lower SATIETY_RATE from 0.55 to 0.18 | 2026-04-10
+
+### Problem
+
+On the `20260410(2)` export (7 hours of additional data beyond the
+earlier `20260410` export), production `SATIETY_RATE=0.55` scored headline
+65.2 — a 1.1-point drop from 66.3 on the earlier same-day export. The
+canonical optimum shifted downward from the 0.5–0.8 plateau to a new
+plateau at 0.12–0.20.
+
+### Research
+
+Ran a 17-candidate sweep (0.05–0.8, then refined 0.12–0.28) on the
+`20260410(2)` export via `run_replay.py`. The landscape:
+
+| sr | headline | count | timing |
+|----|----------|-------|--------|
+| 0.12 | 66.293 | 96.340 | 46.110 |
+| 0.15 | 66.295 | 96.339 | 46.097 |
+| **0.18** | **66.307** | **96.298** | **46.117** |
+| 0.20 | 66.275 | 96.282 | 46.075 |
+| 0.55 (prior) | 65.233 | 96.107 | 44.819 |
+
+The plateau at sr=0.12–0.20 spans only 0.032 headline points. Below
+that range, sr=0.03 scores headline 66.951 but count collapses to 84.5
+(from 96.3), repeating the pattern where very low satiety rates neuter
+volume sensitivity and degrade count accuracy despite improved timing.
+
+### Solution
+
+Set `SATIETY_RATE=0.18`. Chosen interior to the 0.12–0.20 plateau for
+robustness. Headline +1.07 (65.23→66.31), timing +1.30 (44.82→46.12),
+count +0.19 (96.11→96.30). All 25 windows scored at 100% availability.
+
+This is the third satiety-rate optimum shift in two weeks (0.05→0.55→0.18),
+confirming that the canonical surface is unstable across exports. The
+baby's volume-gap dynamics are still evolving. At sr=0.18, satiety
+effects are moderate (0.16 for 1oz, 0.51 for 4oz, 3.1x ratio),
+preserving meaningful volume sensitivity without the over-reliance on
+volume differentiation that degraded at sr=0.55 on this export.
+
 ## Raise SATIETY_RATE from 0.05 to 0.55 | 2026-04-10
 
 ### Problem

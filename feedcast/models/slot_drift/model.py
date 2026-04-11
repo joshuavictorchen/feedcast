@@ -43,10 +43,10 @@ MIN_COMPLETE_DAYS = 3
 
 # Maximum time-of-day distance (hours) for a feed to match a slot.
 # Feeds farther than this are left unmatched (cluster feeds, extras).
-MATCH_COST_THRESHOLD_HOURS = 1.0
+MATCH_COST_THRESHOLD_HOURS = 1.5
 
 # Recency half-life for weighting days in drift and volume estimation.
-DRIFT_WEIGHT_HALF_LIFE_DAYS = 0.25
+DRIFT_WEIGHT_HALF_LIFE_DAYS = 0.80
 
 
 def forecast_slot_drift(

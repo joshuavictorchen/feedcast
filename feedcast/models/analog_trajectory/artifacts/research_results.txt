@@ -1,100 +1,100 @@
-Export: exports/export_narababy_silas_20260410.csv
-Dataset: sha256:8dc1ea2650b0779b6a342b90aa918bc5bd2d5412bfbef25a2df4a8e1bada504e
-Cutoff: 2026-04-10 09:52:59
-Raw bottle events: 238
-Episode events: 210
+Export: exports/export_narababy_silas_20260410(2).csv
+Dataset: sha256:ff8b0a112f77742af35b44e97652b6108915a609526619b808546434315927b8
+Cutoff: 2026-04-10 18:33:17
+Raw bottle events: 241
+Episode events: 213
 
 === STATE LIBRARY COMPARISON ===
 
 Mode     Events  Complete  Incomplete
-raw         238       228           7
-episode     210       200           7
+raw         241       231           7
+episode     213       203           7
 
 === FEATURE STATISTICS (raw, 6h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           2.640    0.965    0.356    5.155
-mean_gap           2.751    0.653    1.009    4.091
-last_volume        3.279    1.092    0.051    5.250
-mean_volume        3.340    0.691    1.167    4.625
-sin_hour          -0.107    0.705   -1.000    1.000
-cos_hour          -0.058    0.699   -1.000    1.000
+last_gap           2.642    0.961    0.356    5.155
+mean_gap           2.754    0.650    1.009    4.091
+last_volume        3.286    1.087    0.051    5.250
+mean_volume        3.346    0.689    1.167    4.625
+sin_hour          -0.117    0.705   -1.000    1.000
+cos_hour          -0.057    0.697   -1.000    1.000
 
 === FEATURE STATISTICS (raw, 9h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           2.640    0.965    0.356    5.155
-mean_gap           2.733    0.557    1.288    3.943
-last_volume        3.279    1.092    0.051    5.250
-mean_volume        3.337    0.622    1.571    4.750
-sin_hour          -0.107    0.705   -1.000    1.000
-cos_hour          -0.058    0.699   -1.000    1.000
+last_gap           2.642    0.961    0.356    5.155
+mean_gap           2.736    0.554    1.288    3.943
+last_volume        3.286    1.087    0.051    5.250
+mean_volume        3.340    0.619    1.571    4.750
+sin_hour          -0.117    0.705   -1.000    1.000
+cos_hour          -0.057    0.697   -1.000    1.000
 
 === FEATURE STATISTICS (raw, 12h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           2.640    0.965    0.356    5.155
-mean_gap           2.728    0.480    1.251    3.979
-last_volume        3.279    1.092    0.051    5.250
-mean_volume        3.330    0.567    1.500    4.562
-sin_hour          -0.107    0.705   -1.000    1.000
-cos_hour          -0.058    0.699   -1.000    1.000
+last_gap           2.642    0.961    0.356    5.155
+mean_gap           2.730    0.478    1.251    3.979
+last_volume        3.286    1.087    0.051    5.250
+mean_volume        3.332    0.563    1.500    4.562
+sin_hour          -0.117    0.705   -1.000    1.000
+cos_hour          -0.057    0.697   -1.000    1.000
 
 === FEATURE STATISTICS (raw, 18h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           2.640    0.965    0.356    5.155
-mean_gap           2.702    0.387    1.617    3.831
-last_volume        3.279    1.092    0.051    5.250
-mean_volume        3.314    0.517    1.795    4.333
-sin_hour          -0.107    0.705   -1.000    1.000
-cos_hour          -0.058    0.699   -1.000    1.000
+last_gap           2.642    0.961    0.356    5.155
+mean_gap           2.708    0.388    1.617    3.831
+last_volume        3.286    1.087    0.051    5.250
+mean_volume        3.315    0.514    1.795    4.333
+sin_hour          -0.117    0.705   -1.000    1.000
+cos_hour          -0.057    0.697   -1.000    1.000
 
 === FEATURE STATISTICS (raw, 24h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           2.640    0.965    0.356    5.155
-mean_gap           2.668    0.345    1.660    3.502
-last_volume        3.279    1.092    0.051    5.250
-mean_volume        3.298    0.495    1.833    4.143
-sin_hour          -0.107    0.705   -1.000    1.000
-cos_hour          -0.058    0.699   -1.000    1.000
+last_gap           2.642    0.961    0.356    5.155
+mean_gap           2.674    0.346    1.660    3.502
+last_volume        3.286    1.087    0.051    5.250
+mean_volume        3.299    0.492    1.833    4.143
+sin_hour          -0.117    0.705   -1.000    1.000
+cos_hour          -0.057    0.697   -1.000    1.000
 
 === FEATURE STATISTICS (raw, 48h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           2.640    0.965    0.356    5.155
-mean_gap           2.643    0.276    1.832    3.502
-last_volume        3.279    1.092    0.051    5.250
-mean_volume        3.271    0.458    2.050    3.909
-sin_hour          -0.107    0.705   -1.000    1.000
-cos_hour          -0.058    0.699   -1.000    1.000
+last_gap           2.642    0.961    0.356    5.155
+mean_gap           2.649    0.278    1.832    3.502
+last_volume        3.286    1.087    0.051    5.250
+mean_volume        3.274    0.456    2.050    3.909
+sin_hour          -0.117    0.705   -1.000    1.000
+cos_hour          -0.057    0.697   -1.000    1.000
 
 === FEATURE STATISTICS (raw, 72h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           2.640    0.965    0.356    5.155
-mean_gap           2.619    0.248    1.832    3.502
-last_volume        3.279    1.092    0.051    5.250
-mean_volume        3.236    0.454    2.050    3.829
-sin_hour          -0.107    0.705   -1.000    1.000
-cos_hour          -0.058    0.699   -1.000    1.000
+last_gap           2.642    0.961    0.356    5.155
+mean_gap           2.624    0.251    1.832    3.502
+last_volume        3.286    1.087    0.051    5.250
+mean_volume        3.242    0.454    2.050    3.829
+sin_hour          -0.117    0.705   -1.000    1.000
+cos_hour          -0.057    0.697   -1.000    1.000
 
 === INTERNAL DIAGNOSTIC SWEEP (raw, 2352 configs) ===
 (fold-causal normalization, full-trajectory evaluation)
 
 Top 10 configurations by full_traj_MAE:
 
-  1. lb=18h  w=means_only       k=7  hl= 36h  len=mean     align=gap           full_traj_MAE=1.419h  (n=218)
-  2. lb=24h  w=means_only       k=7  hl= 36h  len=mean     align=gap           full_traj_MAE=1.421h  (n=218)
-  3. lb=24h  w=means_only       k=7  hl= 36h  len=median   align=time_offset   full_traj_MAE=1.423h  (n=218)
-  4. lb=18h  w=means_only       k=7  hl= 36h  len=median   align=time_offset   full_traj_MAE=1.424h  (n=218)
-  5. lb=18h  w=means_only       k=7  hl= 36h  len=mean     align=time_offset   full_traj_MAE=1.426h  (n=218)
-  6. lb=18h  w=means_only       k=7  hl= 36h  len=median   align=gap           full_traj_MAE=1.428h  (n=218)
-  7. lb=24h  w=means_only       k=7  hl= 36h  len=median   align=gap           full_traj_MAE=1.428h  (n=218)
-  8. lb=24h  w=means_only       k=7  hl= 36h  len=mean     align=time_offset   full_traj_MAE=1.431h  (n=218)
-  9. lb=18h  w=gap_emphasis     k=7  hl= 36h  len=mean     align=gap           full_traj_MAE=1.434h  (n=218)
- 10. lb=18h  w=gap_emphasis     k=5  hl= 36h  len=mean     align=gap           full_traj_MAE=1.435h  (n=218)
+  1. lb=18h  w=means_only       k=7  hl= 36h  len=mean     align=gap           full_traj_MAE=1.411h  (n=221)
+  2. lb=24h  w=means_only       k=7  hl= 36h  len=mean     align=gap           full_traj_MAE=1.411h  (n=221)
+  3. lb=24h  w=means_only       k=7  hl= 36h  len=median   align=time_offset   full_traj_MAE=1.414h  (n=221)
+  4. lb=18h  w=means_only       k=7  hl= 36h  len=median   align=time_offset   full_traj_MAE=1.417h  (n=221)
+  5. lb=18h  w=means_only       k=7  hl= 36h  len=mean     align=time_offset   full_traj_MAE=1.418h  (n=221)
+  6. lb=24h  w=means_only       k=7  hl= 36h  len=median   align=gap           full_traj_MAE=1.418h  (n=221)
+  7. lb=18h  w=means_only       k=7  hl= 36h  len=median   align=gap           full_traj_MAE=1.420h  (n=221)
+  8. lb=24h  w=means_only       k=7  hl= 36h  len=mean     align=time_offset   full_traj_MAE=1.422h  (n=221)
+  9. lb=18h  w=gap_emphasis     k=7  hl= 36h  len=mean     align=gap           full_traj_MAE=1.426h  (n=221)
+ 10. lb=18h  w=gap_emphasis     k=5  hl= 36h  len=mean     align=gap           full_traj_MAE=1.427h  (n=221)
 
 Best diagnostic configuration:
   LOOKBACK_HOURS = 18
@@ -104,95 +104,95 @@ Best diagnostic configuration:
   TRAJECTORY_LENGTH_METHOD = mean
   ALIGNMENT = gap
   HISTORY_MODE = raw
-  full_traj_MAE = 1.419h
-  traj3_MAE = 0.741h
+  full_traj_MAE = 1.411h
+  traj3_MAE = 0.744h
   gap1_MAE = 0.742h
 
 === FEATURE STATISTICS (episode, 6h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           3.010    0.765    1.247    5.196
-mean_gap           3.077    0.523    1.995    4.450
-last_volume        3.738    0.819    1.000    6.500
-mean_volume        3.745    0.583    2.433    6.000
-sin_hour          -0.034    0.711   -1.000    1.000
-cos_hour          -0.065    0.699   -1.000    1.000
+last_gap           3.007    0.763    1.247    5.196
+mean_gap           3.076    0.520    1.995    4.450
+last_volume        3.739    0.814    1.000    6.500
+mean_volume        3.746    0.580    2.433    6.000
+sin_hour          -0.046    0.713   -1.000    1.000
+cos_hour          -0.063    0.696   -1.000    1.000
 
 === FEATURE STATISTICS (episode, 9h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           3.010    0.765    1.247    5.196
-mean_gap           3.057    0.448    2.022    4.042
-last_volume        3.738    0.819    1.000    6.500
-mean_volume        3.743    0.537    2.375    5.667
-sin_hour          -0.034    0.711   -1.000    1.000
-cos_hour          -0.065    0.699   -1.000    1.000
+last_gap           3.007    0.763    1.247    5.196
+mean_gap           3.055    0.445    2.022    4.042
+last_volume        3.739    0.814    1.000    6.500
+mean_volume        3.740    0.533    2.375    5.667
+sin_hour          -0.046    0.713   -1.000    1.000
+cos_hour          -0.063    0.696   -1.000    1.000
 
 === FEATURE STATISTICS (episode, 12h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           3.010    0.765    1.247    5.196
-mean_gap           3.063    0.401    2.139    4.042
-last_volume        3.738    0.819    1.000    6.500
-mean_volume        3.741    0.497    2.600    5.250
-sin_hour          -0.034    0.711   -1.000    1.000
-cos_hour          -0.065    0.699   -1.000    1.000
+last_gap           3.007    0.763    1.247    5.196
+mean_gap           3.061    0.398    2.139    4.042
+last_volume        3.739    0.814    1.000    6.500
+mean_volume        3.737    0.495    2.600    5.250
+sin_hour          -0.046    0.713   -1.000    1.000
+cos_hour          -0.063    0.696   -1.000    1.000
 
 === FEATURE STATISTICS (episode, 18h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           3.010    0.765    1.247    5.196
-mean_gap           3.052    0.325    2.334    3.974
-last_volume        3.738    0.819    1.000    6.500
-mean_volume        3.743    0.453    2.686    5.000
-sin_hour          -0.034    0.711   -1.000    1.000
-cos_hour          -0.065    0.699   -1.000    1.000
+last_gap           3.007    0.763    1.247    5.196
+mean_gap           3.053    0.323    2.334    3.974
+last_volume        3.739    0.814    1.000    6.500
+mean_volume        3.737    0.452    2.686    5.000
+sin_hour          -0.046    0.713   -1.000    1.000
+cos_hour          -0.063    0.696   -1.000    1.000
 
 === FEATURE STATISTICS (episode, 24h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           3.010    0.765    1.247    5.196
-mean_gap           3.037    0.281    2.506    3.852
-last_volume        3.738    0.819    1.000    6.500
-mean_volume        3.745    0.418    2.872    4.857
-sin_hour          -0.034    0.711   -1.000    1.000
-cos_hour          -0.065    0.699   -1.000    1.000
+last_gap           3.007    0.763    1.247    5.196
+mean_gap           3.038    0.279    2.506    3.852
+last_volume        3.739    0.814    1.000    6.500
+mean_volume        3.739    0.418    2.872    4.857
+sin_hour          -0.046    0.713   -1.000    1.000
+cos_hour          -0.063    0.696   -1.000    1.000
 
 === FEATURE STATISTICS (episode, 48h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           3.010    0.765    1.247    5.196
-mean_gap           3.036    0.182    2.658    3.566
-last_volume        3.738    0.819    1.000    6.500
-mean_volume        3.744    0.349    2.962    4.450
-sin_hour          -0.034    0.711   -1.000    1.000
-cos_hour          -0.065    0.699   -1.000    1.000
+last_gap           3.007    0.763    1.247    5.196
+mean_gap           3.036    0.181    2.658    3.566
+last_volume        3.739    0.814    1.000    6.500
+mean_volume        3.741    0.348    2.962    4.450
+sin_hour          -0.046    0.713   -1.000    1.000
+cos_hour          -0.063    0.696   -1.000    1.000
 
 === FEATURE STATISTICS (episode, 72h lookback) ===
 
 Feature             Mean      Std      Min      Max
-last_gap           3.010    0.765    1.247    5.196
-mean_gap           3.034    0.131    2.682    3.502
-last_volume        3.738    0.819    1.000    6.500
-mean_volume        3.734    0.315    3.044    4.176
-sin_hour          -0.034    0.711   -1.000    1.000
-cos_hour          -0.065    0.699   -1.000    1.000
+last_gap           3.007    0.763    1.247    5.196
+mean_gap           3.034    0.130    2.682    3.502
+last_volume        3.739    0.814    1.000    6.500
+mean_volume        3.733    0.313    3.044    4.176
+sin_hour          -0.046    0.713   -1.000    1.000
+cos_hour          -0.063    0.696   -1.000    1.000
 
 === INTERNAL DIAGNOSTIC SWEEP (episode, 2352 configs) ===
 (fold-causal normalization, full-trajectory evaluation)
 
 Top 10 configurations by full_traj_MAE:
 
-  1. lb=48h  w=means_only       k=5  hl= 36h  len=mean     align=gap           full_traj_MAE=1.067h  (n=190)
-  2. lb=48h  w=means_only       k=5  hl= 36h  len=median   align=time_offset   full_traj_MAE=1.068h  (n=190)
-  3. lb=48h  w=means_only       k=5  hl= 36h  len=median   align=gap           full_traj_MAE=1.069h  (n=190)
-  4. lb=48h  w=means_only       k=5  hl= 36h  len=mean     align=time_offset   full_traj_MAE=1.071h  (n=190)
-  5. lb=48h  w=means_only       k=7  hl= 36h  len=mean     align=gap           full_traj_MAE=1.074h  (n=190)
-  6. lb=48h  w=means_only       k=7  hl= 36h  len=median   align=time_offset   full_traj_MAE=1.076h  (n=190)
-  7. lb=48h  w=means_only       k=7  hl= 36h  len=mean     align=time_offset   full_traj_MAE=1.077h  (n=190)
-  8. lb=48h  w=means_only       k=7  hl= 36h  len=median   align=gap           full_traj_MAE=1.085h  (n=190)
-  9. lb=48h  w=means_only       k=5  hl= 72h  len=median   align=time_offset   full_traj_MAE=1.098h  (n=190)
- 10. lb=48h  w=means_only       k=5  hl= 72h  len=mean     align=gap           full_traj_MAE=1.100h  (n=190)
+  1. lb=48h  w=means_only       k=5  hl= 36h  len=mean     align=gap           full_traj_MAE=1.061h  (n=193)
+  2. lb=48h  w=means_only       k=5  hl= 36h  len=median   align=time_offset   full_traj_MAE=1.062h  (n=193)
+  3. lb=48h  w=means_only       k=5  hl= 36h  len=median   align=gap           full_traj_MAE=1.063h  (n=193)
+  4. lb=48h  w=means_only       k=5  hl= 36h  len=mean     align=time_offset   full_traj_MAE=1.065h  (n=193)
+  5. lb=48h  w=means_only       k=7  hl= 36h  len=mean     align=gap           full_traj_MAE=1.067h  (n=193)
+  6. lb=48h  w=means_only       k=7  hl= 36h  len=median   align=time_offset   full_traj_MAE=1.069h  (n=193)
+  7. lb=48h  w=means_only       k=7  hl= 36h  len=mean     align=time_offset   full_traj_MAE=1.070h  (n=193)
+  8. lb=48h  w=means_only       k=7  hl= 36h  len=median   align=gap           full_traj_MAE=1.078h  (n=193)
+  9. lb=48h  w=means_only       k=5  hl= 72h  len=median   align=time_offset   full_traj_MAE=1.093h  (n=193)
+ 10. lb=48h  w=means_only       k=5  hl= 72h  len=mean     align=gap           full_traj_MAE=1.094h  (n=193)
 
 Best diagnostic configuration:
   LOOKBACK_HOURS = 48
@@ -202,9 +202,9 @@ Best diagnostic configuration:
   TRAJECTORY_LENGTH_METHOD = mean
   ALIGNMENT = gap
   HISTORY_MODE = episode
-  full_traj_MAE = 1.067h
+  full_traj_MAE = 1.061h
   traj3_MAE = 0.647h
-  gap1_MAE = 0.649h
+  gap1_MAE = 0.644h
 
 
 ============================================================
@@ -214,38 +214,37 @@ CANONICAL MULTI-WINDOW EVALUATION
 Production-constant evaluation via score_model (same
 infrastructure as the replay CLI).
 
-Aggregate:  headline=73.5  count=97.1  timing=56.5
-Windows:    26 scored / 26 total (100.0% availability)
+Aggregate:  headline=71.2  count=97.0  timing=53.3
+Windows:    25 scored / 25 total (100.0% availability)
 Half-life:  36.0h  Lookback: 96.0h
 
 Per-window breakdown:
   Cutoff                  Weight    Head   Count    Time  Status
-  2026-04-06T11:19:55     0.2571    57.8    88.0    38.0  scored
-  2026-04-06T12:38:39     0.2636    62.5    95.2    41.1  scored
-  2026-04-06T15:22:52     0.2779    48.6    92.5    25.6  scored
-  2026-04-06T17:30:34     0.2895    80.4   100.0    64.6  scored
-  2026-04-06T20:14:09     0.3051    74.0    95.1    57.6  scored
-  2026-04-06T23:33:00     0.3253    67.5    95.1    47.9  scored
-  2026-04-07T02:04:34     0.3415    51.8    83.9    32.0  scored
-  2026-04-07T05:56:15     0.3678    84.7   100.0    71.7  scored
-  2026-04-07T09:20:52     0.3928    74.6   100.0    55.6  scored
-  2026-04-07T11:35:15     0.4101    72.2    95.2    54.8  scored
-  2026-04-07T14:11:23     0.4312    72.9   100.0    53.2  scored
-  2026-04-07T17:39:53     0.4610    85.6   100.0    73.2  scored
-  2026-04-07T20:19:33     0.4852    87.9   100.0    77.3  scored
-  2026-04-08T00:05:11     0.5217    79.2   100.0    62.7  scored
-  2026-04-08T03:18:32     0.5551    81.8    95.2    70.3  scored
-  2026-04-08T06:40:35     0.5922    77.6   100.0    60.3  scored
-  2026-04-08T09:45:13     0.6284    70.8    95.3    52.6  scored
-  2026-04-08T12:58:20     0.6686    69.7    95.3    50.9  scored
-  2026-04-08T14:59:15     0.6950    64.5    95.3    43.6  scored
-  2026-04-08T17:40:09     0.7318    84.2   100.0    70.9  scored
-  2026-04-08T19:51:35     0.7634    46.5    94.3    23.0  scored
-  2026-04-09T00:16:39     0.8311    82.8    95.1    72.0  scored
-  2026-04-09T03:31:04     0.8847    80.0   100.0    64.0  scored
-  2026-04-09T06:30:28     0.9371    66.4    95.2    46.2  scored
-  2026-04-09T09:23:51     0.9907    78.0   100.0    60.8  scored
-  2026-04-09T09:52:59     1.0000    80.1   100.0    64.2  scored
+  2026-04-06T20:14:09     0.2582    74.0    95.1    57.6  scored
+  2026-04-06T23:33:00     0.2752    67.5    95.1    47.9  scored
+  2026-04-07T02:04:34     0.2890    51.8    83.9    32.0  scored
+  2026-04-07T05:56:15     0.3113    84.7   100.0    71.7  scored
+  2026-04-07T09:20:52     0.3324    74.6   100.0    55.6  scored
+  2026-04-07T11:35:15     0.3470    72.2    95.2    54.8  scored
+  2026-04-07T14:11:23     0.3649    72.9   100.0    53.2  scored
+  2026-04-07T17:39:53     0.3901    85.6   100.0    73.2  scored
+  2026-04-07T20:19:33     0.4106    87.9   100.0    77.3  scored
+  2026-04-08T00:05:11     0.4415    79.2   100.0    62.7  scored
+  2026-04-08T03:18:32     0.4697    81.8    95.2    70.3  scored
+  2026-04-08T06:40:35     0.5012    77.6   100.0    60.3  scored
+  2026-04-08T09:45:13     0.5318    70.8    95.3    52.6  scored
+  2026-04-08T12:58:20     0.5658    69.7    95.3    50.9  scored
+  2026-04-08T14:59:15     0.5881    64.5    95.3    43.6  scored
+  2026-04-08T17:40:09     0.6193    84.2   100.0    70.9  scored
+  2026-04-08T19:51:35     0.6460    46.5    94.3    23.0  scored
+  2026-04-09T00:16:39     0.7033    82.8    95.1    72.0  scored
+  2026-04-09T03:31:04     0.7486    80.0   100.0    64.0  scored
+  2026-04-09T06:30:28     0.7930    66.4    95.2    46.2  scored
+  2026-04-09T09:23:51     0.8384    78.0   100.0    60.8  scored
+  2026-04-09T12:10:16     0.8843    66.1    95.2    45.9  scored
+  2026-04-09T15:45:13     0.9475    73.7    95.3    57.0  scored
+  2026-04-09T18:16:28     0.9946    59.0   100.0    34.8  scored
+  2026-04-09T18:33:17     1.0000    57.6    95.3    34.8  scored
 
 
 ============================================================
@@ -258,29 +257,29 @@ History mode, alignment, lookback, feature weights, K, recency half-life, and tr
 Candidates evaluated: 4704
 
                      Headline   Count  Timing  Windows
-Baseline                 73.5    97.1    56.5   26/26
-Best                     73.5    97.1    56.5   26/26
+Baseline                 71.2    97.0    53.3   25/25
+Best                     71.8    97.0    54.0   25/25
 
 Baseline params: {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [2.0, 2.0, 0.5, 0.5, 2.0, 2.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 120, 'TRAJECTORY_LENGTH_METHOD': 'median'}
-Best params:     {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [2.0, 2.0, 0.5, 0.5, 2.0, 2.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 120, 'TRAJECTORY_LENGTH_METHOD': 'median'}
-Headline delta:  +0.000
+Best params:     {'ALIGNMENT': 'time_offset', 'FEATURE_WEIGHTS': [1.0, 1.0, 0.5, 0.5, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 5, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'median'}
+Headline delta:  +0.578
 Availability delta: +0
 
 Top 10 candidates:
-  1. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [2.0, 2.0, 0.5, 0.5, 2.0, 2.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 120, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=73.5  count=97.1  timing=56.5
-  2. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [2.0, 2.0, 0.5, 0.5, 2.0, 2.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=73.1  count=97.6  timing=55.6
-  3. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [2.0, 2.0, 0.5, 0.5, 2.0, 2.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 120, 'TRAJECTORY_LENGTH_METHOD': 'mean'}  headline=73.1  count=96.5  timing=56.2
-  4. {'ALIGNMENT': 'time_offset', 'FEATURE_WEIGHTS': [2.0, 2.0, 0.5, 0.5, 2.0, 2.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=72.8  count=96.4  timing=55.8
-  5. {'ALIGNMENT': 'time_offset', 'FEATURE_WEIGHTS': [2.0, 2.0, 0.5, 0.5, 2.0, 2.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 120, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=72.8  count=95.7  timing=56.3
-  6. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [2.0, 2.0, 0.5, 0.5, 2.0, 2.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'mean'}  headline=72.8  count=97.0  timing=55.5
-  7. {'ALIGNMENT': 'time_offset', 'FEATURE_WEIGHTS': [1.0, 1.0, 0.5, 0.5, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 5, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=72.4  count=96.3  timing=55.3
-  8. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [0.5, 2.0, 0.5, 2.0, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=72.3  count=97.5  timing=54.5
-  9. {'ALIGNMENT': 'time_offset', 'FEATURE_WEIGHTS': [2.0, 2.0, 0.5, 0.5, 2.0, 2.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 120, 'TRAJECTORY_LENGTH_METHOD': 'mean'}  headline=72.3  count=96.1  timing=55.3
-  10. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [2.0, 2.0, 0.5, 0.5, 2.0, 2.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 72, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=72.3  count=96.5  timing=55.2
+  1. {'ALIGNMENT': 'time_offset', 'FEATURE_WEIGHTS': [1.0, 1.0, 0.5, 0.5, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 5, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=71.8  count=97.0  timing=54.0
+  2. {'ALIGNMENT': 'time_offset', 'FEATURE_WEIGHTS': [1.0, 1.0, 0.5, 0.5, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 5, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'mean'}  headline=71.7  count=96.1  timing=54.4
+  3. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [1.0, 1.0, 0.5, 0.5, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 5, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'mean'}  headline=71.7  count=96.6  timing=54.1
+  4. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=71.7  count=97.0  timing=54.0
+  5. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'mean'}  headline=71.7  count=96.7  timing=54.0
+  6. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [1.0, 1.0, 0.5, 0.5, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 5, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=71.6  count=96.9  timing=53.7
+  7. {'ALIGNMENT': 'gap', 'FEATURE_WEIGHTS': [0.5, 2.0, 0.5, 2.0, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 5, 'LOOKBACK_HOURS': 12, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'mean'}  headline=71.6  count=97.3  timing=53.6
+  8. {'ALIGNMENT': 'time_offset', 'FEATURE_WEIGHTS': [0.5, 2.0, 0.5, 2.0, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 5, 'LOOKBACK_HOURS': 12, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=71.5  count=95.4  timing=54.1
+  9. {'ALIGNMENT': 'time_offset', 'FEATURE_WEIGHTS': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 7, 'LOOKBACK_HOURS': 24, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'median'}  headline=71.5  count=97.1  timing=53.4
+  10. {'ALIGNMENT': 'time_offset', 'FEATURE_WEIGHTS': [0.5, 2.0, 0.5, 2.0, 1.0, 1.0], 'HISTORY_MODE': 'episode', 'K_NEIGHBORS': 5, 'LOOKBACK_HOURS': 12, 'RECENCY_HALF_LIFE_HOURS': 240, 'TRAJECTORY_LENGTH_METHOD': 'mean'}  headline=71.4  count=97.1  timing=53.2
 
 Best candidate by history mode:
-  raw: headline=69.4  count=92.0  timing=53.1  history=raw, lb=6h, w=equal, k=7, hl=120h, len=median, align=time_offset
-  episode: headline=73.5  count=97.1  timing=56.5  history=episode, lb=24h, w=gap_hour, k=7, hl=120h, len=median, align=gap
+  raw: headline=68.9  count=94.2  timing=51.0  history=raw, lb=6h, w=means_only, k=3, hl=240h, len=mean, align=gap
+  episode: headline=71.8  count=97.0  timing=54.0  history=episode, lb=24h, w=vol_deemphasis, k=5, hl=240h, len=median, align=time_offset
 
 
 ============================================================
@@ -290,87 +289,87 @@ RAW VS EPISODE COMPARISON
 Feature comparison at canonical-best lookback (24h) and canonical-best history mode (episode).
 
 Feature           Raw Mean    Ep Mean    Raw Std     Ep Std
-last_gap             2.640      3.010      0.965      0.765
-mean_gap             2.668      3.037      0.345      0.281
-last_volume          3.279      3.738      1.092      0.819
-mean_volume          3.298      3.745      0.495      0.418
-sin_hour            -0.107     -0.034      0.705      0.711
-cos_hour            -0.058     -0.065      0.699      0.699
+last_gap             2.642      3.007      0.961      0.763
+mean_gap             2.674      3.038      0.346      0.279
+last_volume          3.286      3.739      1.087      0.814
+mean_volume          3.299      3.739      0.492      0.418
+sin_hour            -0.117     -0.046      0.705      0.713
+cos_hour            -0.057     -0.063      0.697      0.696
 
 Raw history:
-  Internal best: full_traj_MAE=1.419h  gap1=0.742h  traj3=0.741h  config=lb=18h, w=means_only, k=7, hl=36h, len=mean, align=gap
-  Canonical best: headline=69.4  count=92.0  timing=53.1  config=history=raw, lb=6h, w=equal, k=7, hl=120h, len=median, align=time_offset
+  Internal best: full_traj_MAE=1.411h  gap1=0.742h  traj3=0.744h  config=lb=18h, w=means_only, k=7, hl=36h, len=mean, align=gap
+  Canonical best: headline=68.9  count=94.2  timing=51.0  config=history=raw, lb=6h, w=means_only, k=3, hl=240h, len=mean, align=gap
 
 Episode history:
-  Internal best: full_traj_MAE=1.067h  gap1=0.649h  traj3=0.647h  config=lb=48h, w=means_only, k=5, hl=36h, len=mean, align=gap
-  Canonical best: headline=73.5  count=97.1  timing=56.5  config=history=episode, lb=24h, w=gap_hour, k=7, hl=120h, len=median, align=gap
+  Internal best: full_traj_MAE=1.061h  gap1=0.644h  traj3=0.647h  config=lb=48h, w=means_only, k=5, hl=36h, len=mean, align=gap
+  Canonical best: headline=71.8  count=97.0  timing=54.0  config=history=episode, lb=24h, w=vol_deemphasis, k=5, hl=240h, len=median, align=time_offset
 
 
 ============================================================
 RECENT STATE NEIGHBOR QUALITY
 ============================================================
 
-Last 10 complete states under the canonical-best configuration. Internal full_traj_MAE for this config: 1.244h.
-
-State at 04/08 09:45 (gap=3.1h vol=4.0oz):
-  Actual gaps: ['3.22', '2.02', '2.68']
-  NN avg gaps: ['3.07', '2.78', '2.75']
-  Abs errors:  ['0.15', '0.76', '0.06']
-  Neighbors: ['d=1.13', 'd=1.19', 'd=1.22', 'd=1.23', 'd=1.29', 'd=1.34', 'd=1.35']
-
-State at 04/08 12:58 (gap=3.2h vol=3.0oz):
-  Actual gaps: ['2.02', '2.68', '2.19']
-  NN avg gaps: ['2.55', '2.69', '2.38']
-  Abs errors:  ['0.54', '0.01', '0.19']
-  Neighbors: ['d=1.19', 'd=1.22', 'd=1.27', 'd=1.57', 'd=1.58', 'd=1.64', 'd=1.66']
-
-State at 04/08 14:59 (gap=2.0h vol=3.0oz):
-  Actual gaps: ['2.68', '2.19', '4.42']
-  NN avg gaps: ['2.33', '2.86', '2.76']
-  Abs errors:  ['0.35', '0.67', '1.66']
-  Neighbors: ['d=1.05', 'd=1.10', 'd=1.18', 'd=1.44', 'd=1.50', 'd=1.58', 'd=1.61']
+Last 10 complete states under the canonical-best configuration. Internal full_traj_MAE for this config: 1.213h.
 
 State at 04/08 17:40 (gap=2.7h vol=3.2oz):
   Actual gaps: ['2.19', '4.42', '3.24']
-  NN avg gaps: ['2.88', '3.57', '3.24']
-  Abs errors:  ['0.68', '0.84', '0.00']
-  Neighbors: ['d=0.70', 'd=0.94', 'd=1.11', 'd=1.38', 'd=1.52', 'd=1.61', 'd=1.63']
+  NN avg gaps: ['2.51', '3.73', '3.26']
+  Abs errors:  ['0.32', '0.69', '0.02']
+  Neighbors: ['d=0.69', 'd=0.73', 'd=0.84', 'd=1.09', 'd=1.10']
 
 State at 04/08 19:51 (gap=2.2h vol=3.5oz):
   Actual gaps: ['4.42', '3.24', '2.99']
-  NN avg gaps: ['3.30', '3.18', '3.26']
-  Abs errors:  ['1.12', '0.06', '0.27']
-  Neighbors: ['d=0.56', 'd=0.96', 'd=1.05', 'd=1.25', 'd=1.36', 'd=1.39', 'd=1.43']
+  NN avg gaps: ['3.18', '3.40', '3.11']
+  Abs errors:  ['1.24', '0.16', '0.12']
+  Neighbors: ['d=0.44', 'd=0.75', 'd=0.82', 'd=0.99', 'd=1.02']
 
 State at 04/09 00:16 (gap=4.4h vol=3.0oz):
   Actual gaps: ['3.24', '2.99', '2.89']
-  NN avg gaps: ['3.26', '3.25', '2.80']
-  Abs errors:  ['0.02', '0.26', '0.09']
-  Neighbors: ['d=1.40', 'd=1.42', 'd=1.53', 'd=1.73', 'd=1.81', 'd=1.85', 'd=2.00']
+  NN avg gaps: ['3.29', '3.18', '2.51']
+  Abs errors:  ['0.05', '0.19', '0.38']
+  Neighbors: ['d=1.14', 'd=1.20', 'd=1.23', 'd=1.31', 'd=1.46']
 
 State at 04/09 03:31 (gap=3.2h vol=3.0oz):
   Actual gaps: ['2.99', '2.89', '2.77']
-  NN avg gaps: ['3.13', '3.27', '2.90']
-  Abs errors:  ['0.14', '0.38', '0.12']
-  Neighbors: ['d=0.77', 'd=0.89', 'd=1.24', 'd=1.33', 'd=1.36', 'd=1.45', 'd=1.50']
+  NN avg gaps: ['3.05', '3.12', '3.10']
+  Abs errors:  ['0.06', '0.24', '0.32']
+  Neighbors: ['d=0.64', 'd=0.70', 'd=1.08', 'd=1.10', 'd=1.12']
 
 State at 04/09 06:30 (gap=3.0h vol=3.0oz):
   Actual gaps: ['2.89', '2.77', '3.58']
-  NN avg gaps: ['2.69', '2.76', '3.02']
-  Abs errors:  ['0.20', '0.01', '0.57']
-  Neighbors: ['d=0.50', 'd=0.56', 'd=0.95', 'd=1.33', 'd=1.54', 'd=1.56', 'd=1.59']
+  NN avg gaps: ['3.05', '3.01', '2.59']
+  Abs errors:  ['0.16', '0.23', '0.99']
+  Neighbors: ['d=0.49', 'd=0.52', 'd=0.75', 'd=1.14', 'd=1.16']
 
 State at 04/09 09:23 (gap=2.9h vol=3.5oz):
   Actual gaps: ['2.77', '3.58', '2.52']
-  NN avg gaps: ['2.95', '2.62', '2.54']
-  Abs errors:  ['0.17', '0.96', '0.02']
-  Neighbors: ['d=0.82', 'd=1.12', 'd=1.23', 'd=1.26', 'd=1.28', 'd=1.32', 'd=1.37']
+  NN avg gaps: ['2.76', '2.78', '2.33']
+  Abs errors:  ['0.01', '0.80', '0.19']
+  Neighbors: ['d=0.61', 'd=0.89', 'd=0.90', 'd=1.00', 'd=1.06']
 
 State at 04/09 12:10 (gap=2.8h vol=3.0oz):
   Actual gaps: ['3.58', '2.52', '2.26']
-  NN avg gaps: ['2.71', '3.09', '2.76']
-  Abs errors:  ['0.87', '0.57', '0.50']
-  Neighbors: ['d=1.15', 'd=1.34', 'd=1.49', 'd=1.50', 'd=1.51', 'd=1.58', 'd=1.60']
+  NN avg gaps: ['2.69', '3.12', '2.68']
+  Abs errors:  ['0.90', '0.60', '0.42']
+  Neighbors: ['d=1.02', 'd=1.02', 'd=1.10', 'd=1.12', 'd=1.15']
+
+State at 04/09 15:45 (gap=3.6h vol=4.0oz):
+  Actual gaps: ['2.52', '2.26', '2.80']
+  NN avg gaps: ['2.12', '2.61', '3.41']
+  Abs errors:  ['0.40', '0.35', '0.61']
+  Neighbors: ['d=0.55', 'd=0.94', 'd=1.05', 'd=1.30', 'd=1.33']
+
+State at 04/09 18:16 (gap=2.5h vol=4.0oz):
+  Actual gaps: ['2.26', '2.80', '4.09']
+  NN avg gaps: ['2.54', '3.88', '3.34']
+  Abs errors:  ['0.28', '1.08', '0.75']
+  Neighbors: ['d=0.79', 'd=0.90', 'd=1.08', 'd=1.10', 'd=1.12']
+
+State at 04/09 20:32 (gap=2.3h vol=3.5oz):
+  Actual gaps: ['2.80', '4.09', '4.25']
+  NN avg gaps: ['3.37', '2.94', '3.30']
+  Abs errors:  ['0.56', '1.15', '0.94']
+  Neighbors: ['d=0.81', 'd=0.87', 'd=1.00', 'd=1.01', 'd=1.18']
 
 
 ============================================================
@@ -387,16 +386,16 @@ FINAL SUMMARY
   alignment = gap
 
 --- Canonical replay tuning ---
-  Baseline headline: 73.492
-  Best headline:     73.492
+  Baseline headline: 71.224
+  Best headline:     71.802
   Baseline params:   history=episode, lb=24h, w=gap_hour, k=7, hl=120h, len=median, align=gap
-  Best params:       history=episode, lb=24h, w=gap_hour, k=7, hl=120h, len=median, align=gap
-  Headline delta:    +0.000
+  Best params:       history=episode, lb=24h, w=vol_deemphasis, k=5, hl=240h, len=median, align=time_offset
+  Headline delta:    +0.578
   Availability delta:+0
 
 --- Internal diagnostic bests ---
-  raw: full_traj_MAE=1.419h  gap1=0.742h  traj3=0.741h
-  episode: full_traj_MAE=1.067h  gap1=0.649h  traj3=0.647h
+  raw: full_traj_MAE=1.411h  gap1=0.742h  traj3=0.744h
+  episode: full_traj_MAE=1.061h  gap1=0.644h  traj3=0.647h
 
 Production constants are selected by canonical multi-window replay.
 The internal full_traj_MAE sweeps remain diagnostic: they explain retrieval quality and history-mode tradeoffs, but they do not ship constants.

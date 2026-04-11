@@ -1,26 +1,27 @@
 # Agent Inference
 
-Slot-aware cadence model that forecasts feeding episodes from recent
-episode-level gap patterns. Instead of one broad daytime gap and one
-broad overnight gap, it estimates typical gaps for feeds at similar
-hours of day so the schedule can treat evening follow-ups, first-night
-stretches, morning resets, and afternoon cadence differently.
+Five-bucket cadence model that forecasts feeding episodes by projecting
+forward from recency-weighted gap medians estimated in narrow
+time-of-day windows. The model collapses nearby bottle feeds into
+feeding episodes using the shared clustering rule, then examines the
+most recent 7 days of episode-level history.
 
-The model first collapses nearby bottle feeds into feeding episodes
-using the shared clustering rule. It then looks back over recent
-history and measures the gap after each episode, tagging each gap by the
-hour of day of the episode that started it. Gap estimates are weighted
-toward newer observations with a 48-hour recency half-life so the
-forecast follows the latest cadence rather than a longer-run average.
+For each consecutive pair of episodes, it computes the inter-episode gap
+and tags it by the hour of the episode that started the gap. Gaps are
+assigned to five buckets: evening (17:00-19:00), pre-sleep
+(19:00-22:00), deep night (22:00-04:00), early morning (04:00-07:00),
+and daytime (07:00-17:00). Each gap receives a recency weight with a
+48-hour exponential half-life, and the weighted median is taken within
+each bucket. When the predicted evening feed lands in the 20:00 hour,
+the pre-sleep gap is refined with a narrower weighted median built from
+historical gaps that also started in the 20:00 hour; the final
+pre-sleep estimate blends 40% of that narrow estimate with 60% of the
+broader bucket estimate.
 
-For the first predicted feed, the model conditions on how much time has
-already elapsed since the last observed episode and chooses a remaining
-wait that is consistent with comparable recent gaps. Later predicted
-feeds step forward using the hour-appropriate gap estimate for each new
-predicted feed time. When recent evenings support two different
-patterns, such as a late-evening top-up versus a direct jump to
-midnight, the model follows the branch with the stronger recent support.
-
-Predicted volume is held near the recent central tendency at 3.5 oz.
-Overall feed count stays close to recent daily episode counts so the
-schedule remains plausible over the full 24-hour horizon.
+Starting from the last observed episode, the model projects each next
+feed by applying the bucket-appropriate gap for the predicted feed's
+start time. Predicted volume is the recency-weighted median of recent
+episode volumes, held at 3.5 oz for all feeds. Total feed count is
+anchored to the recency-weighted mean of daily episode counts from
+recent complete days, which yields an 8-feed 24-hour schedule for this
+run.

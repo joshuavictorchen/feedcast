@@ -1,6 +1,6 @@
 # Silas Feeding Forecast
 
-**Friday, April 10, 2026** · 42 days old · Cutoff: 3:29 PM
+**Friday, April 10, 2026** · 42 days old · Cutoff: 6:33 PM
 
 ## Next Feeds
 
@@ -12,32 +12,31 @@
 
 ## Trend Insights
 
-The dominant trend over the past two weeks is a gradual drop in per-feed volume. Through the first week (Mar 27 to Apr 2), Silas averaged 4.0 oz per episode, with 85% of feeds at 4 oz or more. That held fairly steady through Apr 6, but starting Apr 7 the typical feed settled to 3.0–3.5 oz. Over the last three days (Apr 8–10), only 27% of episodes reach 4 oz, and Apr 10's five feeds have all landed at exactly 3.4–3.5 oz. Despite smaller feeds, daily totals remain in the 28–31 oz range because he's maintaining the same feeding frequency. Whether this is a transient dip or a new baseline is the main thing to watch.
+The newest data since the prior run is a single feed: 4.8 oz at 6:33 PM, the largest single feed in three days. It stands out against a backdrop of remarkably consistent 3.4-3.5 oz feeds that dominated Apr 10 up to that point and most of Apr 9. Whether this is a one-off hungry feed or the start of volumes ticking back up is worth watching. It does not, on its own, reverse the week's clear downward volume trend, but it is the first feed above 4 oz since yesterday afternoon.
 
-The other clear trend is the disappearance of top-up feeds. In week one, 13% of episodes were multi-feed clusters (a main bottle followed by a small top-up within an hour). That dropped to 7% in week two, and the last four days have had none. He's eating in clean single feeds now. Feed spacing has been remarkably stable throughout: roughly every 3 hours, day and night, with no meaningful change across the full 14 days. Overnight gaps land in a 3.5–4.5 hour range with occasional longer stretches (5.1h on Apr 5, 4.7h on Apr 4), but these haven't become a pattern yet. At 6 weeks, there's a modest day/night difference in gap length but no sign of a consolidated longer overnight sleep stretch.
+Zooming out to the 7-day window, the main story remains the gradual drop in per-feed volume. Through Apr 4-5, nearly every feed landed at 4.0 oz or higher, and multi-feed episodes (a main bottle followed by a small top-up) appeared regularly. Starting around Apr 8 afternoon, the typical feed settled to 3.0-3.5 oz, and top-up feeds disappeared entirely. The share of feeds reaching 4 oz fell from 100% on Apr 4 to 22% on Apr 9. Despite smaller feeds, daily totals have held in the 28-31 oz range because feed count has stayed the same or even crept up (Apr 9 had 9 episodes). Feed spacing is essentially unchanged across the full week at roughly 3 hours, day and night. Overnight gaps are modestly longer (3.6h vs. 2.8h daytime) but show no sign yet of consolidating into a longer sleep stretch.
 
-| Period | Avg Episode Vol | Daily Intake | Multi-Feed Eps | Avg Gap |
-|--------|:-:|:-:|:-:|:-:|
-| Mar 27 – Apr 2 (week 1) | 4.0 oz | 29–37 oz | 13% | 3.0 h |
-| Apr 3 – Apr 9 (week 2) | 3.8 oz | 28–34 oz | 7% | 3.0 h |
-| Apr 8 – Apr 10 (last 3d) | 3.5 oz | 28–31 oz | 0% | 2.9 h |
+| Period | Avg Episode Vol | Daily Intake | Feeds >= 4 oz | Multi-Feed Eps | Avg Gap |
+|--------|:-:|:-:|:-:|:-:|:-:|
+| Apr 3-7 | 4.0 oz | 28-35 oz | 78% | 4 of 26 (15%) | 3.0 h |
+| Apr 8-10 | 3.5 oz | 28-31 oz | 30% | 0 of 23 (0%) | 3.0 h |
 
 ## Prior Run Retrospective
 
-Comparing prior run `20260410-133026` predicted episodes
+Comparing prior run `20260410-180114` predicted episodes
 against actual feeding episodes observed in the current export
 (observed horizon:
-5.6h,
-coverage: 23%).
+3.1h,
+coverage: 13%).
 
 | Model | Score | Count | Timing | Episodes (Pred/Actual/Matched) | Status |
 | ----- | ----- | ----- | ------ | ------------------------------ | ------ |
-| Slot Drift | 82.7 | 68.7 | 99.5 | 1/2/1 | Partial horizon (5.6h observed) |
-| Analog Trajectory | 76.3 | 100.0 | 58.3 | 2/2/2 | Partial horizon (5.6h observed) |
-| Latent Hunger State | 66.5 | 68.7 | 64.5 | 1/2/1 | Partial horizon (5.6h observed) |
-| Survival Hazard | 82.3 | 100.0 | 67.7 | 2/2/2 | Partial horizon (5.6h observed) |
-| Consensus Blend | 92.1 | 100.0 | 84.9 | 2/2/2 | Partial horizon (5.6h observed) |
-| Agent Inference | 81.1 | 100.0 | 65.8 | 2/2/2 | Partial horizon (5.6h observed) |
+| Slot Drift | 24.8 | 100.0 | 6.1 | 1/1/1 | Partial horizon (3.1h observed) |
+| Analog Trajectory | 68.8 | 100.0 | 47.3 | 1/1/1 | Partial horizon (3.1h observed) |
+| Latent Hunger State | 83.7 | 100.0 | 70.1 | 1/1/1 | Partial horizon (3.1h observed) |
+| Survival Hazard | 79.3 | 100.0 | 62.8 | 1/1/1 | Partial horizon (3.1h observed) |
+| Consensus Blend | 81.5 | 100.0 | 66.4 | 1/1/1 | Partial horizon (3.1h observed) |
+| Agent Inference | 68.1 | 100.0 | 46.3 | 1/1/1 | Partial horizon (3.1h observed) |
 Scores are normalized to the observed window. Coverage shows how much of
 the 24-hour horizon has actually resolved so far.
 
@@ -48,28 +47,43 @@ reflect the model versions that made those earlier predictions.
 
 | Model | Comparisons | Full 24h Runs | Mean Score | Mean Count | Mean Timing | Avg Coverage |
 | ----- | ----------- | ------------- | ---------- | ---------- | ----------- | ------------ |
-| Slot Drift | 2 | 1 | 68.6 | 87.5 | 57.2 | 62% |
-| Analog Trajectory | 2 | 1 | 61.9 | 95.6 | 40.5 | 62% |
-| Survival Hazard | 2 | 1 | 61.7 | 90.2 | 42.7 | 62% |
-| Agent Inference | 2 | 1 | 61.1 | 95.6 | 40.0 | 62% |
-| Consensus Blend | 2 | 1 | 58.9 | 94.3 | 39.5 | 62% |
-| Latent Hunger State | 2 | 1 | 56.9 | 86.5 | 39.3 | 62% |
+| Survival Hazard | 3 | 1 | 63.7 | 91.4 | 45.1 | 45% |
+| Slot Drift | 3 | 1 | 63.6 | 89.0 | 51.3 | 45% |
+| Analog Trajectory | 3 | 1 | 62.7 | 96.1 | 41.3 | 45% |
+| Agent Inference | 3 | 1 | 61.9 | 96.1 | 40.7 | 45% |
+| Consensus Blend | 3 | 1 | 61.5 | 94.9 | 42.6 | 45% |
+| Latent Hunger State | 3 | 1 | 60.0 | 88.0 | 42.8 | 45% |
 
 ## Methodologies
 
 
 ### Agent Inference
 
-Empirical Cadence Projection. The agent runs a non-parametric forecasting
-model that projects forward from recent inter-episode gap patterns. Gaps
-are split by day-part (overnight vs. daytime) and weighted toward the
-most recent 2–3 days. The first predicted feed uses a conditional
-survival estimate based on elapsed time since the last episode; subsequent
-feeds step forward at the day-part-appropriate gap median. A count
-calibration step adjusts overall spacing if the projected feed count
-diverges significantly from recent daily episode counts. The model
-and its constants are maintained in a persistent workspace and may be
-evolved by agents across runs.
+Five-bucket cadence model that forecasts feeding episodes by projecting
+forward from recency-weighted gap medians estimated in narrow
+time-of-day windows. The model collapses nearby bottle feeds into
+feeding episodes using the shared clustering rule, then examines the
+most recent 7 days of episode-level history.
+
+For each consecutive pair of episodes, it computes the inter-episode gap
+and tags it by the hour of the episode that started the gap. Gaps are
+assigned to five buckets: evening (17:00-19:00), pre-sleep
+(19:00-22:00), deep night (22:00-04:00), early morning (04:00-07:00),
+and daytime (07:00-17:00). Each gap receives a recency weight with a
+48-hour exponential half-life, and the weighted median is taken within
+each bucket. When the predicted evening feed lands in the 20:00 hour,
+the pre-sleep gap is refined with a narrower weighted median built from
+historical gaps that also started in the 20:00 hour; the final
+pre-sleep estimate blends 40% of that narrow estimate with 60% of the
+broader bucket estimate.
+
+Starting from the last observed episode, the model projects each next
+feed by applying the bucket-appropriate gap for the predicted feed's
+start time. Predicted volume is the recency-weighted median of recent
+episode volumes, held at 3.5 oz for all feeds. Total feed count is
+anchored to the recency-weighted mean of daily episode counts from
+recent complete days, which yields an 8-feed 24-hour schedule for this
+run.
 
 ### Consensus Blend (featured)
 
@@ -227,6 +241,6 @@ fitted values, empirical comparisons, and replay evidence live in
 
 ---
 
-*Export: `export_narababy_silas_20260410(1).csv` · Dataset: `sha256:944bf861...`
-· Commit: `0ae36ba`
-· Generated: 2026-04-10 18:17:16*
+*Export: `export_narababy_silas_20260410(2).csv` · Dataset: `sha256:ff8b0a11...`
+· Commit: `d5dc331`
+· Generated: 2026-04-10 19:40:41*
