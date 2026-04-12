@@ -43,44 +43,6 @@ breakdowns are in `diagnostics.yaml`.
 ## Methodologies
 
 
-### Agent Inference
-
-Empirical cadence projection with sub-period overnight gap refinement. The model collapses raw bottle feeds into feeding episodes using the shared clustering rule (73-minute base gap, 80-minute extension for small top-ups), then examines the most recent 7 days of episode-level history with exponential recency weighting (48-hour half-life).
-
-The baseline algorithm (`model.py`) computes recency-weighted median inter-episode gaps for two day-parts: overnight (19:00-07:00) and daytime (07:00-19:00). For the first predicted feed after the cutoff, it applies non-parametric conditional survival estimation (filtering to gaps longer than elapsed time since the last episode, then taking the weighted median of remaining times). Subsequent feeds step forward using the unconditional day-part median. Count calibration scales all gaps proportionally if the projected feed count diverges more than 30% from the recency-weighted mean of recent daily episode counts.
-
-The agent layer refines the overnight gap by splitting it into sub-periods derived from the most recent 2-3 nights of episode data: evening-to-first-night (~3.4h from the conditional survival estimate), deep night from 22:00-04:00 starts (~4.0h, reflecting the recent trend toward longer mid-sleep stretches), early morning from 03:00-07:00 starts (~3.7h), and the pre-daytime transition from 06:00-09:00 starts (~2.7h). Daytime gaps use the baseline model's recency-weighted median of 2.5 hours. This sub-period refinement addresses the model's documented weakness of a single overnight median that averages together structurally different gap regimes.
-
-Feed count (8 episodes over 24 hours) matches the recency-weighted daily episode count of 7.9. Volume is a flat 3.8 oz per predicted episode, the recency-weighted median across recent episode volumes.
-
-### Consensus Blend (featured)
-
-Combines the scripted models into one forecast by finding where
-a majority of models agree that a feed will happen.
-
-Before comparing models, the blend collapses each model's predictions
-into feeding episodes. If a model predicts a feed and a nearby top-up
-within the cluster window, those predictions become one episode-level
-point. This prevents attachment feeds from distorting the vote.
-
-For each episode-level prediction from any model, the blend looks at
-what the other models predict nearby (within a configurable search
-window) and asks: do a strict majority of models place a feed in this
-region? If so, that region becomes a candidate consensus feed. Its
-predicted time is the median of the contributing models' timestamps,
-and its volume is the median of their volumes.
-
-Many overlapping candidates can describe the same real feed, so the
-blend picks the best non-overlapping set. Two rules prevent double-
-counting: each individual model prediction can only support one
-consensus feed, and two consensus feeds cannot be closer than the
-configured conflict window. The final schedule is the highest-quality set of
-feeds that satisfies both rules.
-
-This approach means the consensus naturally favors feeds where
-multiple models agree on timing, while isolated predictions that
-only one or two models support are filtered out.
-
 ### Slot Drift
 
 Daily template model that identifies recurring feeding episode slots
@@ -206,6 +168,44 @@ medians rather than sampling from the full distribution.
 This methodology intentionally stays at the level of mechanism. Current
 fitted values, empirical comparisons, and replay evidence live in
 `artifacts/research_results.txt`. Current production constants live in `model.py`.
+
+### Consensus Blend (featured)
+
+Combines the scripted models into one forecast by finding where
+a majority of models agree that a feed will happen.
+
+Before comparing models, the blend collapses each model's predictions
+into feeding episodes. If a model predicts a feed and a nearby top-up
+within the cluster window, those predictions become one episode-level
+point. This prevents attachment feeds from distorting the vote.
+
+For each episode-level prediction from any model, the blend looks at
+what the other models predict nearby (within a configurable search
+window) and asks: do a strict majority of models place a feed in this
+region? If so, that region becomes a candidate consensus feed. Its
+predicted time is the median of the contributing models' timestamps,
+and its volume is the median of their volumes.
+
+Many overlapping candidates can describe the same real feed, so the
+blend picks the best non-overlapping set. Two rules prevent double-
+counting: each individual model prediction can only support one
+consensus feed, and two consensus feeds cannot be closer than the
+configured conflict window. The final schedule is the highest-quality set of
+feeds that satisfies both rules.
+
+This approach means the consensus naturally favors feeds where
+multiple models agree on timing, while isolated predictions that
+only one or two models support are filtered out.
+
+### Agent Inference
+
+Empirical cadence projection with sub-period overnight gap refinement. The model collapses raw bottle feeds into feeding episodes using the shared clustering rule (73-minute base gap, 80-minute extension for small top-ups), then examines the most recent 7 days of episode-level history with exponential recency weighting (48-hour half-life).
+
+The baseline algorithm (`model.py`) computes recency-weighted median inter-episode gaps for two day-parts: overnight (19:00-07:00) and daytime (07:00-19:00). For the first predicted feed after the cutoff, it applies non-parametric conditional survival estimation (filtering to gaps longer than elapsed time since the last episode, then taking the weighted median of remaining times). Subsequent feeds step forward using the unconditional day-part median. Count calibration scales all gaps proportionally if the projected feed count diverges more than 30% from the recency-weighted mean of recent daily episode counts.
+
+The agent layer refines the overnight gap by splitting it into sub-periods derived from the most recent 2-3 nights of episode data: evening-to-first-night (~3.4h from the conditional survival estimate), deep night from 22:00-04:00 starts (~4.0h, reflecting the recent trend toward longer mid-sleep stretches), early morning from 03:00-07:00 starts (~3.7h), and the pre-daytime transition from 06:00-09:00 starts (~2.7h). Daytime gaps use the baseline model's recency-weighted median of 2.5 hours. This sub-period refinement addresses the model's documented weakness of a single overnight median that averages together structurally different gap regimes.
+
+Feed count (8 episodes over 24 hours) matches the recency-weighted daily episode count of 7.9. Volume is a flat 3.8 oz per predicted episode, the recency-weighted median across recent episode volumes.
 
 ---
 
