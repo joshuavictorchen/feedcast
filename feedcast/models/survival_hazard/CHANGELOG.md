@@ -2,6 +2,61 @@
 
 Tracks behavior-level changes to the Survival Hazard model. Add newest entries first.
 
+## Soften overnight shape for less regular recent pattern | 2026-04-11
+
+### Problem
+
+The 20260411(1) export (8 new rows vs the earlier 20260411 export)
+shifted the canonical replay landscape. On the prior export version,
+the 154-candidate sweep found the surface flat around `OVERNIGHT_SHAPE=7.5`
+(best improvement: +0.12). With the new data, `OVERNIGHT_SHAPE=4.0-5.0`
+scores +1.2-1.6 better. Per-window analysis shows the improvement
+concentrates in the 5 most recent, highest-weight windows (April 10-11),
+where the baby's overnight feeding was less regular than the 7-day
+lookback predicted.
+
+### Research
+
+Ran three sweep rounds on `exports/export_narababy_silas_20260411(1).csv`:
+
+1. Coarse 20-candidate grid (OVERNIGHT 5.0-8.0, DAYTIME 2.0-3.5):
+   best at (5.0, 3.0) — headline 66.815 (+1.19).
+2. Fine 27-candidate grid (OVERNIGHT 4.0-6.0 × 0.25, DAYTIME 2.75-3.25):
+   best at (4.0, 3.25) — headline 67.261 (+1.64).
+3. Extension 15-candidate check (OVERNIGHT 3.0-4.0, DAYTIME 3.0-3.5):
+   confirmed 4.0 is the interior optimum; scores drop below 3.5.
+
+The optimum sits on a broad plateau from OVERNIGHT 4.0 to 5.0 (spread
+0.45). Selected 4.5 (plateau center) to balance the trend signal against
+oscillation risk — the shapes went 4.75 → 7.5 just yesterday.
+
+Half-life sweep (48-240h) showed no improvement (+0.09 max), confirming
+the regression is a shape issue, not a scale-estimation issue.
+
+| Metric | Previous (`7.5`, `3.0`) | Updated (`4.5`, `3.0`) | Delta |
+|---|---|---|---|
+| Headline | 65.6 | 66.9 | +1.3 |
+| Count | 93.6 | 93.4 | -0.3 |
+| Timing | 47.1 | 48.7 | +1.6 |
+
+Availability unchanged at 25/25.
+
+The 154-candidate analysis sweep confirms the new baseline as near-best
+(best improvement: +0.29 at DAYTIME=1.25/OVERNIGHT=3.5, which trades
+count for timing). Episode-level MLE remains stable (6.04/3.63).
+
+### Solution
+
+Updated production shape:
+
+- `OVERNIGHT_SHAPE`: `7.5 → 4.5`
+- `DAYTIME_SHAPE`: unchanged at `3.0`
+
+The baby's overnight regularity decreased in the latest data, pulling
+the canonical optimum from the sharper shapes set yesterday back toward
+the MLE range. The change reflects the emerging pattern rather than
+chasing the exact replay peak.
+
 ## Re-tune shapes for regularizing feeding pattern | 2026-04-10
 
 ### Problem
