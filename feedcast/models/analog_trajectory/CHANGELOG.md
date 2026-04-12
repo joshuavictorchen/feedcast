@@ -2,6 +2,72 @@
 
 Tracks behavior-level changes to the Analog Trajectory model. Add newest entries first.
 
+## Retune on new export: raw history with equal weighting and tighter recency | 2026-04-11
+
+### Problem
+
+The model's production constants (tuned on
+`exports/export_narababy_silas_20260411.csv`, headline 69.7) degraded to
+headline 65.5 on the new export
+(`exports/export_narababy_silas_20260411(1).csv`). Timing dropped from
+51.7 to 46.8 while count stayed stable at 94.9. The most recent replay
+windows (Apr 10 evening) scored catastrophically on timing (16.8),
+dragging the recency-weighted aggregate down. These windows contain
+cluster feeding (gaps of 1.3h and 0.4h) that the episode model's
+collapsed history could not match against.
+
+### Research
+
+The full 4704-candidate canonical sweep found a joint combination that
+recovers +3.2 headline points and flips the history mode from episode
+back to raw:
+
+| Metric | Old production | New production |
+|--------|----------------|----------------|
+| Headline | 65.5 | 68.7 |
+| Count | 94.9 | 91.2 |
+| Timing | 46.8 | 52.5 |
+
+The most recent windows improved dramatically:
+
+| Window | Old headline | New headline | Old timing | New timing |
+|--------|-------------|-------------|------------|------------|
+| Apr 10 18:33 | 41.0 | 77.2 | 16.8 | 65.5 |
+| Apr 10 19:35 | 40.0 | 75.4 | 16.8 | 65.5 |
+| Apr 10 12:16 | 59.8 | 75.3 | 41.2 | 65.3 |
+
+The raw-vs-episode canonical margin flipped to raw by +0.5 headline
+points (68.7 vs 68.2). Episode history still wins the local diagnostic
+decisively (1.070h vs 1.433h full_traj_MAE). The best episode candidate
+uses a very different regime from the prior production config
+(time_offset alignment, vol_deemphasis weighting, k=3), suggesting the
+episode canonical surface shifted substantially.
+
+Count dropped from 94.9 to 91.2. The raw model predicts more events
+(including cluster-internal ones), which improves timing but slightly
+hurts count precision.
+
+### Solution
+
+Ship the full canonical sweep winner:
+
+- `HISTORY_MODE`: episode -> raw
+- `LOOKBACK_HOURS`: 12 -> 18
+- `FEATURE_WEIGHTS`: means_only [0.5,2,0.5,2,1,1] -> equal [1,1,1,1,1,1]
+- `K_NEIGHBORS`: 5 -> 7
+- `RECENCY_HALF_LIFE_HOURS`: 240 -> 72
+- `TRAJECTORY_LENGTH_METHOD`: median (unchanged)
+- `ALIGNMENT`: gap (unchanged)
+
+The direction of the changes is internally coherent: raw history
+preserves cluster-internal feeds that the baby is currently producing,
+equal weighting lets instantaneous values (last_gap, last_volume)
+contribute signal about short-gap patterns, and tighter recency (72h)
+focuses neighbor weighting on the most recent 3 days where cluster
+feeding is prominent. The history-mode flip is the most notable change;
+the raw/episode margin is narrow (0.5 points) and has oscillated across
+exports.
+
 ## Retune on new export: means-only weighting with shorter lookback and broader recency | 2026-04-11
 
 ### Problem

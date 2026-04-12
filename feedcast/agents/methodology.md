@@ -1,31 +1,9 @@
 # Agent Inference
 
-Slot-anchored cadence model that forecasts feeding episodes by combining
-time-of-day slot medians with gap-level verification against a five-bucket
-inter-episode gap profile.
+Empirical cadence projection with sub-period overnight gap refinement. The model collapses raw bottle feeds into feeding episodes using the shared clustering rule (73-minute base gap, 80-minute extension for small top-ups), then examines the most recent 7 days of episode-level history with exponential recency weighting (48-hour half-life).
 
-The model collapses nearby bottle feeds into feeding episodes using the
-shared clustering rule, then examines the most recent 7 days of
-episode-level history. It assigns each episode to one of eight daily
-slots based on its time of day (mid-morning, lunch, afternoon, evening,
-pre-bed, first wake, deep night, morning wake). Within each slot, the
-recency-weighted median clock time (48-hour exponential half-life) gives
-the typical time that feed occurs.
+The baseline algorithm (`model.py`) computes recency-weighted median inter-episode gaps for two day-parts: overnight (19:00-07:00) and daytime (07:00-19:00). For the first predicted feed after the cutoff, it applies non-parametric conditional survival estimation (filtering to gaps longer than elapsed time since the last episode, then taking the weighted median of remaining times). Subsequent feeds step forward using the unconditional day-part median. Count calibration scales all gaps proportionally if the projected feed count diverges more than 30% from the recency-weighted mean of recent daily episode counts.
 
-These slot medians anchor the forecast to the baby's daily rhythm rather
-than cascading gaps forward from the last episode. Each predicted feed
-lands near the historical median for its slot, so a timing error in one
-feed does not propagate to subsequent feeds.
+The agent layer refines the overnight gap by splitting it into sub-periods derived from the most recent 2-3 nights of episode data: evening-to-first-night (~3.4h from the conditional survival estimate), deep night from 22:00-04:00 starts (~4.0h, reflecting the recent trend toward longer mid-sleep stretches), early morning from 03:00-07:00 starts (~3.7h), and the pre-daytime transition from 06:00-09:00 starts (~2.7h). Daytime gaps use the baseline model's recency-weighted median of 2.5 hours. This sub-period refinement addresses the model's documented weakness of a single overnight median that averages together structurally different gap regimes.
 
-Gap-level verification uses a five-bucket profile (daytime 07:00-17:00,
-evening 17:00-19:00, pre-sleep 19:00-22:00, deep night 22:00-04:00,
-early morning 04:00-07:00) computed from recency-weighted inter-episode
-gaps. The forecast is checked to ensure each gap between consecutive
-predictions falls within the plausible range for its time-of-day bucket.
-
-Feed count is anchored to the recency-weighted mean of daily episode
-counts from recent complete days (7.7 for this run, rounded to 8).
-Whether a pre-bed feed is included depends on its recent frequency: it
-appeared on 4 of the last 5 complete evenings, so it is included.
-Predicted volume is 3.5 oz per episode, the modal volume across recent
-episodes.
+Feed count (8 episodes over 24 hours) matches the recency-weighted daily episode count of 7.9. Volume is a flat 3.8 oz per predicted episode, the recency-weighted median across recent episode volumes.

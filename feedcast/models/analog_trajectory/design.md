@@ -9,24 +9,27 @@ is a full canonical replay sweep through `tune_model()`. The local
 
 | Parameter | Rationale |
 | --------- | --------- |
-| HISTORY_MODE | Episode-level history removes cluster noise from the state library, improving both local retrieval quality and canonical replay headline |
-| LOOKBACK_HOURS | A 24-hour lookback captures the current feeding rhythm without smoothing across older patterns too aggressively |
-| FEATURE_WEIGHTS | Rolling means (mean_gap, mean_volume) are the sharpest retrieval cues on the current export; instantaneous values and hour-of-day are deemphasized |
+| HISTORY_MODE | Raw history preserves cluster-internal feeds, which are needed for neighbor matching during periods of cluster feeding. Episode history still wins the local diagnostic decisively, but canonical replay currently favors raw |
+| LOOKBACK_HOURS | An 18-hour lookback captures roughly three-quarters of a day of feeding, stabilizing rolling means without oversmoothing |
+| FEATURE_WEIGHTS | Equal weighting lets all features contribute; with raw history, instantaneous values carry signal about recent short-gap patterns that means-only suppresses |
 | K_NEIGHBORS | Balances count accuracy against timing precision under canonical replay |
-| RECENCY_HALF_LIFE_HOURS | Broad recency weighting keeps a wide range of historical analogs available, compensating for the shorter lookback window |
+| RECENCY_HALF_LIFE_HOURS | Tighter recency (72h, ~3 days) focuses neighbor weighting on the baby's current feeding cadence |
 | TRAJECTORY_LENGTH_METHOD | Median is more robust than mean on variable-length neighbor trajectories |
 | ALIGNMENT | Gap-based blending outperforms time-offset alignment under both diagnostic and canonical evaluation |
 
 ## History source
 
-The model builds bottle-only events, then collapses them into feeding
-episodes before constructing analog states. This removes cluster-
-internal top-ups from the feature space and makes each state represent
-one real feeding episode rather than one bottle event.
+The model builds bottle-only events and uses them directly as analog
+states (raw history). Episode-collapsed history still produces cleaner
+local retrieval diagnostics (lower trajectory MAE), but canonical replay
+currently favors raw history because the baby's recent cluster feeding
+creates short-gap events that episode collapse removes. Raw history
+preserves these patterns and lets the neighbor search match against
+historical cluster feeds.
 
-Episode history improves both local retrieval quality (all diagnostic
-metrics) and the canonical replay headline. See `research.md` for
-specific numbers.
+The raw/episode margin on canonical replay is narrow (+0.5 headline
+points). This choice has oscillated between exports and may flip again
+as the baby's patterns evolve. See `research.md` for specific numbers.
 
 ## Feature selection and weighting
 
@@ -39,24 +42,22 @@ Each state uses six features:
 - `sin_hour`
 - `cos_hour`
 
-The shipped weight profile puts the strongest weight on rolling means
-(mean_gap, mean_volume), with instantaneous values and hour-of-day
-deemphasized. Both the internal diagnostic sweep and canonical replay
-now agree on `means_only` as the best weight profile, though they
-still differ on lookback and recency. See `research.md` for the
-specific comparison.
+The shipped weight profile is equal (all weights 1.0). With raw history,
+instantaneous values carry signal about recent cluster feeding patterns
+that means-only weighting suppresses. The diagnostic sweep still prefers
+means_only, but canonical replay prefers equal weighting on the current
+export. See `research.md` for the specific comparison.
 
 ## Lookback and recency
 
-A 12-hour lookback window focuses rolling means on the most recent
-half-day of feeding. Paired with means_only weighting and broad
-recency (240h), this captures the current rhythm tightly without
-oversmoothing across stale events.
+An 18-hour lookback window captures roughly three-quarters of a day of
+feeding. Paired with equal weighting and tighter recency (72h), this
+stabilizes rolling means without oversmoothing, while recency focuses
+the state library on the baby's current feeding cadence.
 
 Neighbor weights are `recency / (distance + epsilon)`. The recency
-half-life is set broad enough to keep useful analogs available without
-letting much older states dominate the blend. See `model.py` for the
-current values.
+half-life is set tight (72h, ~3 days) to focus on the most recent
+patterns. See `model.py` for the current values.
 
 ## Alignment and trajectory length
 

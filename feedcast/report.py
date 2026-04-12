@@ -31,12 +31,10 @@ _LEADING_HEADING_PATTERN = re.compile(
     r"^\s{0,3}#{1,6}[ \t]+[^\n]+(?:\n+|$)"
 )
 
-# Rendered Methodologies-section ordering. Agent Inference and Consensus Blend
-# lead the section so the report opens with the cross-model outputs; the
-# individual scripted models follow in their original (pipeline) order. This
-# only affects report rendering — diagnostics, tracker, and plots continue to
-# use the forecast order supplied by the pipeline.
-_METHODOLOGY_SLUG_PRIORITY = ("agent_inference", "consensus_blend")
+# Rendered Methodologies-section ordering. When empty, the report preserves the
+# forecast order supplied by the pipeline. This only affects report rendering;
+# diagnostics, tracker, and plots continue to use the input order.
+_METHODOLOGY_SLUG_PRIORITY = ()
 
 
 def generate_report(
@@ -126,6 +124,7 @@ def _render_report(
     historical_accuracy: list[HistoricalAccuracySummary],
     tracker_meta: dict[str, Any],
     agent_insights: str | None = None,
+    generated_at: str | None = None,
 ) -> None:
     """Render `report.md` from the package template."""
     template_dir = Path(__file__).resolve().parent / "templates"
@@ -150,7 +149,7 @@ def _render_report(
         "source_file": snapshot.export_path.name,
         "dataset_id_short": snapshot.dataset_id[:15] + "...",
         "git_commit_display": _git_commit_display(tracker_meta),
-        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "generated_at": generated_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
     rendered = template.render(context)
     (output_dir / "report.md").write_text(rendered, encoding="utf-8")

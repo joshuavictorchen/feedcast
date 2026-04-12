@@ -24,11 +24,11 @@ questions are:
 | Field | Value |
 |---|---|
 | Run date | 2026-04-11 |
-| Export | `exports/export_narababy_silas_20260411.csv` |
-| Dataset | `sha256:138b5d3ad7d106444951acc6c56154bcd1ae94184f58a566f83c032ad41ef5ec` |
+| Export | `exports/export_narababy_silas_20260411(1).csv` |
+| Dataset | `sha256:f71d7d136049e997e30fca06c93dd3f65cb1a46b7d37a2e41ed24b71fc9665d7` |
 | Command | `.venv/bin/python -m feedcast.models.analog_trajectory.analysis` |
-| Canonical headline | 69.7 |
-| Availability | 24/24 windows (100%) |
+| Canonical headline | 68.7 |
+| Availability | 25/25 windows (100%) |
 | Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Staleness check:** if the current export differs from the one listed
@@ -97,11 +97,11 @@ The full canonical sweep selects:
 
 | Parameter | Value |
 |---|---|
-| `HISTORY_MODE` | `episode` |
-| `LOOKBACK_HOURS` | `12` |
-| `FEATURE_WEIGHTS` | `means_only [0.5, 2, 0.5, 2, 1, 1]` |
-| `K_NEIGHBORS` | `5` |
-| `RECENCY_HALF_LIFE_HOURS` | `240` |
+| `HISTORY_MODE` | `raw` |
+| `LOOKBACK_HOURS` | `18` |
+| `FEATURE_WEIGHTS` | `equal [1, 1, 1, 1, 1, 1]` |
+| `K_NEIGHBORS` | `7` |
+| `RECENCY_HALF_LIFE_HOURS` | `72` |
 | `TRAJECTORY_LENGTH_METHOD` | `median` |
 | `ALIGNMENT` | `gap` |
 
@@ -109,82 +109,85 @@ The current production configuration scores:
 
 | Metric | Score |
 |---|---|
-| Headline | 69.7 |
-| Count | 95.1 |
-| Timing | 51.7 |
+| Headline | 68.7 |
+| Count | 91.2 |
+| Timing | 52.5 |
 
-All 24 windows scored (100% availability).
+All 25 windows scored (100% availability).
 
-This retune on the new export (`20260411`) recovers +2.1 headline points
-over the prior constants (tuned on `20260410`), which had degraded from
-`73.5` to `67.6` on the new data. Four constants changed: shorter
-lookback (`24h` → `12h`), means-only weighting (`gap_hour` →
-`means_only`), fewer neighbors (`7` → `5`), and broader recency (`120h`
-→ `240h`). The most recent replay windows improved substantially (Apr 10
-09:45 went from headline 46.3 to 67.9).
+This retune on the new export (`20260411(1)`) recovers +3.2 headline
+points over the prior constants (tuned on `20260411`), which had
+degraded from `69.7` to `65.5` on the new data. Five constants changed:
+history mode (`episode` to `raw`), lookback (`12h` to `18h`), feature
+weights (`means_only` to `equal`), K (`5` to `7`), and recency (`240h`
+to `72h`). The most recent replay windows improved dramatically (Apr 10
+18:33 went from headline 41.0 to 77.2, timing from 16.8 to 65.5).
 
-The raw-vs-episode margin is `+2.6` headline points (`69.7` vs `67.1`).
-Episode history wins on both count (`95.1` vs `92.4`) and timing (`51.7`
-vs `49.3`).
+The raw-vs-episode canonical margin flipped to raw by +0.5 headline
+points (`68.7` vs `68.2`). This reverses the prior export where episode
+led by +2.6. The best episode candidate uses a different regime from the
+prior production config (`time_offset` alignment, `vol_deemphasis`
+weighting, `k=3`, `hl=120h`), suggesting the episode surface shifted
+substantially between exports.
 
 Gap alignment remains the best shipping choice. The top 4 canonical
-candidates all use the means_only/12h/k=5/240h configuration with
-either gap or time_offset alignment; the gap variant leads.
+candidates all use the raw/18h/equal/k=7/hl=72h configuration with
+gap or time_offset alignment; the gap variant leads.
 
-The top of the canonical surface is still shallow. Several nearby
-episode candidates land between `68.6` and `69.7`. The broader
-conclusion is stronger than the exact decimal ordering: episode history
-with means-only emphasis at a 12-hour lookback and broad recency beats
-other regimes on this export.
+The top of the canonical surface is still shallow. Several candidates
+land between `68.0` and `68.7`. The broader conclusion is stronger than
+the exact decimal ordering: raw history with equal weighting, moderate
+lookback, and tighter recency beats other regimes on this export.
 
-`RECENCY_HALF_LIFE_HOURS=240` is a boundary winner in the current grid
-[36, 72, 120, 240]. Future sweeps should check whether higher values
-improve further, though 240h (10 days) is already broad for a baby whose
-patterns shift week to week.
+Count dropped from 94.9 to 91.2 in the retune. The raw model includes
+cluster-internal feeds in its state library and trajectories, which
+helps timing precision but slightly hurts count precision on windows
+without cluster feeding.
 
 ### Diagnostic findings
 
-**Episode history is locally cleaner:** The best diagnostic episode
+**Episode history is still locally cleaner:** The best diagnostic episode
 configuration beats the best diagnostic raw configuration on every local
 metric:
 
 | Metric | Raw best | Episode best |
 |---|---|---|
-| `full_traj_MAE` | 1.417h | 1.063h |
-| `gap1_MAE` | 0.758h | 0.652h |
-| `traj3_MAE` | 0.758h | 0.649h |
+| `full_traj_MAE` | 1.433h | 1.070h |
+| `gap1_MAE` | 0.760h | 0.634h |
+| `traj3_MAE` | 0.767h | 0.643h |
 
-This is not just a canonical replay preference. The underlying analog
-retrieval problem is easier on episode history too.
+The diagnostic/canonical disagreement now extends to history mode
+itself. Episode history produces cleaner retrieval locally, but canonical
+replay favors raw history on the current export. This is a deeper
+disagreement than prior exports, where both metrics agreed on episode.
 
-**Internal and canonical metrics now agree on weighting and K but still
-diverge on lookback and recency:** Both metrics prefer episode history,
-gap alignment, and means_only weighting with k=5. They disagree on
-lookback and recency. The best episode diagnostic configuration is
-(`episode`, `48h`, `means_only`, `k=5`, `36h`, `mean`, `gap`), while
-the shipped canonical configuration is
-(`episode`, `12h`, `means_only`, `k=5`, `240h`, `median`, `gap`).
-This is narrower disagreement than the prior export, where canonical and
-diagnostic also differed on weighting and K.
+**Internal and canonical metrics diverge on most axes:** The best raw
+diagnostic configuration is (`raw`, `24h`, `means_only`, `k=7`, `36h`,
+`mean`, `gap`), while the shipped canonical configuration is (`raw`,
+`18h`, `equal`, `k=7`, `72h`, `median`, `gap`). They agree on history
+mode (raw), K (7), alignment (gap), but disagree on lookback, weighting,
+recency, and trajectory length.
 
-**Feature distributions explain why episode history helps:** At the
-canonical-best 12-hour lookback, episode history produces larger and
-tighter gap/volume signals than raw history:
+**Feature distributions still show the episode advantage for retrieval:**
+At the canonical-best 18-hour lookback, episode history produces larger
+and tighter gap/volume signals than raw history:
 
-- `last_gap`: `2.653 -> 3.010`
-- `mean_gap`: `2.739 -> 3.063`
-- `last_volume`: `3.291 -> 3.734`
-- `mean_volume`: `3.338 -> 3.734`
+- `last_gap`: `2.641 -> 3.016`
+- `mean_gap`: `2.718 -> 3.054`
+- `last_volume`: `3.286 -> 3.753`
+- `mean_volume`: `3.322 -> 3.737`
 
-Those shifts are exactly what you would expect if cluster-internal
-top-ups were being removed from the state library.
+These shifts are exactly what you would expect if cluster-internal
+top-ups were being removed from the state library. The cleaner state
+space explains the diagnostic advantage, but canonical replay uses
+bottle-only scoring events, so cluster-internal feeds are part of the
+scoring target that the episode model cannot represent.
 
-**The current winner emphasizes rolling means over instantaneous
-values:** The retune moved from `gap_hour` to `means_only`, which
-upweights mean_gap and mean_volume while deemphasizing last_gap,
-last_volume, and hour features. This suggests the baby's mean feeding
-rhythm is a more stable discriminator than any single recent gap or
-time-of-day feature on the current export.
+**The current winner weights all features equally:** The retune moved
+from `means_only` to `equal`, giving instantaneous values (last_gap,
+last_volume) equal standing with rolling means. With raw history,
+instantaneous values carry signal about recent cluster feeding patterns
+(short gaps, small volumes) that means-only weighting suppresses.
 
 ### Simulation-study findings
 
@@ -230,44 +233,55 @@ assertions.
 
 **Disposition: Change.** Analog Trajectory ships updated constants:
 
-- `HISTORY_MODE = "episode"`
-- `LOOKBACK_HOURS = 12`
-- `FEATURE_WEIGHTS = means_only [0.5, 2, 0.5, 2, 1, 1]`
-- `K_NEIGHBORS = 5`
-- `RECENCY_HALF_LIFE_HOURS = 240`
+- `HISTORY_MODE = "raw"`
+- `LOOKBACK_HOURS = 18`
+- `FEATURE_WEIGHTS = equal [1, 1, 1, 1, 1, 1]`
+- `K_NEIGHBORS = 7`
+- `RECENCY_HALF_LIFE_HOURS = 72`
 - `TRAJECTORY_LENGTH_METHOD = "median"`
 - `ALIGNMENT = "gap"`
 
-The retune on the new export moved four constants: lookback (`24h` →
-`12h`), feature weights (`gap_hour` → `means_only`), K (`7` → `5`),
-and recency (`120h` → `240h`). Headline recovered from `67.6` to
-`69.7`, with timing improving from `48.9` to `51.7`.
+The retune on the new export moved five constants: history mode
+(`episode` to `raw`), lookback (`12h` to `18h`), feature weights
+(`means_only` to `equal`), K (`5` to `7`), and recency (`240h` to
+`72h`). Headline recovered from `65.5` to `68.7`, with timing improving
+from `46.8` to `52.5`.
 
-The architectural conclusions remain stable. Episode history wins both
-the local retrieval diagnostics and the canonical ship metric, with a
-`+2.6` headline margin on this export. The internal/canonical
-divergence narrowed: both now agree on means_only weighting and k=5,
-differing only on lookback and recency. The process is clean: a single
-full canonical sweep selects all production constants.
+The architectural landscape shifted on this export. Raw history now
+leads canonical replay by +0.5 headline points, reversing the +2.6
+episode advantage on the prior export. Episode history still wins the
+local retrieval diagnostics decisively (1.070h vs 1.433h), so the
+diagnostic/canonical disagreement now extends to history mode. The most
+likely explanation: recent cluster feeding produces short-gap scoring
+events that episode collapse removes from the state library but that
+canonical replay still scores against.
+
+The internal/canonical divergence widened: they now agree only on K (7)
+and alignment (gap), disagreeing on history mode, lookback, weighting,
+recency, and trajectory length. The process is clean: a single full
+canonical sweep selects all production constants.
 
 ## Open questions
 
 ### Model-local
 
-- **Recency half-life is a boundary winner.** `RECENCY_HALF_LIFE_HOURS
-  =240` is the highest value in the current grid [36, 72, 120, 240].
-  Future sweeps should extend the grid (e.g., add 360, 480) to
-  determine whether the optimum is interior or continues beyond 240h.
+- **Raw/episode history mode is unstable across exports.** The canonical
+  winner flipped from episode (+2.6 on the prior export) to raw (+0.5
+  on the current export). The margin is narrow in both directions and
+  depends on how much recent cluster feeding is in the replay windows.
+  This is the most consequential axis of constant churn since it
+  changes the model's state representation.
 - **Constant churn between exports.** The optimal constant combination
-  has shifted on each of the last three exports (lookback oscillating
-  12→9→24→12, weights moving through recent_only→hour_emphasis→
-  gap_hour→means_only). The shallow canonical surface means small data
-  changes move the exact winner. This churn is expected given the
-  shallow surface, but it also means point estimates of the best
-  constants are fragile.
+  has shifted on each of the last four exports (lookback oscillating
+  12→9→24→12→18, weights moving through recent_only→hour_emphasis→
+  gap_hour→means_only→equal, history mode flipping episode→raw). The
+  shallow canonical surface means small data changes move the exact
+  winner. This churn is expected given the shallow surface, but it also
+  means point estimates of the best constants are fragile.
 - **Top-up windows are still fragile.** Some of the weakest per-window
-  scores still sit around short daytime follow-ups. The local neighbor
-  diagnostics show the same pattern.
+  scores still sit around short daytime follow-ups. The Apr 10 evening
+  cluster feeds drove the largest timing errors under the prior
+  production config.
 - **How robust is the model once archetypes overlap or drift?** The
   simulation suite validates clean recurrence, not ambiguous or
   contaminated states. The next synthetic extensions should test near-
@@ -276,6 +290,12 @@ full canonical sweep selects all production constants.
 
 ### Cross-cutting
 
-- **Timing as shared bottleneck:** Count is `95.1`; timing is `51.7`.
+- **Timing as shared bottleneck:** Count is `91.2`; timing is `52.5`.
   Timing drift remains the main quality constraint. This pattern
   persists across all five models — see `feedcast/research/README.md`.
+- **Episode collapse vs. bottle-level scoring tension:** Episode history
+  produces cleaner state representations but removes events that
+  canonical replay scores against. This tension may affect other models
+  that use episode history. The analog model's raw/episode flip
+  highlights the tradeoff most sharply because it directly controls
+  which events enter the state library and trajectory blending.
