@@ -37,24 +37,25 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 # Per-feature weights for weighted Euclidean distance.
 # Order: last_gap, mean_gap, last_volume, mean_volume, sin_hour, cos_hour.
 # Higher weight = more influence on neighbor selection.
-# "equal" profile: all features weighted equally. On the current export
-# the baby's recent cluster feeding makes instantaneous gap/volume values
-# as informative as rolling means for neighbor retrieval. Equal weighting
-# avoids suppressing any feature dimension.
-FEATURE_WEIGHTS = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+# "gap_hour" profile: emphasizes gap cadence and time-of-day, de-emphasizes
+# volume. On the current export the baby's feeding schedule is consolidating,
+# making temporal regularity (gap rhythm and time-of-day) the strongest
+# retrieval cues while volume carries less discriminating signal.
+FEATURE_WEIGHTS = np.array([2.0, 2.0, 0.5, 0.5, 2.0, 2.0])
 
 # Lookback window for rolling mean features (hours).
 # Events within this window contribute to mean_gap and mean_volume.
-# 18h captures roughly three-quarters of a day of feeding. Paired with
-# equal weighting and tighter recency (72h), the slightly wider lookback
-# stabilizes rolling means while recency keeps the state library focused
-# on the most recent patterns.
-LOOKBACK_HOURS = 18
+# 9h captures roughly the most recent 3 feeds. Paired with gap_hour
+# weighting and broader recency (240h), the shorter lookback focuses
+# rolling means on the immediate cadence while broader recency keeps
+# enough historical states available for selective (k=3) retrieval.
+LOOKBACK_HOURS = 9
 
 # Number of nearest neighbors to retrieve.
-# k=7 wins the full canonical replay sweep on the current export,
-# providing broader neighbor coverage that smooths out timing noise.
-K_NEIGHBORS = 7
+# k=3 wins the full canonical replay sweep on the current export. With
+# gap_hour weighting, fewer neighbors produce sharper predictions by
+# focusing on the most cadence-similar historical states.
+K_NEIGHBORS = 3
 
 # Minimum number of historical states with complete trajectories.
 MIN_COMPLETE_STATES = 10
@@ -63,10 +64,11 @@ MIN_COMPLETE_STATES = 10
 MIN_PRIOR_EVENTS = 3
 
 # Half-life for recency weighting of neighbor states (hours).
-# 72h (3 days) focuses neighbor weighting on recent history. With raw
-# history mode and equal weighting, tighter recency sharpens retrieval
-# toward the baby's current feeding cadence, including cluster feeds.
-RECENCY_HALF_LIFE_HOURS = 72
+# 240h (~10 days) keeps a broader pool of historical states available.
+# With k=3 and gap_hour weighting, selective retrieval handles recency
+# naturally (recent cadence-similar states are preferred by distance),
+# so the half-life can be wider without diluting quality.
+RECENCY_HALF_LIFE_HOURS = 240
 
 # Trajectory length aggregation method: "median" or "mean".
 # "median" remains best under canonical replay.
@@ -75,9 +77,9 @@ TRAJECTORY_LENGTH_METHOD = "median"
 # Trajectory alignment method: "gap" or "time_offset".
 # "gap" blends inter-event gaps step-by-step and rolls forward.
 # "time_offset" blends absolute offsets from the state event and
-# positions feeds relative to cutoff. Canonical replay still prefers
-# gap alignment on the current export.
-ALIGNMENT = "gap"
+# positions feeds relative to cutoff. Canonical replay now narrowly
+# prefers time_offset on the current export (+0.4 headline points).
+ALIGNMENT = "time_offset"
 
 # History source for state construction: "raw" or "episode".
 # "raw" keeps every bottle event. "episode" collapses close-together
