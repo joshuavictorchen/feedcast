@@ -2234,6 +2234,357 @@
           }
         ]
       }
+    },
+    {
+      "run_id": "20260412-224447",
+      "timestamp": "2026-04-12T23:14:57",
+      "git_commit": "02911a1",
+      "git_dirty": false,
+      "dataset_id": "sha256:1fc8695c14bda5dabdbdf2c554024159f9efbc5e853e5ed449ed1c4f7156f481",
+      "source_file": "export_narababy_silas_20260412.csv",
+      "source_hash": "sha256:f8ffc0efa521e6b356011acc5e1fdf2465a35066dbe7c8ee088146eb4332dc48",
+      "cutoff": "2026-04-12T20:24:35",
+      "featured_slug": "consensus_blend",
+      "model_slugs": [
+        "slot_drift",
+        "analog_trajectory",
+        "latent_hunger",
+        "survival_hazard",
+        "consensus_blend",
+        "agent_inference"
+      ],
+      "model_names": {
+        "slot_drift": "Slot Drift",
+        "analog_trajectory": "Analog Trajectory",
+        "latent_hunger": "Latent Hunger State",
+        "survival_hazard": "Survival Hazard",
+        "consensus_blend": "Consensus Blend",
+        "agent_inference": "Agent Inference"
+      },
+      "predictions": {
+        "slot_drift": [
+          {
+            "time": "2026-04-13T03:28:50.773753",
+            "volume_oz": 3.622,
+            "gap_hours": 7.071
+          },
+          {
+            "time": "2026-04-13T07:25:06.548077",
+            "volume_oz": 3.572,
+            "gap_hours": 3.938
+          },
+          {
+            "time": "2026-04-13T09:24:16.220756",
+            "volume_oz": 3.912,
+            "gap_hours": 1.986
+          },
+          {
+            "time": "2026-04-13T13:16:51.884159",
+            "volume_oz": 3.634,
+            "gap_hours": 3.877
+          },
+          {
+            "time": "2026-04-13T15:37:35.009340",
+            "volume_oz": 3.47,
+            "gap_hours": 2.345
+          },
+          {
+            "time": "2026-04-13T17:50:49.941480",
+            "volume_oz": 4.423,
+            "gap_hours": 2.221
+          },
+          {
+            "time": "2026-04-13T19:25:01.154293",
+            "volume_oz": 3.913,
+            "gap_hours": 1.57
+          }
+        ],
+        "analog_trajectory": [
+          {
+            "time": "2026-04-12T23:43:59.640724",
+            "volume_oz": 3.721,
+            "gap_hours": 3.324
+          },
+          {
+            "time": "2026-04-13T02:26:40.585363",
+            "volume_oz": 3.892,
+            "gap_hours": 2.711
+          },
+          {
+            "time": "2026-04-13T05:53:28.255586",
+            "volume_oz": 3.928,
+            "gap_hours": 3.447
+          },
+          {
+            "time": "2026-04-13T08:59:29.345975",
+            "volume_oz": 3.969,
+            "gap_hours": 3.1
+          },
+          {
+            "time": "2026-04-13T11:24:08.888628",
+            "volume_oz": 3.844,
+            "gap_hours": 2.411
+          },
+          {
+            "time": "2026-04-13T14:11:25.816665",
+            "volume_oz": 3.943,
+            "gap_hours": 2.788
+          },
+          {
+            "time": "2026-04-13T16:41:25.051353",
+            "volume_oz": 3.056,
+            "gap_hours": 2.5
+          },
+          {
+            "time": "2026-04-13T18:50:41.934220",
+            "volume_oz": 3.624,
+            "gap_hours": 2.155
+          }
+        ],
+        "latent_hunger": [
+          {
+            "time": "2026-04-12T23:06:06.951529",
+            "volume_oz": 4.0,
+            "gap_hours": 2.692
+          },
+          {
+            "time": "2026-04-13T01:54:16.880200",
+            "volume_oz": 4.0,
+            "gap_hours": 2.803
+          },
+          {
+            "time": "2026-04-13T04:42:26.808871",
+            "volume_oz": 4.0,
+            "gap_hours": 2.803
+          },
+          {
+            "time": "2026-04-13T07:30:36.737542",
+            "volume_oz": 4.0,
+            "gap_hours": 2.803
+          },
+          {
+            "time": "2026-04-13T10:18:46.666213",
+            "volume_oz": 4.0,
+            "gap_hours": 2.803
+          },
+          {
+            "time": "2026-04-13T13:06:56.594884",
+            "volume_oz": 4.0,
+            "gap_hours": 2.803
+          },
+          {
+            "time": "2026-04-13T15:55:06.523555",
+            "volume_oz": 4.0,
+            "gap_hours": 2.803
+          },
+          {
+            "time": "2026-04-13T18:43:16.452226",
+            "volume_oz": 4.0,
+            "gap_hours": 2.803
+          }
+        ],
+        "survival_hazard": [
+          {
+            "time": "2026-04-12T23:34:13.127776",
+            "volume_oz": 4.0,
+            "gap_hours": 3.161
+          },
+          {
+            "time": "2026-04-13T02:43:51.255552",
+            "volume_oz": 4.0,
+            "gap_hours": 3.161
+          },
+          {
+            "time": "2026-04-13T05:53:29.383328",
+            "volume_oz": 4.0,
+            "gap_hours": 3.161
+          },
+          {
+            "time": "2026-04-13T09:03:07.511104",
+            "volume_oz": 4.0,
+            "gap_hours": 3.161
+          },
+          {
+            "time": "2026-04-13T11:39:36.927211",
+            "volume_oz": 4.0,
+            "gap_hours": 2.608
+          },
+          {
+            "time": "2026-04-13T14:16:06.343318",
+            "volume_oz": 4.0,
+            "gap_hours": 2.608
+          },
+          {
+            "time": "2026-04-13T16:52:35.759425",
+            "volume_oz": 4.0,
+            "gap_hours": 2.608
+          },
+          {
+            "time": "2026-04-13T19:29:05.175532",
+            "volume_oz": 4.0,
+            "gap_hours": 2.608
+          }
+        ],
+        "consensus_blend": [
+          {
+            "time": "2026-04-12T23:34:13.127776",
+            "volume_oz": 4.0,
+            "gap_hours": 3.161
+          },
+          {
+            "time": "2026-04-13T02:35:15.920457",
+            "volume_oz": 3.946,
+            "gap_hours": 3.017
+          },
+          {
+            "time": "2026-04-13T05:53:28.255586",
+            "volume_oz": 4.0,
+            "gap_hours": 3.303
+          },
+          {
+            "time": "2026-04-13T09:03:07.511104",
+            "volume_oz": 3.969,
+            "gap_hours": 3.161
+          },
+          {
+            "time": "2026-04-13T11:24:08.888628",
+            "volume_oz": 4.0,
+            "gap_hours": 2.35
+          },
+          {
+            "time": "2026-04-13T13:44:08.850412",
+            "volume_oz": 3.972,
+            "gap_hours": 2.333
+          },
+          {
+            "time": "2026-04-13T16:18:15.787454",
+            "volume_oz": 3.735,
+            "gap_hours": 2.569
+          },
+          {
+            "time": "2026-04-13T19:07:51.544257",
+            "volume_oz": 3.956,
+            "gap_hours": 2.827
+          }
+        ],
+        "agent_inference": [
+          {
+            "time": "2026-04-13T00:29:00",
+            "volume_oz": 4.0,
+            "gap_hours": 4.074
+          },
+          {
+            "time": "2026-04-13T04:29:00",
+            "volume_oz": 4.0,
+            "gap_hours": 4.0
+          },
+          {
+            "time": "2026-04-13T07:29:00",
+            "volume_oz": 4.0,
+            "gap_hours": 3.0
+          },
+          {
+            "time": "2026-04-13T09:53:00",
+            "volume_oz": 4.0,
+            "gap_hours": 2.4
+          },
+          {
+            "time": "2026-04-13T12:17:00",
+            "volume_oz": 4.0,
+            "gap_hours": 2.4
+          },
+          {
+            "time": "2026-04-13T14:41:00",
+            "volume_oz": 4.0,
+            "gap_hours": 2.4
+          },
+          {
+            "time": "2026-04-13T17:05:00",
+            "volume_oz": 4.0,
+            "gap_hours": 2.4
+          },
+          {
+            "time": "2026-04-13T19:29:00",
+            "volume_oz": 4.0,
+            "gap_hours": 2.4
+          }
+        ]
+      },
+      "retrospective": {
+        "available": true,
+        "same_dataset": false,
+        "dataset_id_short": null,
+        "prior_run_id": "20260411-201329",
+        "observed_horizon_hours": 24,
+        "results": [
+          {
+            "name": "Slot Drift",
+            "slug": "slot_drift",
+            "score": 57.923,
+            "count_score": 94.196,
+            "timing_score": 35.618,
+            "predicted_episode_count": 7,
+            "actual_episode_count": 8,
+            "matched_episode_count": 7,
+            "status": "Full 24h observed"
+          },
+          {
+            "name": "Analog Trajectory",
+            "slug": "analog_trajectory",
+            "score": 62.205,
+            "count_score": 100.0,
+            "timing_score": 38.695,
+            "predicted_episode_count": 8,
+            "actual_episode_count": 8,
+            "matched_episode_count": 8,
+            "status": "Full 24h observed"
+          },
+          {
+            "name": "Latent Hunger State",
+            "slug": "latent_hunger",
+            "score": 61.762,
+            "count_score": 85.331,
+            "timing_score": 44.703,
+            "predicted_episode_count": 8,
+            "actual_episode_count": 8,
+            "matched_episode_count": 7,
+            "status": "Full 24h observed"
+          },
+          {
+            "name": "Survival Hazard",
+            "slug": "survival_hazard",
+            "score": 65.743,
+            "count_score": 84.822,
+            "timing_score": 50.956,
+            "predicted_episode_count": 8,
+            "actual_episode_count": 8,
+            "matched_episode_count": 7,
+            "status": "Full 24h observed"
+          },
+          {
+            "name": "Consensus Blend",
+            "slug": "consensus_blend",
+            "score": 60.605,
+            "count_score": 86.065,
+            "timing_score": 42.677,
+            "predicted_episode_count": 8,
+            "actual_episode_count": 8,
+            "matched_episode_count": 7,
+            "status": "Full 24h observed"
+          },
+          {
+            "name": "Agent Inference",
+            "slug": "agent_inference",
+            "score": 64.043,
+            "count_score": 100.0,
+            "timing_score": 41.015,
+            "predicted_episode_count": 8,
+            "actual_episode_count": 8,
+            "matched_episode_count": 8,
+            "status": "Full 24h observed"
+          }
+        ]
+      }
     }
   ]
 }
