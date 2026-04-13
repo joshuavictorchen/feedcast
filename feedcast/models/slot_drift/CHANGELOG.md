@@ -2,6 +2,85 @@
 
 Tracks behavior-level changes to the Slot Drift model. Add newest entries first.
 
+## Wider lookback, looser threshold for episode-count transition | 2026-04-12
+
+### Problem
+
+The LOOKBACK=5 regime, tuned for a stable 8-episode pattern, degraded as
+the baby's daily episode count shifted from 8 toward 7. Headline dropped
+from 73.1 to 64.4 on the 20260412 export, with timing falling from 59.3
+to 46.0. The most recent windows (April 11) showed timing scores of
+30-36, indicating substantial misalignment between projected and actual
+feed times.
+
+### Research
+
+588-candidate canonical sweep via `tune_model()` on
+`exports/export_narababy_silas_20260412.csv`, plus boundary checks
+extending LOOKBACK to 21 and 28 and THRESHOLD to 3.5 and 4.0.
+
+Two competing regimes emerged:
+
+LOOKBACK=7 regime (THRESHOLD=3.0):
+
+| DRIFT | Headline | Count | Timing |
+|-------|----------|-------|--------|
+| 3.0   | 65.6     | 89.3  | 48.7   |
+| 5.0   | 65.8     | 89.3  | 48.9   |
+| 7.0   | 65.7     | 89.2  | 48.8   |
+
+DRIFT plateau from 3.0 to 7.0 (range 0.2). THRESHOLD interior:
+2.5→63.3, 3.0→65.8, 3.5→worse. LOOKBACK interior: 6→58.3, 7→65.8,
+10→61.0.
+
+LOOKBACK=14+ regime (THRESHOLD=2.5, DRIFT=2.5):
+
+| LOOKBACK | Headline |
+|----------|----------|
+| 14       | 65.9     |
+| 21       | 66.5     |
+| 28       | 66.6     |
+
+LOOKBACK=14 is a boundary artifact: performance continues climbing
+through 21 and 28 without plateauing.
+
+| Constant | Before | After |
+|---|---|---|
+| `LOOKBACK_DAYS` | 5 | 7 |
+| `DRIFT_WEIGHT_HALF_LIFE_DAYS` | 7.0 | 5.0 |
+| `MATCH_COST_THRESHOLD_HOURS` | 2.0 | 3.0 |
+
+| Metric | Before | After | Delta |
+|---|---|---|---|
+| Headline | 64.4 | 65.8 | +1.4 |
+| Count | 93.2 | 89.3 | -3.9 |
+| Timing | 46.0 | 48.9 | +2.9 |
+| Availability | 24/24 | 24/24 | 0 |
+
+### Solution
+
+Wider lookback (7 days) provides more history for template building as
+the episode count transitions from 8 to 7. Episode counts over the
+7-day window: 7, 10, 7, 8, 9, 7, 7 (median 7). Four of 7 days match
+the median, providing a stable initial template seed (vs. 1 of 5 at the
+prior LOOKBACK=5).
+
+The 5.0-day drift half-life with 7-day lookback gives the oldest day
+~44% of yesterday's weight, providing gentle recency weighting rather
+than near-uniform averaging. Looser threshold (3.0h) admits more matches
+during the transition, improving template refinement when episode counts
+vary.
+
+The LOOKBACK=7 regime was chosen over LOOKBACK=14+ because the longer
+regime has no stable upper bound (performance continues climbing at 21,
+28), indicating it is fitting stale history rather than capturing a
+stable signal. LOOKBACK=7 is an interior optimum (6→58.3, 7→65.8,
+10→61.0).
+
+Timing improved +2.9, count traded down -3.9. The timing improvement
+concentrates on the most recent windows (April 11 retrospective timing:
+35.6→53.5, +17.9), where the pattern shift is most visible.
+
 ## Shorter lookback, near-uniform drift weighting | 2026-04-11
 
 ### Problem

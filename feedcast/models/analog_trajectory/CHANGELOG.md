@@ -2,6 +2,71 @@
 
 Tracks behavior-level changes to the Analog Trajectory model. Add newest entries first.
 
+## Retune on new export: gap_hour weighting with shorter lookback and time_offset alignment | 2026-04-12
+
+### Problem
+
+The model's production constants (tuned on
+`exports/export_narababy_silas_20260411(1).csv`, headline 68.7) degraded to
+headline 65.7 on the new export
+(`exports/export_narababy_silas_20260412.csv`). Timing dropped from 52.5
+to 48.4 while count stayed stable at 90.4. The most recent replay
+windows (Apr 11 evening) scored poorly on timing (35.1), dragging the
+recency-weighted aggregate down.
+
+### Research
+
+The full 4704-candidate canonical sweep found a joint combination that
+recovers +4.5 headline points:
+
+| Metric | Old production | New production |
+|--------|----------------|----------------|
+| Headline | 65.7 | 70.2 |
+| Count | 90.4 | 91.6 |
+| Timing | 48.4 | 54.7 |
+
+The most recent windows improved substantially:
+
+| Window | Old headline | New headline | Old timing | New timing |
+|--------|-------------|-------------|------------|------------|
+| Apr 11 19:35 | 54.7 | 68.3 | 35.1 | 50.8 |
+| Apr 11 20:24 | 53.6 | 66.9 | 35.1 | 50.8 |
+| Apr 11 17:18 | 70.4 | 69.4 | 57.2 | 54.9 |
+
+Raw history still leads episode by +2.3 headline points (70.2 vs 67.9).
+The top 6 canonical candidates all use gap_hour weighting, and volume
+de-emphasis is consistent across the top 10. Time_offset alignment
+narrowly leads gap for the first time (+0.4 headline points).
+
+Episode history still wins the local diagnostic decisively (1.070h vs
+1.418h full_traj_MAE). The internal/canonical divergence widened further:
+they now agree only on history mode (raw), disagreeing on lookback,
+weighting, K, recency, trajectory length, and alignment.
+
+RECENCY_HALF_LIFE_HOURS=240 is again a boundary winner in the grid
+[36, 72, 120, 240]. See research.md open questions.
+
+### Solution
+
+Ship the full canonical sweep winner:
+
+- `LOOKBACK_HOURS`: 18 -> 9
+- `FEATURE_WEIGHTS`: equal [1,1,1,1,1,1] -> gap_hour [2,2,0.5,0.5,2,2]
+- `K_NEIGHBORS`: 7 -> 3
+- `RECENCY_HALF_LIFE_HOURS`: 72 -> 240
+- `ALIGNMENT`: gap -> time_offset
+- `TRAJECTORY_LENGTH_METHOD`: median (unchanged)
+- `HISTORY_MODE`: raw (unchanged)
+
+The direction of the changes is internally coherent: gap_hour weighting
+emphasizes gap cadence and time-of-day as the baby's schedule
+consolidates, shorter lookback focuses on the most recent ~3 feeds, fewer
+neighbors (k=3) produce sharper predictions, and broader recency keeps
+enough historical states available for selective retrieval. The
+time_offset alignment flip is the most notable change; the gap/time_offset
+margin is narrow (0.4 points) and time_offset has been inferior on every
+prior export.
+
 ## Retune on new export: raw history with equal weighting and tighter recency | 2026-04-11
 
 ### Problem

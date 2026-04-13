@@ -10,12 +10,12 @@ is a full canonical replay sweep through `tune_model()`. The local
 | Parameter | Rationale |
 | --------- | --------- |
 | HISTORY_MODE | Raw history preserves cluster-internal feeds, which are needed for neighbor matching during periods of cluster feeding. Episode history still wins the local diagnostic decisively, but canonical replay currently favors raw |
-| LOOKBACK_HOURS | An 18-hour lookback captures roughly three-quarters of a day of feeding, stabilizing rolling means without oversmoothing |
-| FEATURE_WEIGHTS | Equal weighting lets all features contribute; with raw history, instantaneous values carry signal about recent short-gap patterns that means-only suppresses |
-| K_NEIGHBORS | Balances count accuracy against timing precision under canonical replay |
-| RECENCY_HALF_LIFE_HOURS | Tighter recency (72h, ~3 days) focuses neighbor weighting on the baby's current feeding cadence |
+| LOOKBACK_HOURS | A 9-hour lookback captures roughly the most recent 3 feeds, focusing rolling means on immediate cadence. Paired with gap_hour weighting and broader recency, the short window lets the model track the baby's current rhythm |
+| FEATURE_WEIGHTS | Gap_hour weighting emphasizes gap cadence and time-of-day over volume. As the baby's schedule consolidates, temporal regularity is a stronger retrieval cue than feed size |
+| K_NEIGHBORS | k=3 produces sharper predictions by selecting only the most cadence-similar historical states |
+| RECENCY_HALF_LIFE_HOURS | Broader recency (240h, ~10 days) keeps enough historical states available for selective (k=3) retrieval. Distance-based neighbor selection handles recency naturally |
 | TRAJECTORY_LENGTH_METHOD | Median is more robust than mean on variable-length neighbor trajectories |
-| ALIGNMENT | Gap-based blending outperforms time-offset alignment under both diagnostic and canonical evaluation |
+| ALIGNMENT | Time-offset alignment narrowly leads gap on the current export (+0.4 headline). This is the first canonical preference for time_offset; the margin is narrow and may flip again |
 
 ## History source
 
@@ -42,29 +42,35 @@ Each state uses six features:
 - `sin_hour`
 - `cos_hour`
 
-The shipped weight profile is equal (all weights 1.0). With raw history,
-instantaneous values carry signal about recent cluster feeding patterns
-that means-only weighting suppresses. The diagnostic sweep still prefers
-means_only, but canonical replay prefers equal weighting on the current
-export. See `research.md` for the specific comparison.
+The shipped weight profile is gap_hour (`[2, 2, 0.5, 0.5, 2, 2]`),
+which emphasizes gap cadence and time-of-day while de-emphasizing volume.
+On the current export, the baby's feeding schedule is consolidating,
+making temporal regularity (gap rhythm and time-of-day) the strongest
+retrieval cues. Volume carries less discriminating signal. The diagnostic
+sweep still prefers means_only, but canonical replay selects gap_hour on
+the current export. See `research.md` for the specific comparison.
 
 ## Lookback and recency
 
-An 18-hour lookback window captures roughly three-quarters of a day of
-feeding. Paired with equal weighting and tighter recency (72h), this
-stabilizes rolling means without oversmoothing, while recency focuses
-the state library on the baby's current feeding cadence.
+A 9-hour lookback window captures roughly the most recent 3 feeds.
+Paired with gap_hour weighting and broader recency (240h), the short
+lookback focuses rolling means on immediate cadence while broader recency
+keeps enough historical states available for selective (k=3) retrieval.
 
 Neighbor weights are `recency / (distance + epsilon)`. The recency
-half-life is set tight (72h, ~3 days) to focus on the most recent
-patterns. See `model.py` for the current values.
+half-life is set broad (240h, ~10 days). With only k=3 neighbors,
+distance-based selection naturally favors recent, cadence-similar states;
+the broader half-life avoids starving the retrieval pool. See `model.py`
+for the current values.
 
 ## Alignment and trajectory length
 
-The forecast blends neighbor trajectories as inter-episode gaps, then
-rolls those gaps forward from the cutoff. Time-offset alignment remains
-inferior on the current export, including within the best raw-history
-surface.
+The forecast blends neighbor trajectories as absolute time offsets from
+the state event, positioning feeds relative to the cutoff. Time-offset
+alignment narrowly leads gap alignment on the current export (+0.4
+headline points). This is the first canonical preference for time_offset;
+the margin is narrow and the gap/time_offset choice has been stable at
+gap historically, so this axis may flip again.
 
 Trajectory length is the median neighbor trajectory length. That guards
 against unusually short or long neighbor traces and remains the best
