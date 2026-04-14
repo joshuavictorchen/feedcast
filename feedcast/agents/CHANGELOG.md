@@ -2,6 +2,56 @@
 
 Tracks behavior-level changes to the agent inference model. Add newest entries first.
 
+## Four-bucket day-part split | 2026-04-13
+
+### Problem
+
+The workspace baseline (`model.py`) splits inter-episode gaps into two
+day-parts (overnight 19:00-07:00 and daytime 07:00-19:00) and takes
+the recency-weighted median per bucket. Recent observations show
+three structurally different gap regimes within overnight that a single
+overnight median blends together: an evening transition into the first
+sleep stretch, wake-feed-sleep intervals in deep night, and shorter
+pre-dawn gaps. The prior run layered ad-hoc overnight sub-periods on
+top of `model.py` but kept daytime on the baseline's two-bucket median,
+so daytime and overnight were computed under different schemes.
+
+### Research
+
+Over the last 7 days, recency-weighted gap medians (48-hour half-life)
+by clock-hour bucket of the gap-starting feed:
+
+| Bucket        | Hours        | Weighted median gap |
+|---------------|--------------|---------------------|
+| Evening       | 19:00-22:00  | 3.77h               |
+| Deep night    | 22:00-03:00  | 4.03h               |
+| Early morning | 03:00-07:00  | 2.95h               |
+| Daytime       | 07:00-19:00  | 2.31h               |
+
+Projecting forward from the 2026-04-13T19:15:38 cutoff yields an
+8-episode 24h schedule (evening 3.77h, deep night 4.03h, two early
+morning 2.95h, four daytime 2.31h), which aligns with the
+recency-weighted daily episode count of 7.7. The prior run's
+retrospective against 2026-04-13 actuals scored headline 82.2 /
+count 95.0 / timing 71.1, with 7 predicted vs. 8 actual episodes. The
+fuller bucket scheme closes that one-episode undercount.
+
+### Solution
+
+Classify every inter-episode gap into one of four sub-periods by the
+clock hour of the gap-starting feed, compute the recency-weighted
+median per sub-period, and step the forecast forward from the cutoff
+by applying the sub-period gap that matches each predicted feed's
+start clock hour. Daytime is now computed under the same bucket-and-
+weight scheme as the overnight sub-periods rather than inherited from
+`model.py`'s two-bucket daytime median.
+
+| Aspect               | Before                                        | After                                           |
+|----------------------|-----------------------------------------------|-------------------------------------------------|
+| Sub-period count     | 3 overnight + 1 daytime (daytime inherited)   | 4 unified (evening, deep night, early morning, daytime) |
+| Daytime gap source   | `model.py` two-bucket daytime median          | Four-bucket scheme, same recency weighting as overnight |
+| Projected 24h count  | 7 episodes                                    | 8 episodes                                      |
+
 ## Add explicit runtime budget and fast-path guidance | 2026-04-09
 
 ### Problem
