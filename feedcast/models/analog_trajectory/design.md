@@ -10,12 +10,12 @@ is a full canonical replay sweep through `tune_model()`. The local
 | Parameter | Rationale |
 | --------- | --------- |
 | HISTORY_MODE | Raw history preserves cluster-internal feeds, which are needed for neighbor matching during periods of cluster feeding. Episode history still wins the local diagnostic decisively, but canonical replay currently favors raw |
-| LOOKBACK_HOURS | A 9-hour lookback captures roughly the most recent 3 feeds, focusing rolling means on immediate cadence. Paired with gap_hour weighting and broader recency, the short window lets the model track the baby's current rhythm |
+| LOOKBACK_HOURS | A 24-hour lookback captures roughly a full day of feeds, giving rolling means a stable daily base. Paired with gap_hour weighting and broader recency, the longer window smooths intra-day variation while gap_hour weighting keeps retrieval keyed on cadence and time-of-day |
 | FEATURE_WEIGHTS | Gap_hour weighting emphasizes gap cadence and time-of-day over volume. As the baby's schedule consolidates, temporal regularity is a stronger retrieval cue than feed size |
-| K_NEIGHBORS | k=3 produces sharper predictions by selecting only the most cadence-similar historical states |
+| K_NEIGHBORS | k=5 balances sharpness with coverage, providing enough neighbor diversity to handle daily cadence variations while still favoring cadence-similar states |
 | RECENCY_HALF_LIFE_HOURS | Broader recency (240h, ~10 days) keeps enough historical states available for selective (k=3) retrieval. Distance-based neighbor selection handles recency naturally |
 | TRAJECTORY_LENGTH_METHOD | Median is more robust than mean on variable-length neighbor trajectories |
-| ALIGNMENT | Time-offset alignment narrowly leads gap on the current export (+0.4 headline). This is the first canonical preference for time_offset; the margin is narrow and may flip again |
+| ALIGNMENT | Gap alignment leads on the current export, regaining its historical position after a single-export time_offset preference. Gap alignment blends inter-event gaps step-by-step and rolls forward from the cutoff |
 
 ## History source
 
@@ -52,25 +52,26 @@ the current export. See `research.md` for the specific comparison.
 
 ## Lookback and recency
 
-A 9-hour lookback window captures roughly the most recent 3 feeds.
-Paired with gap_hour weighting and broader recency (240h), the short
-lookback focuses rolling means on immediate cadence while broader recency
-keeps enough historical states available for selective (k=3) retrieval.
+A 24-hour lookback window captures roughly a full day of feeds, giving
+rolling means a stable daily base. Paired with gap_hour weighting and
+broader recency (240h), the longer lookback smooths intra-day variation
+while gap_hour weighting keeps retrieval keyed on cadence and
+time-of-day. Broader recency keeps enough historical states available
+for selective (k=5) retrieval.
 
 Neighbor weights are `recency / (distance + epsilon)`. The recency
-half-life is set broad (240h, ~10 days). With only k=3 neighbors,
+half-life is set broad (240h, ~10 days). With k=5 neighbors,
 distance-based selection naturally favors recent, cadence-similar states;
 the broader half-life avoids starving the retrieval pool. See `model.py`
 for the current values.
 
 ## Alignment and trajectory length
 
-The forecast blends neighbor trajectories as absolute time offsets from
-the state event, positioning feeds relative to the cutoff. Time-offset
-alignment narrowly leads gap alignment on the current export (+0.4
-headline points). This is the first canonical preference for time_offset;
-the margin is narrow and the gap/time_offset choice has been stable at
-gap historically, so this axis may flip again.
+The forecast blends neighbor trajectories as inter-event gaps, rolling
+forward step-by-step from the cutoff. Gap alignment regains its
+historical lead on the current export after a single-export preference
+for time_offset. The gap/time_offset margin remains narrow and this axis
+continues to be volatile across exports.
 
 Trajectory length is the median neighbor trajectory length. That guards
 against unusually short or long neighbor traces and remains the best

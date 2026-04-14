@@ -2,6 +2,64 @@
 
 Tracks behavior-level changes to the Survival Hazard model. Add newest entries first.
 
+## Re-tune both shapes for shifted day-part patterns | 2026-04-13
+
+### Problem
+
+The 20260413 export (18 new rows vs the 20260411(1) export) showed
+headline regression from 66.9 to 64.2 with the prior constants
+(ON=4.5, DT=3.0). Timing degraded most (48.7 to 44.6). The baby's
+overnight pattern regularized again while daytime feeding became more
+variable, making both shapes suboptimal.
+
+### Research
+
+Ran three sweep rounds on `exports/export_narababy_silas_20260413.csv`:
+
+1. Coarse 36-candidate grid (OVERNIGHT 3.0-8.0, DAYTIME 2.0-3.5):
+   best at (5.5, 2.0) with headline 68.31 (+4.1). DAYTIME=2.0
+   dominates all top candidates.
+2. Fine 40-candidate grid (OVERNIGHT 4.5-6.5 x 0.25, DAYTIME 1.5-2.5):
+   best at (6.5, 1.5) with headline 68.43. Broad plateau from ON 5.5-7.5
+   at DT 1.5-2.0 (spread 0.4).
+3. Boundary extension (OVERNIGHT 6.0-8.0, DAYTIME 1.0-1.75):
+   DT=1.0 scores up to 69.2 (ON=8.0) but trades 3 count points for
+   timing. DT=1.0 is the structural boundary (exponential, no memory).
+
+The 154-candidate analysis sweep confirms the updated constants as
+near-best. The boundary candidate (ON=8.0, DT=1.0) gains +0.9 headline
+but with count 91.1 vs 94.2.
+
+Episode-level MLE: overnight 5.96, daytime 3.47. The overnight MLE
+converges with the production choice (6.0) for the first time.
+
+| Metric | Previous (4.5, 3.0) | Updated (6.0, 1.75) | Delta |
+|---|---|---|---|
+| Headline | 64.2 | 68.3 | +4.0 |
+| Count | 93.3 | 94.2 | +0.9 |
+| Timing | 44.6 | 50.1 | +5.5 |
+
+Availability unchanged at 25/25.
+
+Holdout improved: 9 predicted vs 9 actual (perfect count, was 8 vs 11),
+0.54h mean timing error (unchanged from prior).
+
+### Solution
+
+Updated production shapes:
+
+- `OVERNIGHT_SHAPE`: 4.5 to 6.0
+- `DAYTIME_SHAPE`: 3.0 to 1.75
+
+Overnight moved toward the center of the 5.5-7.5 plateau, converging
+with the episode-level MLE (5.96). This convergence suggests the value
+is structurally anchored rather than an artifact of replay weighting.
+
+Daytime moved from 3.0 to 1.75, reflecting a return to more variable
+daytime feeding. DT=1.75 sits at the center of the 1.5-2.0 plateau
+with the widest overnight robustness (ON 5.5-8.0 all score 68.1+ at
+DT=1.75).
+
 ## Soften overnight shape for less regular recent pattern | 2026-04-11
 
 ### Problem

@@ -36,7 +36,7 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 # --- Tuning parameters (model-specific) ---
 
 # How many days of history to consider for template building and drift.
-LOOKBACK_DAYS = 7
+LOOKBACK_DAYS = 14
 
 # Minimum complete days required to produce a forecast.
 MIN_COMPLETE_DAYS = 3
@@ -46,7 +46,7 @@ MIN_COMPLETE_DAYS = 3
 MATCH_COST_THRESHOLD_HOURS = 3.0
 
 # Recency half-life for weighting days in drift and volume estimation.
-DRIFT_WEIGHT_HALF_LIFE_DAYS = 5.0
+DRIFT_WEIGHT_HALF_LIFE_DAYS = 2.5
 
 
 def forecast_slot_drift(

@@ -2,6 +2,91 @@
 
 Tracks behavior-level changes to the Slot Drift model. Add newest entries first.
 
+## Wider lookback, faster drift for template stability | 2026-04-13
+
+### Problem
+
+The LOOKBACK=7 regime, tuned for an episode-count transition from 8 to 7,
+degraded as episode counts rebounded. Headline dropped from 65.8 to 64.0 on
+the 20260413 export, with the latest retrospective showing headline 57.9
+(count 84.9, timing 39.5). The model predicted 6 episodes vs. 8 actual.
+
+With LOOKBACK=7, episode counts [10, 7, 8, 9, 7, 7, 9] produced a median of
+8 (up from 7 on the prior export), but only 1 of 7 days matched the median,
+making the template seed fragile.
+
+### Research
+
+588-candidate canonical sweep via `tune_model()` on
+`exports/export_narababy_silas_20260413.csv`, plus boundary checks extending
+LOOKBACK to 12, 13, 15, 16, 21, and 28 and THRESHOLD to 3.5 and 4.0.
+
+LOOKBACK landscape (DRIFT=2.5, THRESHOLD=3.0):
+
+| LOOKBACK | Headline |
+|----------|----------|
+| 5        | 60.8     |
+| 6        | 58.5     |
+| 7        | 64.0     |
+| 10       | 61.7     |
+| 12       | 62.9     |
+| 13       | 64.9     |
+| 14       | 66.6     |
+| 15       | 62.0     |
+| 16       | 62.4     |
+| 21       | 62.1     |
+| 28       | 67.8     |
+
+LOOKBACK=14 is a sharp interior peak (13→64.9, 14→66.6, 15→62.0). The
+boundary artifact identified on the prior export (14→65.9, 21→66.5,
+28→66.6 monotonically climbing) has resolved: LOOKBACK=21 now scores 62.1,
+well below 14. LOOKBACK=28 (67.8) is isolated beyond a valley at 21.
+
+DRIFT gradient at LOOKBACK=14, THRESHOLD=3.0:
+
+| DRIFT | Headline |
+|-------|----------|
+| 2.0   | 66.0     |
+| 2.5   | 66.6     |
+| 3.0   | 66.3     |
+| 5.0   | 66.0     |
+| 7.0   | 65.5     |
+
+DRIFT=2.5 is interior (2.0→66.0, 2.5→66.6, 3.0→66.3). THRESHOLD=3.0
+is near-tied with 3.5 (66.6 vs. 66.8); 3.0 retained since the delta is
+negligible and 3.5 is also interior (4.0→63.2).
+
+| Constant | Before | After |
+|---|---|---|
+| `LOOKBACK_DAYS` | 7 | 14 |
+| `DRIFT_WEIGHT_HALF_LIFE_DAYS` | 5.0 | 2.5 |
+| `MATCH_COST_THRESHOLD_HOURS` | 3.0 | 3.0 |
+
+| Metric | Before | After | Delta |
+|---|---|---|---|
+| Headline | 64.0 | 66.6 | +2.6 |
+| Count | 87.1 | 88.8 | +1.7 |
+| Timing | 47.3 | 50.3 | +3.0 |
+| Availability | 25/25 | 25/25 | 0 |
+
+### Solution
+
+Wider lookback (14 days) stabilizes the episode template during a period of
+high episode-count variability (7-10 range). With LOOKBACK=14, 7 of 14 days
+match the median episode count of 7, providing a robust template seed. The
+prior LOOKBACK=7 had only 1 matching day.
+
+The 2.5-day drift half-life with 14-day lookback gives the oldest day ~2.7%
+of yesterday's weight, focusing drift estimation on recent data while
+allowing older data to contribute to template stability. This is a sharper
+recency gradient than the prior 5.0-day half-life at LOOKBACK=7 (oldest
+day ~44% weight), reflecting the model's need to track faster-moving timing
+shifts within a wider template window.
+
+Both count (+1.7) and timing (+3.0) improved. The LOOKBACK=14 regime was
+selected because its prior boundary artifact (monotonically climbing through
+21, 28) has resolved, making it a confirmed interior optimum.
+
 ## Wider lookback, looser threshold for episode-count transition | 2026-04-12
 
 ### Problem

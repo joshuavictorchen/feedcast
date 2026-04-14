@@ -105,17 +105,55 @@ method you actually used for the current forecast.
 
 Write it from first principles for a fresh reader:
 
-- Describe the current method, not the delta from an older one.
-- Explain what data it uses and how it turns that data into predicted
-  feed times.
-- Mention how volume and overall feed count are handled when they matter.
-- Keep it self-contained. Do not rely on "builds on", "same as before",
-  or references to prior iterations for basic context.
-- Keep history, experiments, and future ideas in `CHANGELOG.md` or
-  `strategy.md`, not here.
+- Describe the current method in full. The document must stand on its
+  own: a reader who has never seen a prior version must be able to
+  understand the mechanism from this file alone.
+- Explain what data is used, how gaps or slots or states are computed,
+  and how those turn into predicted feed times.
+- Mention how volume and overall feed count are handled when they
+  matter.
 
-Use the scripted model `methodology.md` files as the style bar:
-concise, current-state, and mechanism-first.
+Do not write `methodology.md` as a delta from a previous approach.
+Concretely, do not use phrasings like "the baseline", "the two-bucket
+baseline", "the baseline algorithm", "builds on", "refines", "as
+before", "same as before", "an improvement over X", or "addresses the
+documented weakness of Y". Any justification by contrast with an
+earlier approach belongs in `CHANGELOG.md` or `strategy.md`, not here.
+
+Use the scripted model `methodology.md` files as the style bar
+(e.g. `feedcast/models/slot_drift/methodology.md`): concise,
+current-state, and mechanism-first.
 
 - Keep it to a single section. A leading `# Agent Inference` title is
   fine, but do not add `##` or deeper sub-headers.
+
+## CHANGELOG.md
+
+Your workspace contains `CHANGELOG.md`. Whenever this run changes
+behavior materially, append a new entry at the top of the file.
+Material changes include a new approach, a different bucket or slot
+scheme, a reworked projection step, or a tuned constant backed by new
+evidence.
+
+Use the same `Problem / Research / Solution` format as the scripted
+models (e.g. `feedcast/models/slot_drift/CHANGELOG.md`):
+
+```
+## <Short imperative title> | YYYY-MM-DD
+
+### Problem
+<What observed behavior or recent-run outcome motivated the change?>
+
+### Research
+<Evidence behind the change: observed sub-period medians, recent
+retrospective scores, count/timing trade-offs, before/after projection
+shape. Include concrete numbers where available.>
+
+### Solution
+<What changed, stated concretely. Include a Before/After table for
+constants or projection shape when applicable.>
+```
+
+Cadence: one entry per material change, newest first. Cosmetic
+rewording of `methodology.md` that describes the same mechanism does
+not need an entry; approach changes and constant changes always do.

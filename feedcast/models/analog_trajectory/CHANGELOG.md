@@ -2,6 +2,77 @@
 
 Tracks behavior-level changes to the Analog Trajectory model. Add newest entries first.
 
+## Retune on new export: longer lookback, more neighbors, gap alignment restored | 2026-04-13
+
+### Problem
+
+The model's production constants (tuned on
+`exports/export_narababy_silas_20260412.csv`, headline 70.2) degraded to
+headline 66.6 on the new export
+(`exports/export_narababy_silas_20260413.csv`). Timing dropped from 54.7
+to 49.0 while count stayed stable at 92.1. The most recent replay
+windows (Apr 12 afternoon/evening) scored modestly on timing (42-49),
+continuing the pattern of per-export timing degradation.
+
+### Research
+
+The full 4704-candidate canonical sweep found a joint combination that
+recovers +2.8 headline points:
+
+| Metric | Old production | New production |
+|--------|----------------|----------------|
+| Headline | 66.6 | 69.4 |
+| Count | 92.1 | 94.1 |
+| Timing | 49.0 | 51.8 |
+
+The most recent windows improved:
+
+| Window | Old headline | New headline | Old timing | New timing |
+|--------|-------------|-------------|------------|------------|
+| Apr 12 19:15 | 63.4 | 80.4 | 42.1 | 64.6 |
+| Apr 12 18:22 | 65.0 | 72.3 | 45.7 | 56.6 |
+| Apr 12 00:15 | 54.6 | 75.9 | 31.1 | 57.6 |
+
+Gap alignment regains the lead over time_offset. The single-export
+time_offset preference (Apr 12) did not persist, confirming the narrow
+margin noted in the prior research.md. All top 10 canonical candidates
+use gap alignment.
+
+Raw history still leads episode by +1.2 headline points (69.4 vs 68.2).
+Both best candidates now use gap_hour weighting and gap alignment, but
+differ on lookback (24h vs 18h), K (5 vs 7), and recency (240h vs 72h).
+
+Gap_hour weighting continues to dominate: the top 4 candidates all use
+gap_hour or vol_deemphasis, consistent with the prior export. Volume
+de-emphasis remains the strongest regime-level signal.
+
+RECENCY_HALF_LIFE_HOURS=240 is a boundary winner for the third
+consecutive export.
+
+Episode history still wins the local diagnostic decisively (1.075h vs
+1.427h full_traj_MAE). The internal/canonical divergence pattern is
+unchanged.
+
+### Solution
+
+Ship the full canonical sweep winner:
+
+- `LOOKBACK_HOURS`: 9 -> 24
+- `K_NEIGHBORS`: 3 -> 5
+- `ALIGNMENT`: time_offset -> gap
+- `FEATURE_WEIGHTS`: gap_hour (unchanged)
+- `RECENCY_HALF_LIFE_HOURS`: 240 (unchanged)
+- `TRAJECTORY_LENGTH_METHOD`: median (unchanged)
+- `HISTORY_MODE`: raw (unchanged)
+
+The direction of the changes is internally coherent: longer lookback
+(24h, roughly a full day) gives rolling means a more stable daily base,
+moderate neighbor count (k=5) provides smoother predictions while still
+favoring cadence-similar states, and gap alignment returns to its
+historical position. The gap_hour weighting, broad recency, and raw
+history mode all held, reinforcing the regime-level stability of these
+choices.
+
 ## Retune on new export: gap_hour weighting with shorter lookback and time_offset alignment | 2026-04-12
 
 ### Problem

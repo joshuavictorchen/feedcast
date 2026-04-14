@@ -45,17 +45,17 @@ FEATURE_WEIGHTS = np.array([2.0, 2.0, 0.5, 0.5, 2.0, 2.0])
 
 # Lookback window for rolling mean features (hours).
 # Events within this window contribute to mean_gap and mean_volume.
-# 9h captures roughly the most recent 3 feeds. Paired with gap_hour
-# weighting and broader recency (240h), the shorter lookback focuses
-# rolling means on the immediate cadence while broader recency keeps
-# enough historical states available for selective (k=3) retrieval.
-LOOKBACK_HOURS = 9
+# 24h captures roughly a full day of feeds. Paired with gap_hour
+# weighting and broader recency (240h), the longer lookback gives
+# rolling means a stable daily base while gap_hour weighting ensures
+# retrieval keys on cadence and time-of-day over volume.
+LOOKBACK_HOURS = 24
 
 # Number of nearest neighbors to retrieve.
-# k=3 wins the full canonical replay sweep on the current export. With
-# gap_hour weighting, fewer neighbors produce sharper predictions by
-# focusing on the most cadence-similar historical states.
-K_NEIGHBORS = 3
+# k=5 wins the full canonical replay sweep on the current export. With
+# gap_hour weighting, moderate neighbor count balances sharpness with
+# coverage across the daily cadence variations.
+K_NEIGHBORS = 5
 
 # Minimum number of historical states with complete trajectories.
 MIN_COMPLETE_STATES = 10
@@ -77,9 +77,9 @@ TRAJECTORY_LENGTH_METHOD = "median"
 # Trajectory alignment method: "gap" or "time_offset".
 # "gap" blends inter-event gaps step-by-step and rolls forward.
 # "time_offset" blends absolute offsets from the state event and
-# positions feeds relative to cutoff. Canonical replay now narrowly
-# prefers time_offset on the current export (+0.4 headline points).
-ALIGNMENT = "time_offset"
+# positions feeds relative to cutoff. Gap alignment regains the lead
+# on the current export after a single-export time_offset preference.
+ALIGNMENT = "gap"
 
 # History source for state construction: "raw" or "episode".
 # "raw" keeps every bottle event. "episode" collapses close-together
