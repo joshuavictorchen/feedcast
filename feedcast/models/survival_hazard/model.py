@@ -37,12 +37,12 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 
 # Weibull shape parameters by day-part, chosen by canonical multi-window
 # replay. Higher shape = more regular (tighter distribution around the
-# median). On the 20260411 export, the baby's overnight pattern became
-# less regular in the most recent windows, pulling the canonical optimum
-# from 7.5 down to a 4.0-5.0 plateau. 4.5 is the plateau center.
-# See CHANGELOG.md and research.md for the evidence chain.
-OVERNIGHT_SHAPE = 4.5
-DAYTIME_SHAPE = 3.0
+# median). On the 20260413 export, both shapes shifted: overnight
+# regularized again (plateau 5.5-7.5 at DT=1.75), daytime became more
+# variable (plateau 1.5-2.0). 6.0 converges with the episode-level MLE
+# (6.04) for the first time. See CHANGELOG.md and research.md.
+OVERNIGHT_SHAPE = 6.0
+DAYTIME_SHAPE = 1.75
 
 # Day-part boundaries (hour of day).
 # Overnight: 20:00 to 08:00. Daytime: 08:00 to 20:00.
