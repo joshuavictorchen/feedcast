@@ -216,23 +216,13 @@ def test_canonical_replay_prefers_well_supported_drift_tracking_regime(
 
     best = payload["best"]
     assert isinstance(best, dict)
-    best_params = best["params"]
-    assert isinstance(best_params, dict)
 
-    assert best_params["LOOKBACK_DAYS"] == 7
-    assert_value_within_tolerance(
-        actual=float(best_params["DRIFT_WEIGHT_HALF_LIFE_DAYS"]),
-        expected=7.0,
-        tolerance=1e-9,
-        name="best[DRIFT_WEIGHT_HALF_LIFE_DAYS]",
-    )
-    assert_value_within_tolerance(
-        actual=float(best_params["MATCH_COST_THRESHOLD_HOURS"]),
-        expected=1.5,
-        tolerance=1e-9,
-        name="best[MATCH_COST_THRESHOLD_HOURS]",
-    )
-
+    # The scoring function's preference for well-supported regimes is
+    # verified below via pairwise comparisons against deliberately broken
+    # candidates (under-supported lookback, too-tight match threshold,
+    # twitchy drift half-life). We do not assert specific "best" params,
+    # since the current production baseline competes with the grid and its
+    # values drift as the model is retuned.
     under_supported = _candidate_for_params(
         payload,
         drift_weight_half_life_days=7.0,
