@@ -11,12 +11,12 @@ starts the gap and assigned to one of four sub-periods: evening
 (19:00-22:00), deep night (22:00-03:00), early morning (03:00-07:00),
 and daytime (07:00-19:00). Within each sub-period, the recency-weighted
 median of observed gaps yields a characteristic gap duration. For this
-run: evening 3.77h, deep night 4.03h, early morning 2.95h, daytime
-2.31h.
+run: evening 3.82h, deep night 3.74h, early morning 2.64h, daytime
+2.59h.
 
 Starting from the cutoff, the forecast steps forward by applying the
 sub-period gap that matches the clock hour of each predicted feed's
 start. Feed count (8 episodes over 24 hours) aligns with the
-recency-weighted daily episode count of 7.7. Volume is a flat 4.0 oz
+recency-weighted daily episode count of 8.1. Volume is a flat 4.0 oz
 per predicted episode, the recency-weighted median across recent
 episode volumes.
