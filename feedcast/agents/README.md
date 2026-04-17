@@ -16,9 +16,9 @@ latest forecast, and each run must produce `forecast.json`.
 
 | File | Current use |
 | ---- | ----------- |
-| `model.py` | The current forecasting script. Prior agents have rewritten it when they had a better approach. |
+| `model.py` | Canonical forecast implementation. The pipeline runs it and scores the resulting `forecast.json`. Prior agents have rewritten it when they had a better approach. |
 | `prompt.md` | Runtime instructions the agent reads on each run. Uses `{{variable}}` placeholders substituted by the pipeline. The agent may edit this to change how future runs invoke it. |
-| `strategy.md` | Durable notes from prior agents: baseline approach, measured strengths and weaknesses, open questions. |
+| `strategy.md` | Durable notes on the current approach: tuning rationale, measured strengths and weaknesses, open questions. |
 | `methodology.md` | Report-facing description of the method used for the latest run. Keep it current and self-contained. |
 | `design.md` | Design decisions behind the current implementation. |
 | `CHANGELOG.md` | Prior agents' log of what changed and why. |
@@ -26,12 +26,14 @@ latest forecast, and each run must produce `forecast.json`.
 
 ## Current workspace state
 
-The durable workspace currently includes a baseline `model.py`
-implementing Empirical Cadence Projection. An agent may reuse it, tune
-it, replace it, or bypass it if another approach better fits the latest
-data. `methodology.md` is the report-facing record of the method
-actually used for the most recent forecast. `strategy.md` and
-`CHANGELOG.md` hold longer-lived notes, evidence, and history.
+The durable workspace currently includes `model.py`, a four-bucket
+cadence projection script that steps forward from recency-weighted
+gap medians across four clock-hour sub-periods. An agent may reuse
+it, tune it, rewrite it, or bypass it if another approach better
+fits the latest data. `methodology.md` is the report-facing record
+of the method actually used for the most recent forecast.
+`strategy.md` and `CHANGELOG.md` hold longer-lived notes, evidence,
+and history.
 
 ## How the pipeline invokes the agent
 

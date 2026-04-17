@@ -23,12 +23,12 @@ questions are:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-04-13 |
-| Export | `exports/export_narababy_silas_20260413.csv` |
-| Dataset | `sha256:1820a6f33b499f22c5adbfc8bbb0538fca2366fbf4661452b57fddd31a0a6d8d` |
+| Run date | 2026-04-16 |
+| Export | `exports/export_narababy_silas_20260416.csv` |
+| Dataset | `sha256:383bff93af3fbf40ff86f1eccecd6d2fefd9a4b7d5093eb1b37174f552ac6e74` |
 | Command | `.venv/bin/python -m feedcast.models.analog_trajectory.analysis` |
-| Canonical headline | 69.4 |
-| Availability | 25/25 windows (100%) |
+| Canonical headline | 70.5 |
+| Availability | 26/26 windows (100%) |
 | Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Staleness check:** if the current export differs from the one listed
@@ -57,7 +57,7 @@ production-relevant constant:
 - `ALIGNMENT`: `gap`, `time_offset`
 
 Candidates are ranked by availability tier first, then headline score.
-On the current export, every analog candidate scored all 24 windows, so
+On the current export, every analog candidate scored all 26 windows, so
 headline score decides the ranking.
 
 ### Objective comparison contract
@@ -98,10 +98,10 @@ The full canonical sweep selects:
 | Parameter | Value |
 |---|---|
 | `HISTORY_MODE` | `raw` |
-| `LOOKBACK_HOURS` | `24` |
-| `FEATURE_WEIGHTS` | `gap_hour [2, 2, 0.5, 0.5, 2, 2]` |
-| `K_NEIGHBORS` | `5` |
-| `RECENCY_HALF_LIFE_HOURS` | `240` |
+| `LOOKBACK_HOURS` | `9` |
+| `FEATURE_WEIGHTS` | `gap_emphasis [2, 2, 1, 1, 1, 1]` |
+| `K_NEIGHBORS` | `7` |
+| `RECENCY_HALF_LIFE_HOURS` | `36` |
 | `TRAJECTORY_LENGTH_METHOD` | `median` |
 | `ALIGNMENT` | `gap` |
 
@@ -109,36 +109,57 @@ The current production configuration scores:
 
 | Metric | Score |
 |---|---|
-| Headline | 69.4 |
-| Count | 94.1 |
-| Timing | 51.8 |
+| Headline | 70.5 |
+| Count | 92.9 |
+| Timing | 54.1 |
 
-All 25 windows scored (100% availability).
+All 26 windows scored (100% availability).
 
-This retune on the new export (`20260413`) recovers +2.8 headline
-points over the prior constants (tuned on `20260412`), which had
-degraded from `70.2` to `66.6` on the new data. Three constants changed:
-lookback (`9h` to `24h`), K (`3` to `5`), and alignment (`time_offset`
-to `gap`). The most recent replay windows improved substantially
-(Apr 12 19:15 went from headline 63.4 to 80.4, timing from 42.1 to
-64.6).
+This retune on the new export (`20260416`) recovers +3.9 headline
+points over the prior constants (tuned on `20260413`), which had
+degraded from `69.4` to `66.6` on the new data. Four constants changed:
+lookback (`24h` to `9h`), weights (`gap_hour` to `gap_emphasis`), K (`5`
+to `7`), and recency (`240h` to `36h`). Per-window degradation on the
+prior config was diffuse rather than concentrated in any one cluster,
+consistent with a regime-level shift rather than a local failure.
 
-The raw-vs-episode canonical margin narrowed to +1.2 headline points
-(`69.4` vs `68.2`). Both best candidates now use gap_hour weighting
-and gap alignment, but they differ on lookback (24h vs 18h),
-K (5 vs 7), and recency (240h vs 72h).
+The raw-vs-episode canonical margin widened to +1.8 headline points
+(`70.5` vs `68.7`). The two best candidates disagree on almost every
+axis: raw prefers `lb=9h`, `gap_emphasis`, `k=7`, `hl=36h`, `gap`
+alignment, while episode prefers `lb=18h`, `means_only`, `k=3`,
+`hl=120h`, `time_offset` alignment. They agree only on trajectory
+length method.
 
-Gap alignment regains the lead after a single-export time_offset
-preference. All top 10 canonical candidates use gap alignment,
-confirming the prior warning that the time_offset margin was narrow
-and likely to flip.
+Gap alignment retains its lead over time_offset by a thin margin
+(`70.5` vs `70.3`). Rows 3, 4, 6, 7 of the top 10 use time_offset, so
+this axis is effectively tied on the current export.
 
-The top of the canonical surface remains shallow. Several candidates
-land between `68.5` and `69.4`. The broader conclusion is stronger than
-the exact decimal ordering: gap_hour weighting with volume de-emphasis
-dominates the top of the surface regardless of lookback and K details.
+The top of the canonical surface is coherent: all top 10 candidates
+use raw history and `k=7`, and 8 of 10 use `lb=9h` with gap_emphasis
+weighting. Recency clusters at 36h or 72h across the top; none of the
+top 10 use the previously-shipped 240h value. The regime-level signal
+is a shift from broad averaging toward tight, recent-pattern retrieval.
 
-Count improved from 92.1 to 94.1. Timing improved from 49.0 to 51.8.
+`RECENCY_HALF_LIFE_HOURS=36` is a boundary winner of the production
+grid `[36, 72, 120, 240]`, but a targeted same-axis check at
+`[12, 18, 24, 36]` confirms 36h is an interior optimum:
+
+| hl | Headline |
+|----|----------|
+| 12 | 66.03 |
+| 18 | 67.89 |
+| 24 | 68.84 |
+| 36 | 70.45 |
+| 72 | 69.59 |
+
+This flips the "240h boundary winner for three consecutive exports" open
+question: the optimum has now moved to the opposite end of the grid and
+is locally interior. The recency axis is driven by how stable the
+baby's current regime is relative to older history, not by a grid
+artifact.
+
+Count is roughly unchanged (92.9 vs 94.1). Timing improved from 51.8 to
+54.1, recovering the timing gap that drove the headline degradation.
 
 ### Diagnostic findings
 
@@ -148,9 +169,9 @@ metric:
 
 | Metric | Raw best | Episode best |
 |---|---|---|
-| `full_traj_MAE` | 1.427h | 1.075h |
-| `gap1_MAE` | 0.755h | 0.645h |
-| `traj3_MAE` | 0.763h | 0.654h |
+| `full_traj_MAE` | 1.411h | 1.078h |
+| `gap1_MAE` | 0.742h | 0.645h |
+| `traj3_MAE` | 0.758h | 0.654h |
 
 The diagnostic/canonical disagreement continues to extend to history mode.
 Episode history produces cleaner retrieval locally, but canonical replay
@@ -159,20 +180,21 @@ favors raw history on the current export.
 **Internal and canonical metrics diverge on nearly every axis:** The best
 raw diagnostic configuration is (`raw`, `18h`, `means_only`, `k=7`,
 `36h`, `median`, `time_offset`), while the shipped canonical
-configuration is (`raw`, `24h`, `gap_hour`, `k=5`, `240h`, `median`,
-`gap`). They agree on history mode (raw) and trajectory length (median),
-but disagree on lookback, weighting, K, recency, and alignment.
-Alignment is now a point of divergence again (diagnostic prefers
-time_offset, canonical prefers gap).
+configuration is (`raw`, `9h`, `gap_emphasis`, `k=7`, `36h`, `median`,
+`gap`). They agree on history mode (raw), K (7), recency (36h), and
+trajectory length (median), but disagree on lookback, weighting, and
+alignment. Recency is now a point of agreement — the diagnostic has
+preferred `36h` for several exports while canonical was stuck at `240h`,
+and the two converged this export as canonical moved down.
 
 **Feature distributions still show the episode advantage for retrieval:**
-At the canonical-best 24-hour lookback, episode history produces larger
+At the canonical-best 9-hour lookback, episode history produces larger
 and tighter gap/volume signals than raw history:
 
-- `last_gap`: `2.634 -> 3.005`
-- `mean_gap`: `2.681 -> 3.044`
-- `last_volume`: `3.297 -> 3.762`
-- `mean_volume`: `3.314 -> 3.757`
+- `last_gap`: `2.640 -> 2.995`
+- `mean_gap`: `2.740 -> 3.042`
+- `last_volume`: `3.328 -> 3.775`
+- `mean_volume`: `3.385 -> 3.771`
 
 These shifts are exactly what you would expect if cluster-internal
 top-ups were being removed from the state library. The cleaner state
@@ -180,13 +202,16 @@ space explains the diagnostic advantage, but canonical replay uses
 bottle-only scoring events, so cluster-internal feeds are part of the
 scoring target that the episode model cannot represent.
 
-**Volume de-emphasis remains the dominant regime-level signal:** The top
-4 canonical candidates all use gap_hour weighting (`[2, 2, 0.5, 0.5, 2,
-2]`) or vol_deemphasis (`[1, 1, 0.5, 0.5, 1, 1]`). No top-10
-candidate gives volume equal or dominant weight. This is the second
-consecutive export where gap_hour weighting dominates, consistent with
-the baby's feeding schedule consolidating and temporal regularity being
-the strongest retrieval cue.
+**Gap-feature emphasis replaces volume de-emphasis at the top:** The
+prior export's top of the surface was dominated by gap_hour and
+vol_deemphasis (both de-emphasize volume). The current top 10 instead
+clusters on gap_emphasis (`[2, 2, 1, 1, 1, 1]`), which keeps volume at
+baseline and does not elevate hour features. This is a regime-level
+shift: gap features continue to dominate retrieval, but the de-emphasis
+of volume and the elevation of time-of-day features both disappear.
+Volume has become informative enough to carry baseline weight, and
+time-of-day is no longer a dominant separator as the daytime cadence
+tightens to a narrow 2.5-3.1h band.
 
 ### Simulation-study findings
 
@@ -233,76 +258,107 @@ assertions.
 **Disposition: Change.** Analog Trajectory ships updated constants:
 
 - `HISTORY_MODE = "raw"`
-- `LOOKBACK_HOURS = 24`
-- `FEATURE_WEIGHTS = gap_hour [2, 2, 0.5, 0.5, 2, 2]`
-- `K_NEIGHBORS = 5`
-- `RECENCY_HALF_LIFE_HOURS = 240`
+- `LOOKBACK_HOURS = 9`
+- `FEATURE_WEIGHTS = gap_emphasis [2, 2, 1, 1, 1, 1]`
+- `K_NEIGHBORS = 7`
+- `RECENCY_HALF_LIFE_HOURS = 36`
 - `TRAJECTORY_LENGTH_METHOD = "median"`
 - `ALIGNMENT = "gap"`
 
-The retune on the new export moved three constants: lookback (`9h` to
-`24h`), K (`3` to `5`), and alignment (`time_offset` to `gap`).
-Headline recovered from `66.6` to `69.4`, with count improving from
-`92.1` to `94.1` and timing from `49.0` to `51.8`.
+The retune on the new export moved four constants: lookback (`24h` to
+`9h`), weights (`gap_hour` to `gap_emphasis`), K (`5` to `7`), and
+recency (`240h` to `36h`). Headline recovered from `66.6` to `70.5`,
+with count roughly unchanged (`94.1` to `92.9`) and timing improving
+from `51.8` to `54.1`. The improvement concentrated on timing, which
+matches the degradation pattern on the prior config.
 
-Four constants held across this export: gap_hour weighting, 240h
-recency, raw history, and median trajectory length. The regime-level
-signal continues to strengthen: gap_hour weighting dominates the top
-of the canonical surface for the second consecutive export, and volume
-de-emphasis is the strongest regime-level finding.
+Three constants held across this export: raw history, median trajectory
+length, and gap alignment. Every other production constant moved. The
+broader regime-level signal is a shift toward faster adaptation:
+shorter lookback, more neighbors, and a sharply tighter recency
+half-life all bias retrieval toward recent states and away from older
+history.
 
-Gap alignment regains its historical lead after a single-export
-time_offset preference. All top 10 canonical candidates use gap
-alignment, resolving the prior export's ambiguity decisively.
+The recency half-life flip (`240h` to `36h`) is the most consequential
+change. The low-boundary concern from the prior export (third
+consecutive 240h winner) is now resolved in the opposite direction —
+the optimum moved to the grid's low end and a targeted check confirms
+it is interior. The canonical and diagnostic surfaces agree on recency
+for the first time in several exports. This supports the project-level
+working assumption that tracking emerging behavior beats averaging over
+longer history when the baby's pattern is shifting.
 
-The internal/canonical divergence widened on alignment (diagnostic
-prefers time_offset, canonical prefers gap) and continues on lookback,
-K, and recency. They agree on history mode (raw) and trajectory length
-(median). The process is clean: a single full canonical sweep selects
-all production constants.
+Gap alignment retains a thin lead over time_offset (`70.5` vs `70.3`).
+The axis is effectively tied on the current export and is expected to
+remain volatile.
+
+The internal/canonical divergence narrowed on recency (now agree on
+36h) but remains on lookback, weighting, and alignment. The process is
+clean: a single full canonical sweep selects all production constants,
+followed by a targeted same-axis boundary check on recency.
 
 ## Open questions
 
 ### Model-local
 
-- **RECENCY_HALF_LIFE_HOURS=240 is a boundary winner for the third
-  consecutive export.** The recency grid is [36, 72, 120, 240]. 240h
-  (~10 days) is already broad for a growing baby. Extending the grid
-  (e.g., to 360h, 480h) could reveal whether the optimum is interior or
-  still climbing. However, going broader than ~10 days risks matching
-  against stale patterns from a meaningfully different feeding regime.
+- **Recency half-life flipped from the high to the low boundary.** The
+  240h winner held for three consecutive exports, then the current
+  export selected 36h — the opposite end of the grid. A targeted check
+  at [12, 18, 24, 36] confirms 36h is interior, so the grid is locally
+  adequate. The larger question is whether the recency axis will
+  continue to swing wildly between exports as the baby's regime shifts,
+  or whether tight recency is the new stable choice. If a future export
+  again selects 240h, reconsider whether a smoother recency-adaptation
+  strategy is needed in place of export-by-export retuning.
 - **Constant churn between exports continues.** The optimal constant
-  combination has shifted on each of the last five exports. The shallow
-  canonical surface means small data changes move the exact winner. The
-  regime-level signal (volume de-emphasis, raw history) is more stable
-  than the point estimates.
-- **Gap/time_offset alignment continues to oscillate.** Gap alignment
-  regained the lead after a single-export time_offset preference. This
-  axis has now flipped twice in the tuning history. The margins remain
-  narrow, suggesting the surface is genuinely flat on this dimension.
-- **Top-up windows remain fragile.** Some of the weakest per-window
-  scores still sit around short daytime follow-ups. The Apr 12 cluster
-  feeding windows (16:42, 18:22) show the model struggling with
-  short-gap events (0.39h actual vs 3.22h predicted).
+  combination has now shifted on every one of the last six exports.
+  Four constants changed this export (lookback, weights, K, recency).
+  The shallow canonical surface means small data changes move the
+  exact winner. The regime-level signal this export (raw history, k=7,
+  gap-feature emphasis) is coherent but different from the prior
+  export's signal (gap_hour weighting dominant). Regime shifts across
+  exports make it hard to call any individual constant "stable" beyond
+  `HISTORY_MODE=raw`, `TRAJECTORY_LENGTH_METHOD=median`, and
+  `ALIGNMENT=gap` (which is itself marginal).
+- **Gap/time_offset alignment remains effectively tied.** Top candidates
+  include both alignments within 0.2 headline points. This axis is flat
+  enough that either choice is defensible; gap is shipped because it
+  wins the headline today by the narrowest margin.
+- **Top-up/cluster windows remain fragile.** The last-10-states
+  neighbor-quality table under the new config shows the Apr 15 cluster
+  (16:29, 18:24, 19:32) producing the largest trajectory errors
+  (up to 3.3h on a single gap). Short-gap cluster feeds continue to
+  challenge neighbor retrieval because the historical library has few
+  matching states.
 - **How robust is the model once archetypes overlap or drift?** The
   simulation suite validates clean recurrence, not ambiguous or
-  contaminated states. The next synthetic extensions should test near-
-  miss archetypes, gradual archetype evolution, and top-up
+  contaminated states. The next synthetic extensions should test
+  near-miss archetypes, gradual archetype evolution, and top-up
   contamination.
 
 ### Cross-cutting
 
-- **Timing as shared bottleneck:** Count is `94.1`; timing is `51.8`.
-  Timing drift remains the main quality constraint. This pattern
-  persists across all five models (see `feedcast/research/README.md`).
+- **Timing as shared bottleneck:** Count is `92.9`; timing is `54.1`.
+  Timing remains the binding constraint. The gap narrowed this export
+  (timing +2.3, count -1.2 vs prior), but count-vs-timing asymmetry
+  still dominates the headline. This pattern persists across all five
+  models (see `feedcast/research/README.md`).
 - **Episode collapse vs. bottle-level scoring tension:** Episode history
   produces cleaner state representations but removes events that
   canonical replay scores against. This tension may affect other models
   that use episode history. The analog model's raw history preference
   highlights the tradeoff most sharply because it directly controls
   which events enter the state library and trajectory blending.
-- **Volume de-emphasis as a cross-model signal:** The top of the
-  canonical surface uniformly de-emphasizes volume. If this reflects a
-  real shift in the baby's feeding patterns (more regular timing, more
-  variable volume), other models that weight volume heavily may also
-  benefit from reduced volume sensitivity.
+- **Short recency and short lookback may favor emerging-behavior
+  tracking across models.** The analog model's retune concentrated
+  neighbor weight on the most recent ~1.5 days and collapsed rolling
+  features to ~3 recent feeds, recovering +3.9 headline points. If
+  other base models (slot_drift, latent_hunger, survival_hazard) also
+  have parameters controlling recency, they may benefit from a similar
+  tightening given the same underlying data shift. Worth checking
+  whether their canonical sweeps show the same directional signal.
+- **Volume de-emphasis no longer dominates the top of the surface.**
+  The prior export's top candidates all de-emphasized volume; this
+  export's top 10 instead use gap_emphasis (volume at baseline). If
+  other models encoded volume de-emphasis as a long-term finding, that
+  choice may be worth revisiting on the current export.

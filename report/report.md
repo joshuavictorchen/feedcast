@@ -1,6 +1,6 @@
 # Silas Feeding Forecast
 
-**Monday, April 13, 2026** · 45 days old · Cutoff: 7:15 PM
+**Thursday, April 16, 2026** · 48 days old · Cutoff: 8:57 PM
 
 ## Next Feeds
 
@@ -12,38 +12,35 @@
 
 ## Trend Insights
 
-Apr 13 adds a full day of new data (8 episodes since the prior run's 8:24 PM cutoff on Apr 12), and the standout is consistency. Seven of eight episodes landed at 4.0 oz or above, with six hitting exactly 4.0 oz. That kind of uniformity is unusual for this baby; most days show at least 1-2 feeds in the low 3s. The only sub-4 feed was a 3.5 oz bottle at 2:50 PM, which still comfortably clears the mid-week lows. There were zero multi-feed episodes, meaning every bottle was a clean single feed with no top-ups needed. Total intake through 7:15 PM sits at 31.7 oz, on track to finish in the 32-34 oz range. Daytime gaps averaged 2.4 hours, a touch more relaxed than Apr 12's compressed 2.2 hours, suggesting the baby is eating well at a natural pace rather than catching up. Overnight followed the now-familiar shape: a 3.8-hour gap from the last evening feed to midnight, a 4.0-hour gap to the 4 AM feed, then a shorter 3.0-hour stretch to 7:10 AM.
+The three days of new data since the last forecast (Apr 14-16) reinforce 4 oz as the new normal: 26 episodes averaging 3.93 oz, with today (Apr 16) the most consistent day of the week at 4.08 oz per feed and 6 of 7 episodes hitting at least 4 oz. The only standout in the new window is Wednesday evening, where Silas ate three 2-oz "snack" bottles back to back between 5:42 and 7:32 PM (a single 6-oz episode by clustering rules) and then stretched 4.5 hours to the next feed. That was the lone meaningful multi-feed cluster across the new data; otherwise feeds have been clean singles. Today also produced the largest individual bottle of the week (5 oz at 6:03 PM) and the most rhythmic daytime spacing yet, with all gaps falling between 2.6 and 3.6 hours.
 
-Across the 7-day baseline, the mid-week volume dip (Apr 8-9 averaged 3.4-3.6 oz per episode) has clearly resolved: Apr 12-13 are back at 3.9-4.0 oz averages and both posted 4+ oz feeds two-thirds of the time or better. Daily intake has remained stable at 27-35 oz throughout the week regardless of per-feed volume, because the baby simply eats more often when individual bottles are smaller (Apr 6 and Apr 9 both ran 9+ episodes to compensate for more small feeds). Episode clustering has been minimal all week, with 0-1 multi-feed episodes per day and none at all on four of the eight days. The day/night rhythm is steady but not yet lengthening: overnight gaps average 3.6 hours, daytime gaps average 2.5 hours, and the longest single gap of the week was Apr 11's 4.7-hour evening stretch. There is no sign yet of a consolidated sleep window beyond 4-5 hours.
+In the broader 7-day picture, the early-baseline mid-week dip (avg per-feed volumes of 3.4-3.6 oz on Apr 9-10) has fully resolved, with daily averages now sitting at 3.8-4.1 oz. Daily intake remains stable in a tight 28-34 oz band regardless of episode count, because the baby trades feed size against feed frequency. Overnight gaps are not yet lengthening: the longest deep-night stretches stay around 3.4-3.8 hours every night, and Apr 14-16 actually have slightly tighter night cadence than earlier in the week. There is still no sign of a consolidated long sleep window. Episode clustering has been rare (0-1 per day), and the Apr 15 evening triple is the only cluster of note.
 
-| Day | Episodes | Total Intake | Avg Vol/Ep | Episodes >= 4 oz | Multi-Feed | Day Gap | Night Gap |
-|-----|:--------:|:------------:|:----------:|:-----------------:|:----------:|:-------:|:---------:|
-| Apr 6 | 10 | 34.6 oz | 3.5 oz | 6 of 10 (60%) | 0 | 2.1 h | 3.2 h |
-| Apr 7 | 7 | 27.8 oz | 4.0 oz | 6 of 7 (86%) | 0 | 2.7 h | 3.4 h |
-| Apr 8 | 8 | 28.7 oz | 3.6 oz | 4 of 8 (50%) | 0 | 2.5 h | 3.6 h |
-| Apr 9 | 9 | 30.8 oz | 3.4 oz | 2 of 9 (22%) | 0 | 2.8 h | 3.4 h |
-| Apr 10 | 7 | 29.2 oz | 4.2 oz | 2 of 7 (29%) | 1 | 3.0 h | 4.2 h |
-| Apr 11 | 7 | 27.3 oz | 3.9 oz | 3 of 7 (43%) | 1 | 2.6 h | 3.8 h |
-| Apr 12 | 9 | 34.7 oz | 3.9 oz | 6 of 9 (67%) | 1 | 2.2 h | 3.8 h |
-| **Apr 13** | **8** | **31.7 oz** | **4.0 oz** | **7 of 8 (88%)** | **0** | **2.4 h** | **3.6 h** |
+| Day | Episodes | Total | Avg/Ep | >=4 oz | Multi | Day Gap | Night Gap |
+|-----|:--------:|:-----:|:------:|:------:|:-----:|:-------:|:---------:|
+| Apr 10 | 7 | 29.1 oz | 4.16 oz | 2 of 7 | 1 | 3.0 h | 4.2 h |
+| Apr 11 | 7 | 27.3 oz | 3.90 oz | 3 of 7 | 1 | 3.0 h | 3.2 h |
+| Apr 12 | 9 | 34.8 oz | 3.86 oz | 6 of 9 | 1 | 2.4 h | 3.5 h |
+| Apr 13 | 9 | 35.7 oz | 3.97 oz | 8 of 9 | 0 | 2.6 h | 3.6 h |
+| Apr 14 | 9 | 33.9 oz | 3.77 oz | 5 of 9 | 0 | 2.5 h | 3.0 h |
+| Apr 15 | 8 | 31.5 oz | 3.94 oz | 4 of 8 | 1 | 3.1 h | 3.1 h |
+| **Apr 16** | **7** | **28.5 oz** | **4.08 oz** | **6 of 7** | **1** | **2.9 h** | **3.0 h** |
 
 ## Retrospective Accuracy
 
-The "Last Run" column scores prior run `20260412-224447` against actuals observed in the current export (horizon 22.9h, coverage 95%).
-The "Historical" column is the weighted mean across 7 stored retrospectives (2 full 24h, avg coverage 62%), reflecting the model versions that made those earlier predictions.
+The "Last Run" column scores prior run `20260413-202434` against actuals observed in the current export (horizon 24.0h, coverage 100%).
+The "Historical" column is the weighted mean across 8 stored retrospectives (3 full 24h, avg coverage 67%), reflecting the model versions that made those earlier predictions.
 Higher is better (0-100 scale).
 
 | Model | Last Run | Historical |
 | ----- | -------: | ---------: |
-| Agent Inference | 82.2 | 63.8 |
-| Latent Hunger State | 63.9 | 62.4 |
-| Slot Drift | 57.9 | 59.3 |
-| Analog Trajectory | 56.9 | 58.2 |
-| Survival Hazard | 55.5 | 60.0 |
-| Consensus Blend | 54.2 | 56.8 |
+| Agent Inference | 82.9 | 67.2 |
+| Latent Hunger State | 66.7 | 63.1 |
+| Analog Trajectory | 63.2 | 59.1 |
+| Slot Drift | 62.3 | 59.9 |
+| Survival Hazard | 56.3 | 59.3 |
+| Consensus Blend | 51.4 | 55.9 |
 
-Last Run scores are normalized to the observed window. Count and timing
-breakdowns are in `diagnostics.yaml`.
 
 ## Methodologies
 
@@ -204,14 +201,29 @@ only one or two models support are filtered out.
 
 ### Agent Inference
 
-Four-bucket cadence projection. The model collapses raw bottle feeds into feeding episodes using the shared clustering rule (73-minute base gap, 80-minute extension for small top-ups), then examines the most recent 7 days of episode-level history with exponential recency weighting (48-hour half-life).
+Four-bucket cadence projection. The model collapses raw bottle feeds
+into feeding episodes using the shared clustering rule (73-minute base
+gap, 80-minute extension for small top-ups), then examines the most
+recent 7 days of episode-level history with exponential recency
+weighting (48-hour half-life).
 
-Each inter-episode gap is tagged by the clock hour of the feed that starts the gap and assigned to one of four sub-periods: evening (19:00-22:00), deep night (22:00-03:00), early morning (03:00-07:00), and daytime (07:00-19:00). Within each sub-period, the recency-weighted median of observed gaps yields a characteristic gap duration. For this run: evening 3.77h, deep night 4.03h, early morning 2.95h, daytime 2.31h.
+Each inter-episode gap is tagged by the clock hour of the feed that
+starts the gap and assigned to one of four sub-periods: evening
+(19:00-22:00), deep night (22:00-03:00), early morning (03:00-07:00),
+and daytime (07:00-19:00). Within each sub-period, the recency-weighted
+median of observed gaps yields a characteristic gap duration. For this
+run: evening 3.82h, deep night 3.74h, early morning 2.64h, daytime
+2.59h.
 
-Starting from the cutoff, the forecast steps forward by applying the sub-period gap that matches the clock hour of each predicted feed's start. Feed count (8 episodes over 24 hours) aligns with the recency-weighted daily episode count of 7.7. Volume is a flat 4.0 oz per predicted episode, the recency-weighted median across recent episode volumes.
+Starting from the cutoff, the forecast steps forward by applying the
+sub-period gap that matches the clock hour of each predicted feed's
+start. Feed count (8 episodes over 24 hours) aligns with the
+recency-weighted daily episode count of 8.1. Volume is a flat 4.0 oz
+per predicted episode, the recency-weighted median across recent
+episode volumes.
 
 ---
 
-*Export: `export_narababy_silas_20260413.csv` · Dataset: `sha256:1820a6f3...`
-· Commit: `a1d53a2`
-· Generated: 2026-04-13 20:53:29*
+*Export: `export_narababy_silas_20260416.csv` · Dataset: `sha256:383bff93...`
+· Commit: `76e97cf`
+· Generated: 2026-04-16 23:00:34*

@@ -37,25 +37,25 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 # Per-feature weights for weighted Euclidean distance.
 # Order: last_gap, mean_gap, last_volume, mean_volume, sin_hour, cos_hour.
 # Higher weight = more influence on neighbor selection.
-# "gap_hour" profile: emphasizes gap cadence and time-of-day, de-emphasizes
-# volume. On the current export the baby's feeding schedule is consolidating,
-# making temporal regularity (gap rhythm and time-of-day) the strongest
-# retrieval cues while volume carries less discriminating signal.
-FEATURE_WEIGHTS = np.array([2.0, 2.0, 0.5, 0.5, 2.0, 2.0])
+# "gap_emphasis" profile: gap features carry double weight; volume and
+# time-of-day stay at baseline. Emphasizing gap over time-of-day beats the
+# prior gap_hour profile on the current export, where the baby's intra-day
+# cadence has become less hour-anchored than the gap rhythm itself.
+FEATURE_WEIGHTS = np.array([2.0, 2.0, 1.0, 1.0, 1.0, 1.0])
 
 # Lookback window for rolling mean features (hours).
 # Events within this window contribute to mean_gap and mean_volume.
-# 24h captures roughly a full day of feeds. Paired with gap_hour
-# weighting and broader recency (240h), the longer lookback gives
-# rolling means a stable daily base while gap_hour weighting ensures
-# retrieval keys on cadence and time-of-day over volume.
-LOOKBACK_HOURS = 24
+# 9h focuses rolling means on the most recent ~3 feeds, giving the query
+# state a sharper read on the current rhythm rather than a day-long average.
+# Paired with tight recency (36h), this keeps retrieval keyed on the baby's
+# immediate pattern instead of averaging across stale history.
+LOOKBACK_HOURS = 9
 
 # Number of nearest neighbors to retrieve.
-# k=5 wins the full canonical replay sweep on the current export. With
-# gap_hour weighting, moderate neighbor count balances sharpness with
-# coverage across the daily cadence variations.
-K_NEIGHBORS = 5
+# k=7 wins the full canonical replay sweep on the current export. Broader
+# neighbor averaging smooths individual trajectory noise while gap-emphasis
+# weighting still keeps retrieval selective on cadence.
+K_NEIGHBORS = 7
 
 # Minimum number of historical states with complete trajectories.
 MIN_COMPLETE_STATES = 10
@@ -64,11 +64,13 @@ MIN_COMPLETE_STATES = 10
 MIN_PRIOR_EVENTS = 3
 
 # Half-life for recency weighting of neighbor states (hours).
-# 240h (~10 days) keeps a broader pool of historical states available.
-# With k=3 and gap_hour weighting, selective retrieval handles recency
-# naturally (recent cadence-similar states are preferred by distance),
-# so the half-life can be wider without diluting quality.
-RECENCY_HALF_LIFE_HOURS = 240
+# 36h (~1.5 days) is the interior canonical optimum on the current export:
+# neighbor selection concentrates weight on the most recent states, which
+# is appropriate because the baby's feeding regime has shifted rapidly
+# (volumes rising, overnight gaps not lengthening). A quick same-axis
+# check at 12/18/24/36h confirms 36h beats tighter values, so the choice
+# is an interior optimum rather than a boundary winner.
+RECENCY_HALF_LIFE_HOURS = 36
 
 # Trajectory length aggregation method: "median" or "mean".
 # "median" remains best under canonical replay.
@@ -84,10 +86,10 @@ ALIGNMENT = "gap"
 # History source for state construction: "raw" or "episode".
 # "raw" keeps every bottle event. "episode" collapses close-together
 # bottle feeds into single feeding episodes before building states.
-# Raw history wins the canonical replay on the current export. The baby's
-# recent cluster feeding creates short-gap events that episode collapse
-# removes, but that raw history can match against historical cluster
-# patterns. Episode still wins the local diagnostic decisively.
+# Raw history wins the canonical replay on the current export by +1.8
+# headline points (70.5 vs 68.7). Episode still wins the local diagnostic
+# decisively, but canonical replay scores against raw bottle events, so
+# raw state history matches the scoring target more directly.
 HISTORY_MODE = "raw"
 
 # A trajectory is "complete" if it has at least one event this many

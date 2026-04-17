@@ -840,19 +840,21 @@ def main() -> None:
                 0.01,
                 0.02,
                 0.03,
-                0.04,
                 0.05,
                 0.1,
-                0.15,
                 0.2,
-                0.25,
                 0.3,
-                0.35,
                 0.4,
                 0.5,
                 0.6,
                 0.7,
                 0.8,
+                1.0,
+                1.2,
+                1.4,
+                1.6,
+                2.0,
+                3.0,
             ],
         },
         export_path=snapshot.export_path,
@@ -924,8 +926,8 @@ def main() -> None:
     log("  2. Multiplicative satiety produces meaningful volume-sensitive variation")
     log("  3. Circadian modulation adds no benefit on top of volume sensitivity")
     log("  4. Episode-level data improves all walk-forward metrics (~20%)")
-    log("  5. Internal gap1_MAE prefers higher satiety rates (~0.6); canonical")
-    log("     multi-window scoring prefers lower rates — metrics disagree on direction")
+    log("  5. Internal episode gap1_MAE prefers sr~0.33; canonical multi-window")
+    log("     scoring prefers sr~1.2 — metrics disagree on direction")
     log("  6. Volume-gap correlation is weaker at episode level (cluster artifact removed)")
     log("  7. Breastfeed merge has negligible impact on current data")
 

@@ -2,6 +2,88 @@
 
 Tracks behavior-level changes to the Analog Trajectory model. Add newest entries first.
 
+## Retune on new export: shorter lookback, tighter recency, gap emphasis | 2026-04-16
+
+### Problem
+
+The model's production constants (tuned on
+`exports/export_narababy_silas_20260413.csv`, headline 69.4) degraded to
+headline 66.6 on the new export
+(`exports/export_narababy_silas_20260416.csv`). Timing dropped from 51.8
+to 48.4 while count stayed roughly stable at 92.4. Per-window scores were
+diffusely soft rather than concentrated in any one cluster. The live
+forecast retrospective (score 63.2, count 83.5, timing 47.9, 9 predicted
+vs 8 actual) showed the same pattern: the previous config over-predicted
+the episode count and lagged on timing.
+
+### Research
+
+The full 4704-candidate canonical sweep found a joint combination that
+recovers +3.9 headline points:
+
+| Metric | Old production | New production |
+|--------|----------------|----------------|
+| Headline | 66.6 | 70.5 |
+| Count | 92.4 | 92.9 |
+| Timing | 48.4 | 54.1 |
+
+Four constants changed: lookback (`24h` to `9h`), weights (`gap_hour` to
+`gap_emphasis`), K (`5` to `7`), and recency (`240h` to `36h`). All top
+10 canonical candidates use raw history and k=7; 8 of 10 use the 9h
+lookback plus gap_emphasis weighting, with recency values concentrated at
+36h or 72h. This is a clear regime-level shift toward faster adaptation
+to recent patterns.
+
+`RECENCY_HALF_LIFE_HOURS=36` is the low boundary of the [36, 72, 120,
+240] grid. A targeted same-axis check at [12, 18, 24, 36] confirms 36h
+is an interior optimum rather than still climbing:
+
+| hl | Headline |
+|----|----------|
+| 12 | 66.03 |
+| 18 | 67.89 |
+| 24 | 68.84 |
+| 36 | 70.45 |
+| 72 | 69.59 |
+| 120 | ~68.5 |
+| 240 | ~67.5 |
+
+The flip from 240h (boundary winner for three consecutive exports) to an
+interior 36h optimum is the single most consequential change. It is
+consistent with the wider report context: volumes have risen to ~4 oz in
+the last three days, cluster feeding has become rare, and the baby's
+cadence has shifted enough that longer-ago states dilute the neighbor
+pool instead of enriching it.
+
+Raw history still leads episode by +1.8 headline points (70.5 vs 68.7).
+Gap and time_offset alignment are nearly tied at the top of the surface
+(70.5 vs 70.3); gap retains the lead by the same thin margin noted in
+recent exports.
+
+Episode history still wins the local diagnostic decisively (1.078h vs
+1.411h full_traj_MAE). The internal/canonical divergence pattern is
+unchanged — canonical replay scores against raw bottle events, which
+raw-history retrieval can match more directly.
+
+### Solution
+
+Ship the full canonical sweep winner:
+
+- `LOOKBACK_HOURS`: 24 -> 9
+- `FEATURE_WEIGHTS`: gap_hour [2,2,0.5,0.5,2,2] -> gap_emphasis [2,2,1,1,1,1]
+- `K_NEIGHBORS`: 5 -> 7
+- `RECENCY_HALF_LIFE_HOURS`: 240 -> 36
+- `HISTORY_MODE`: raw (unchanged)
+- `TRAJECTORY_LENGTH_METHOD`: median (unchanged)
+- `ALIGNMENT`: gap (unchanged)
+
+The direction of the changes is internally coherent: a 9h lookback
+focuses rolling means on the most recent ~3 feeds, gap_emphasis keeps
+volume and hour features at baseline instead of de-emphasizing volume,
+k=7 smooths neighbor trajectory noise, and a 36h half-life concentrates
+neighbor weight on the most recent ~1.5 days. The model now tracks
+emerging behavior rather than averaging across a longer history window.
+
 ## Retune on new export: longer lookback, more neighbors, gap alignment restored | 2026-04-13
 
 ### Problem

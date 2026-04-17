@@ -2,6 +2,73 @@
 
 Tracks behavior-level changes to the Latent Hunger model. Add newest entries first.
 
+## Raise SATIETY_RATE from 0.55 to 1.2 | 2026-04-16
+
+### Problem
+
+On the `20260416` export (five days of new data since the last tuning),
+production `SATIETY_RATE=0.55` scored headline 62.98 — 0.1 points off
+the 20260411 baseline but now clearly below a new interior peak. In the
+broader 7-day window the baby's pattern consolidated: episode count
+settled at 7–9 per day, per-episode volumes rose into a tight
+3.77–4.16 oz band (4 oz as the new normal per the agent insights), and
+cluster-feed events became rare. Under these tighter dynamics, the
+canonical landscape no longer climbs monotonically toward the
+constant-gap limit — a distinct non-degenerate peak emerged in the
+sr=1.0–1.35 range.
+
+### Research
+
+Ran a combined sweep (0.03–3.0, then refined 1.05–1.35) on the
+`20260416` export via `run_replay.py`. The landscape:
+
+| sr | headline | count | timing |
+|----|----------|-------|--------|
+| 0.03 | 63.957 | 85.385 | 48.380 |
+| 0.55 (prior) | 62.980 | 90.220 | 44.332 |
+| 0.7 | 63.582 | 90.759 | 44.948 |
+| 1.0 | 63.844 | 90.766 | 45.396 |
+| **1.2** | **64.079** | **90.811** | **45.777** |
+| 1.25 | 64.082 | 90.811 | 45.780 |
+| 1.5 | 63.936 | 90.788 | 45.532 |
+| 2.0 | 63.772 | 90.803 | 45.236 |
+| 3.0 | 63.679 | 90.760 | 45.096 |
+
+Two structural changes vs. the 20260411 sweep:
+
+1. **Interior peak replaces monotonic climb.** sr=1.20 (64.08) beats the
+   constant-gap limit at sr=3.0 (63.68). The model still earns its
+   differentiated design hypothesis, just at a higher saturation
+   regime — at sr=1.2, satiety effect is 0.70 for 1oz vs 0.99 for 4oz
+   (1.4x range, nearly saturated for typical feeds, still informative
+   for small snack bottles).
+2. **sr=0.55 is now a local minimum in the 0.4–1.2 arm.** The old
+   moderate plateau (0.40–0.70, 63.0–63.2) has flattened and been
+   overtaken by the new plateau at 1.0–1.35 (63.8–64.1).
+
+A half-life cross-check at sr=1.2 (72/120/168/240h) showed 168h remains
+optimal (64.08 vs 62.76 / 63.73 / 63.75). No change to
+`RECENCY_HALF_LIFE_HOURS`.
+
+### Solution
+
+Set `SATIETY_RATE=1.2`. Interior to the 1.0–1.35 plateau. Headline
++1.10 (62.98→64.08), timing +1.44 (44.33→45.78), count +0.59
+(90.22→90.81). All 26 windows scored at 100% availability.
+
+At sr=1.2 the model behaves as a near-constant-gap predictor for
+typical feeds (3.5–5 oz), while still producing materially different
+gaps for snack-sized feeds (1–2 oz → 0.70–0.91 satiety effect). That
+matches the current data: snack clusters are rare and when they occur
+the model should respond, but clean single feeds now dominate and
+shouldn't be split into volume-dependent sub-regimes.
+
+This is the fifth satiety-rate optimum shift in three weeks
+(0.05→0.55→0.18→0.55 monotonic-climbing→1.2 interior-peak). The
+canonical surface remains unstable across exports, but this shift is
+backed by a structural change in the landscape rather than a plateau
+drift.
+
 ## Raise SATIETY_RATE from 0.18 to 0.55 | 2026-04-11
 
 ### Problem

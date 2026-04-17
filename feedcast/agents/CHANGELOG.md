@@ -2,6 +2,49 @@
 
 Tracks behavior-level changes to the agent inference model. Add newest entries first.
 
+## Rewrite `model.py` as four-bucket projection | 2026-04-16
+
+### Problem
+
+The 2026-04-13 run adopted the four-bucket day-part split in
+`methodology.md` but did not update `model.py`, which still carried
+the two-bucket (overnight 19:00-07:00, daytime 07:00-19:00)
+implementation. The described method and the committed script
+disagreed, so every subsequent run had to re-derive the four-bucket
+logic ad-hoc instead of running the canonical script.
+
+### Research
+
+Running the four-bucket projection at the 2026-04-16T20:57:11
+cutoff over a 7-day lookback yields recency-weighted gap medians of
+evening 3.82h (n=4), deep night 3.74h (n=10), early morning 2.64h
+(n=8), and daytime 2.59h (n=34). Projecting forward places 8
+episodes over the 24-hour horizon, matching the recency-weighted
+daily episode count of 8.1.
+
+### Solution
+
+Rewrote `model.py` as the four-bucket projection described in
+`methodology.md` so the committed script produces the current
+forecast directly. Each inter-episode gap is classified by the
+clock hour of the feed that starts it; bucket medians use the same
+48-hour recency weighting as the prior two-bucket version; buckets
+with fewer than 3 gaps fall back to the overall median; the
+forecast steps forward from the cutoff using the sub-period gap
+that matches each predicted feed's start hour.
+
+First-feed conditional survival and 30%-threshold count calibration
+from the two-bucket implementation are not carried into this
+rewrite. The four-bucket projected count (8) matches the expected
+count (8.1) directly; conditional first-feed handling is listed as
+an open question in `strategy.md`.
+
+| Aspect               | Before                                      | After                                           |
+|----------------------|---------------------------------------------|-------------------------------------------------|
+| Day-part split       | 2 buckets (overnight 19-07, daytime 07-19)  | 4 buckets (evening, deep night, early morning, daytime) |
+| First-feed handling  | Conditional survival on day-part gaps       | Uniform bucket-median stepping from cutoff      |
+| Count calibration    | 30% threshold scaling of gap medians        | None (implicit count agreement observed)        |
+
 ## Four-bucket day-part split | 2026-04-13
 
 ### Problem

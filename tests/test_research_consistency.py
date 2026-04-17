@@ -74,6 +74,56 @@ class ResearchConsistencyTests(unittest.TestCase):
         self.assertIn(f"baseline {baseline_params}", output)
         self.assertIn(f"'LOOKBACK_DAYS': {updated_lookback}", output)
 
+    def test_agents_workspace_clean_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+            self._copy_tree(
+                "feedcast/agents",
+                repo_root / "feedcast/agents",
+            )
+            self._init_git_repo(repo_root)
+
+            issues = find_consistency_issues([], repo_root=repo_root)
+
+        self.assertEqual(issues, [])
+
+    def test_agents_model_change_requires_changelog(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+            agents_dir = repo_root / "feedcast/agents"
+            self._copy_tree("feedcast/agents", agents_dir)
+            self._init_git_repo(repo_root)
+
+            model_path = agents_dir / "model.py"
+            model_path.write_text(
+                model_path.read_text(encoding="utf-8") + "\n# tuning tweak\n",
+                encoding="utf-8",
+            )
+
+            issues = find_consistency_issues([], repo_root=repo_root)
+
+        output = "\n".join(issues)
+        self.assertIn(
+            "feedcast/agents: model.py changed without a matching CHANGELOG.md update",
+            output,
+        )
+
+    def test_agents_extra_python_files_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+            agents_dir = repo_root / "feedcast/agents"
+            self._copy_tree("feedcast/agents", agents_dir)
+            self._init_git_repo(repo_root)
+
+            (agents_dir / "research_helper.py").write_text(
+                "# exploration helper\n",
+                encoding="utf-8",
+            )
+
+            issues = find_consistency_issues([], repo_root=repo_root)
+
+        self.assertEqual(issues, [])
+
     def test_metadata_and_volatile_artifacts_are_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_root = Path(tmp_dir)

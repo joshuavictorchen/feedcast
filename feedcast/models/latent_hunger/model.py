@@ -41,12 +41,12 @@ MODEL_METHODOLOGY = load_methodology(__file__)
 HUNGER_THRESHOLD = 1.0
 
 # Multiplicative satiety rate: hunger_after = threshold * exp(-rate * volume).
-# Selected by canonical multi-window tuning on the 20260411 export.
-# The landscape climbs monotonically toward the constant-gap limit (sr>3),
-# but the 0.40–0.70 range is a moderate plateau that preserves volume
-# sensitivity. sr=0.55 is interior and has been at or near optimal on
-# 3 of the last 4 exports. See research.md for the sweep evidence.
-SATIETY_RATE = 0.55
+# Selected by canonical multi-window tuning on the 20260416 export.
+# The landscape now has a clear interior peak at sr=1.20 (headline 64.08),
+# with a plateau spanning sr=1.0-1.35 within 0.10 headline points. Higher
+# rates trade near-saturation of typical feeds for larger differentiation
+# between snack and full feeds. See research.md for the sweep evidence.
+SATIETY_RATE = 1.2
 
 # How many days of recent history to use for growth rate estimation.
 LOOKBACK_DAYS = 7
