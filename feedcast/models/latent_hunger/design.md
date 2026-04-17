@@ -35,13 +35,16 @@ multi-window tuning (`tune_model()` sweep). Growth rate is fit at
 runtime, so only the satiety rate needs to be stable across data
 windows. See `research.md` for the canonical sweep results.
 
-The canonical sweep selects a lower satiety rate than the internal
-walk-forward diagnostic prefers. The tuning surface is shallow — nearby
-values produce similar accuracy. The model retains meaningful volume
-sensitivity at the shipped rate, but the absolute effects are smaller
-than at higher rates, producing more uniform gap predictions that score
-better on canonical episode-count matching. See `research.md` for the
-sweep evidence and `model.py` for the current value.
+Canonical and internal diagnostics often disagree on the optimal
+satiety rate, and the direction of the disagreement is not stable
+across exports: on some exports the internal gap1_MAE optimum sits
+below the canonical optimum, on others it sits above. The canonical
+multi-window score is the shipping gate either way. The model retains
+meaningful volume sensitivity at the shipped rate — small feeds still
+get materially shorter predicted gaps — but the magnitude of volume
+differentiation in the typical feed range varies with where the
+canonical optimum lands on a given export. See `research.md` for the
+current sweep evidence and `model.py` for the current value.
 
 ## Circadian modulation: infrastructure only
 

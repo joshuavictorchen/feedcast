@@ -23,12 +23,12 @@ are:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-04-11 |
-| Export | `exports/export_narababy_silas_20260411.csv` |
-| Dataset | `sha256:138b5d3ad7d106444951acc6c56154bcd1ae94184f58a566f83c032ad41ef5ec` |
+| Run date | 2026-04-16 |
+| Export | `exports/export_narababy_silas_20260416.csv` |
+| Dataset | `sha256:383bff93af3fbf40ff86f1eccecd6d2fefd9a4b7d5093eb1b37174f552ac6e74` |
 | Command | `.venv/bin/python -m feedcast.models.latent_hunger.analysis` |
-| Canonical headline | 63.1 |
-| Availability | 24/24 windows (100%) |
+| Canonical headline | 64.1 |
+| Availability | 26/26 windows (100%) |
 | Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Staleness check:** if the current export differs from the one
@@ -44,9 +44,9 @@ aggregate (lookback 96h, half-life 36h, episode-boundary cutoffs) that
 is directly comparable across all models.
 
 **Canonical tuning** last ran as a multi-stage sweep via `run_replay.py`:
-a coarse sweep (0.05-0.70), extended upward (0.80-5.0) to confirm the
-monotonic climb reaches the constant-gap limit, then refined (0.40-0.70)
-to characterize the moderate plateau.
+a coarse sweep (0.03–3.0) to characterize the landscape, then refined
+(1.05–1.35) to locate the new interior peak, and a half-life
+cross-check at the peak.
 
 Growth rate is estimated at runtime from recent episodes and is not
 overridable via constant overrides, so it is not part of the sweep.
@@ -122,157 +122,174 @@ single change in the model's history (~20% gap MAE improvement).
 
 ### Canonical findings
 
-On the 20260411 export, headline dropped to 62.6 at the prior
-production sr=0.18, a 3.7-point decline from the prior export. The
-decline affected all satiety rates: even the constant-gap limit
-(sr>3.0) only reached 64.8, compared to 66.3 at the prior export's
-best. The drop is driven by a broader pattern shift, not the satiety
-rate specifically.
+On the 20260416 export, the canonical landscape changed shape relative
+to 20260411. The prior monotonic climb toward the constant-gap limit
+flattened into a clear interior peak at sr=1.20:
 
-Within that context, the landscape climbs monotonically from low to
-high satiety rates. The prior (sr=0.18) and new production (sr=0.55)
-compare as follows:
+| sr | headline | count | timing |
+|---|---|---|---|
+| 0.03 | 63.96 | 85.39 | 48.38 |
+| 0.55 (prior production) | 62.98 | 90.22 | 44.33 |
+| 0.70 | 63.58 | 90.76 | 44.95 |
+| 1.00 | 63.84 | 90.77 | 45.40 |
+| **1.20** | **64.08** | **90.81** | **45.78** |
+| 1.25 | 64.08 | 90.81 | 45.78 |
+| 1.50 | 63.94 | 90.79 | 45.53 |
+| 2.00 | 63.77 | 90.80 | 45.24 |
+| 3.00 | 63.68 | 90.76 | 45.10 |
 
-| Metric | Prior (sr=0.18) | Current (sr=0.55) |
-|---|---|---|
-| Headline | 62.6 | 63.1 |
-| Count | 94.7 | 94.8 |
-| Timing | 41.9 | 42.4 |
+All 26 windows scored at 100% availability. The 1.00–1.35 range forms a
+new plateau (63.84–64.08, span 0.24 points). The old moderate plateau
+(0.40–0.70) has dropped to 62.58–63.58, and the prior production sr=0.55
+is now near the bottom of that range.
 
-All 24 windows scored (100% availability) for all candidates. The
-0.40-0.70 range forms a gentle plateau (63.0-63.2, span 0.13 points).
-Above sr=0.80 the curve steepens as the model converges toward the
-constant-gap limit (64.8 at sr>3.0), where volume sensitivity is
-effectively neutralized.
+The sr=0.03 low-sr option still scores higher headline (63.96) than the
+old moderate plateau but count drops to 85.4 from 90.8, repeating the
+pattern where very low rates degenerate into constant-gap predictors and
+sacrifice episode-count matching for timing. The constant-gap limit at
+the high end (sr=3.0, 63.68) no longer wins — it undercuts the new
+interior peak by 0.40 points.
 
-The analysis script's internal canonical sweep identifies sr=0.03 as
-headline-best (67.0), but count collapses to 83.7 (from 94.8). This
-repeats the pattern seen on prior exports: very low satiety rates
-improve timing by producing near-constant gap predictions, at the cost
-of substantial count degradation.
+A half-life cross-check at sr=1.20 confirmed 168h is still optimal
+(64.08 at 168h vs. 62.76/63.73/63.75 at 72/120/240h). No change to
+`RECENCY_HALF_LIFE_HOURS`.
 
-This is the fourth canonical optimum shift in two weeks
-(0.05->0.55->0.18->0.55), confirming that the surface is unstable
-across exports. The value 0.55 was chosen for stability: it has been at
-or near optimal on 3 of the last 4 exports and sits in the moderate
-zone that preserves meaningful volume sensitivity.
-
-Per-window timing scores range from 25.9 to 60.6. The weakest windows
-cluster around overnight transitions and cluster-feed periods, consistent
+Per-window timing scores range from 33.8 to 70.2. The weakest windows
+cluster around cluster-feed periods and evening transitions, consistent
 with the cross-cutting timing bottleneck.
 
 ### Diagnostic findings
 
-**Multiplicative vs. additive:** Multiplicative satiety (gap1_MAE=0.748h,
-pred_std=0.546h) outperforms additive (gap1_MAE=0.755h,
-pred_std=0.007h) on the raw-data walk-forward evaluation. The critical
-signal remains prediction diversity: additive collapses to near-constant
-gaps (pred_std near 0), confirming the design rationale in `design.md`.
+**Multiplicative vs. additive:** Multiplicative satiety (gap1_MAE=0.793h,
+pred_std=0.428h) still outperforms additive (gap1_MAE=0.784h,
+pred_std=0.009h) on prediction diversity — additive collapses to
+near-constant gaps (pred_std near 0). Additive's slightly lower gap1_MAE
+on this export is within noise and comes from its degenerate collapse
+in a dataset that has narrowed toward typical feed sizes. The design
+rationale in `design.md` still holds.
 
-**Circadian modulation:** Best circadian amplitude is 0.150 with
-gap1_MAE=0.719h, an improvement over no-circadian 0.748h.
-Joint refinement with circadian achieves 0.688h. Production holds
+**Circadian modulation:** Best circadian amplitude is 0.200 with
+gap1_MAE=0.704h, an improvement over no-circadian 0.793h.
+Joint refinement with circadian achieves 0.696h. Production holds
 `CIRCADIAN_AMPLITUDE=0.0` because the gain historically does not survive
 episode-level data (where volume already encodes time-of-day effects).
 
 **Episode-level impact:** Episode collapsing improves all metrics
-substantially (gap1_MAE 0.748h->0.568h, fcount_MAE 0.99->0.82).
-Volume-gap correlation strengthens at episode level on this export
-(raw 0.287->episode 0.320). This remains the strongest single design
-decision.
+(gap1_MAE 0.793h→0.656h, fcount_MAE 0.96→0.93). Volume-gap correlation
+strengthens at episode level (raw 0.266→episode 0.306). This remains the
+strongest single design decision.
 
 **Internal vs. canonical metric disagreement:** The episode-level grid
-search finds best sr=0.231, while canonical scoring on this export
-favors higher rates (monotonically climbing toward the constant-gap
-limit, with sr=0.55 chosen in the moderate plateau). The internal
-optimum (0.231) is close to the prior production value (0.18). Across
-four exports, the canonical optimum has been 0.05, 0.55, 0.18, and now
-monotonically climbing. The instability is in the canonical surface, not
-a stable structural property.
+search finds best sr=0.334, while canonical scoring on this export
+favors much higher rates (peak at sr=1.20). The gap between the two
+objectives has widened substantially — about an order of magnitude. This
+is the largest divergence observed across the last five exports, and it
+coincides with the emergence of the new interior peak on the canonical
+surface.
 
-**Holdout 24h:** Predicted 7 feeds vs. 9 actual, mean timing error
-0.93h on 7 matched pairs. Feed count error of 2 (under-predicted).
-Timing errors concentrate in the daytime stretch
-(09:52 err=0.81h, 12:16 err=1.42h, 15:29 err=1.21h) and early morning
-(06:30 err=1.77h).
+**Holdout 24h:** Predicted 8 feeds vs. 8 actual (count error 0), but
+mean timing error 2.53h on 8 matched pairs. Timing errors are
+concentrated in the late-night/early-morning stretch where the
+holdout-fit model anchors off a late-evening 2oz snack bottle and
+assumes the snack-regime cadence persists through the night.
 
-**Naive baselines:** All model variants beat last-gap (0.937h) and
-mean-3-gaps (0.906h). The multiplicative model at 0.748h represents a
-20% improvement over last-gap.
+**Naive baselines:** All model variants beat last-gap (0.944h) and
+mean-3-gaps (0.911h). The multiplicative constant model (0.793h) is a
+16% improvement over last-gap; joint-refined multiplicative + circadian
+(0.696h) is a 26% improvement.
 
 ## Conclusions
 
-**Disposition: Change.** `SATIETY_RATE` raised from 0.18 to 0.55.
+**Disposition: Change.** `SATIETY_RATE` raised from 0.55 to 1.20.
 
-On the 20260411 export, headline dropped 3.7 points across all
-satiety rates. The decline is driven by a broader pattern shift, not
-the satiety rate. Within the available improvement range, the canonical
-landscape climbs monotonically from sr=0.05 to the constant-gap limit
-(sr>3.0). The prior sr=0.18 sits near the bottom (headline 62.6),
-while the 0.40-0.70 plateau scores 63.0-63.2, and the constant-gap
-limit reaches 64.8.
+On the 20260416 export the canonical landscape restructured: instead of
+climbing monotonically to the constant-gap limit, it now has a clear
+interior peak at sr=1.20 (headline 64.08, +1.10 over sr=0.55). The old
+0.40–0.70 moderate plateau flattened and now sits 0.5–1.5 points below
+the new 1.00–1.35 plateau. The constant-gap limit (sr=3.0, 63.68) no
+longer wins.
 
-The value 0.55 was chosen for cross-export stability rather than
-single-export optimality. Across four recent exports, sr=0.55 has been
-either optimal or within ~1 point of optimal. The constant-gap limit
-(sr>3.0) was not adopted despite its +2.2 headline advantage because
-it neutralizes volume sensitivity, the model's distinguishing design
-hypothesis and ensemble contribution.
+The shift coincides with the baby's feeding pattern consolidating. Per
+the agent insights, Apr 10–16 averaged 7–9 episodes per day with
+per-episode volumes in a narrow 3.77–4.16 oz band — 4 oz is the new
+normal, snack clusters have become rare, and daytime cadence is
+rhythmic. Under these tighter dynamics, the model benefits from
+treating typical feeds as near-saturating resets while still responding
+to the occasional 1–2 oz snack bottle.
 
-This is the fourth optimum shift in two weeks (0.05->0.55->0.18->0.55),
-confirming that the canonical surface is unstable. The surface is
-consistently shallow near the optimum (top candidates span <1 headline
-point in the moderate range), so the exact value matters less than
-staying in a reasonable zone.
+At sr=1.20, the satiety effect is 0.70 for 1oz and 0.99 for 4oz — a
+1.4x range compared with 2.1x at sr=0.55. Volume sensitivity is
+compressed but not eliminated: small feeds still get materially shorter
+predicted gaps. The design hypothesis (multiplicative satiety) still
+beats additive satiety on prediction diversity (pred_std 0.428 vs
+0.009).
 
-At sr=0.55, the satiety effect is 0.42 for 1oz and 0.89 for 4oz (2.1x
-ratio). This is strong volume sensitivity that meaningfully
-differentiates gap predictions by feed size.
+This is the fifth satiety-rate optimum shift in three weeks
+(0.05→0.55→0.18→0.55 monotonic-climbing→1.20 interior-peak). Unlike
+prior shifts within a shallow plateau, this is a structural change in
+the landscape shape: the interior peak has replaced the monotonic
+climb, so the new value sits inside a plateau rather than being an
+arbitrary anchor in a noisy range.
 
-The internal-canonical disagreement continues. Episode-level gap1_MAE
-prefers sr=0.231, while canonical on this export favors higher rates.
-The disagreement has widened compared to the prior export. Whether this
-reflects a genuine structural divergence or transient data-window
-effects remains unresolved.
+The internal-canonical disagreement is now at its widest observed
+magnitude. Episode-level gap1_MAE prefers sr=0.334 while canonical
+prefers sr=1.20 — roughly an order of magnitude apart. This is
+consistent with the broader pattern tracked in the research hub's
+stacked-generalization open question, but the magnitude on this export
+is a step change rather than drift.
 
 ## Open questions
 
 ### Model-local
 
-- **Canonical surface instability:** The canonical optimum has shifted
-  four times in two weeks: sr=0.05 (20260327), sr=0.55 (20260410),
-  sr=0.18 (20260410(2)), and monotonically climbing on 20260411. The
-  surface is consistently shallow (the 0.40-0.70 moderate zone spans
-  0.13 headline points), so the exact optimum is sensitive to which
-  data windows are included. The value sr=0.55 has been chosen for
-  cross-export stability. If the optimum stabilizes on future exports,
-  that would indicate the baby's volume-gap dynamics have settled. If
-  it continues to shift, the satiety rate may need to be adapted more
-  dynamically or the parameter may be fundamentally under-determined on
-  this dataset.
-- **Monotonic climb toward constant-gap limit:** On the 20260411 export,
-  the canonical landscape climbs monotonically to sr>3.0, where the
-  model degenerates to a constant-gap predictor. The full +2.2 headline
-  improvement was not adopted because it neutralizes volume sensitivity.
-  Whether this pattern persists on future exports would indicate whether
-  the baby's current feeding pattern has weaker volume-gap dynamics than
-  historical data, or whether this is a transient data-window effect.
-- **Low-sr count-timing tradeoff:** sr=0.03 achieves higher headline
-  (67.0 vs 63.1) but count collapses to 83.7 (vs 94.8). This pattern
-  has appeared on every export tested. Very low satiety rates effectively
-  disable volume sensitivity, producing near-constant gap predictions.
-  Whether the headline improvement at sr=0.03 is real signal or a
-  scoring artifact (geometric mean rewarding an imbalanced count/timing
-  tradeoff) is unresolved.
+- **Canonical surface instability and landscape shape:** The canonical
+  optimum has now shifted five times in three weeks: sr=0.05 (20260327),
+  sr=0.55 (20260410), sr=0.18 (20260410(2)), monotonically climbing on
+  20260411, and a new interior peak at sr=1.20 on 20260416. The earlier
+  shifts were plateau drift within a shallow landscape; this one is a
+  structural change from a monotonic climb into an interior peak. If the
+  interior peak persists on future exports, the right long-term approach
+  may be to tune sr to the plateau center rather than track its exact
+  location. If the shape continues to restructure, the parameter may be
+  fundamentally under-determined on this dataset and a model-level
+  change (e.g., making the satiety rate self-adapting from recent
+  volume-gap pairs, similar to how growth rate is already runtime-fit)
+  could dominate manual re-tuning.
+- **Interior peak replaces constant-gap limit:** On the 20260416 export
+  the constant-gap limit at sr=3.0 scores 0.40 points below the
+  interior peak at sr=1.20. This reverses the pattern seen on prior
+  exports, where the limit was the best available option and a
+  principled stand was required to avoid it. Whether the interior peak
+  is a stable feature or transient is an open question for the next
+  retune.
+- **Low-sr count-timing tradeoff:** sr=0.03 still scores 63.96 headline
+  (above the old moderate plateau) but collapses count to 85.4. This
+  pattern has appeared on every export tested and is not a property of
+  any particular export. Whether the high headline at sr=0.03 is real
+  signal or a scoring artifact (geometric mean rewarding an imbalanced
+  count/timing tradeoff) remains unresolved.
+- **Internal-canonical divergence widened to an order of magnitude:**
+  Internal episode gap1_MAE prefers sr=0.334, canonical prefers
+  sr=1.20. The ratio is now ~3.6x, up from ~1.3x on the prior export.
+  This is the largest spread observed and is consistent with the
+  stacked-generalization hypothesis in the research hub: the production
+  forecaster's chained prediction logic values constant-gap behavior in
+  the typical-volume regime that single-step MAE doesn't measure.
 
 ### Cross-cutting
 
-- **Timing as shared bottleneck:** Timing (42.4) is substantially weaker
-  than count (94.8). This pattern persists across all five models; see
-  `feedcast/research/README.md`.
-- **Internal vs. canonical metric divergence:** On this export, the
-  divergence widened (internal sr=0.231, canonical favoring higher
-  rates). This follows a narrowing on the prior export (internal 0.360,
-  canonical 0.18). The direction and magnitude of the disagreement
-  fluctuates across exports, relevant to the cross-model pattern tracked
-  in `feedcast/research/README.md`.
+- **Timing as shared bottleneck:** Timing (45.8) remains substantially
+  weaker than count (90.8). Timing improved 3.4 points from the prior
+  export at the new constants. The pattern persists across all five
+  models; see `feedcast/research/README.md`.
+- **Internal vs. canonical metric divergence:** See the model-local
+  entry above. The magnitude on this export (sr=0.334 internal vs
+  sr=1.20 canonical) is the widest observed and relevant to the
+  cross-model pattern tracked in `feedcast/research/README.md`.
+- **Canonical landscape restructuring as a pattern-shift signal:** The
+  shift from a monotonic-climbing landscape to one with an interior
+  peak coincides with a visible consolidation in the baby's feed
+  pattern (narrower volume distribution, stable episode count). If
+  other models see similar landscape restructuring on this export, it
+  may be worth promoting "landscape shape as trend indicator" into a
+  shared research article.

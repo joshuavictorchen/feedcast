@@ -2,6 +2,116 @@
 
 Tracks behavior-level changes to the Slot Drift model. Add newest entries first.
 
+## Narrower lookback, tighter threshold, near-uniform drift weighting | 2026-04-16
+
+### Problem
+
+The LOOKBACK=14 regime degraded on the 20260416 export: headline fell
+from 66.6 to 65.3 even before accounting for retrospective drift. The
+most recent retrospective scored 62.3 (count 84.4, timing 46.0) with the
+model predicting 6 episodes against 8 actual. Meanwhile the baby's recent
+pattern (Apr 10-15 episode counts 7, 7, 9, 9, 9, 8; median 9) was higher
+than the 14-day median of 8, and the baseline was consistently
+undercounting on Apr 13-14 windows (pred=6, actual=8-9).
+
+### Research
+
+560-candidate canonical sweep via `tune_model()` on
+`exports/export_narababy_silas_20260416.csv`, plus targeted boundary
+checks via the replay CLI at finer LOOKBACK, THRESHOLD, and DRIFT
+resolutions.
+
+LOOKBACK landscape (DRIFT=10, THRESHOLD=2.25):
+
+| LOOKBACK | Headline |
+|----------|----------|
+| 7        | 60.2     |
+| 8        | 66.0     |
+| 9        | 56.6     |
+| 10       | 68.3     |
+| 11       | 76.2     |
+| 12       | 75.3     |
+| 13       | 67.3     |
+| 14       | 67.1     |
+| 15       | 66.8     |
+| 16       | 57.3     |
+| 21       | 55.0     |
+| 28       | 63.5     |
+
+LOOKBACK=11 is a sharp interior peak: 10→68.3, 11→76.2, 12→75.3,
+13→67.3. The prior 20260413 boundary artifact at LOOKBACK=28 (67.8) has
+receded to 63.5 on this export. LOOKBACK=21 is 55.0, well below the peak.
+
+THRESHOLD gradient at LOOKBACK=11, DRIFT=10:
+
+| THRESHOLD | Headline |
+|-----------|----------|
+| 1.75      | 75.3     |
+| 2.00      | 76.0     |
+| 2.25      | 76.2     |
+| 2.50      | 73.6     |
+
+THRESHOLD=2.25 is interior.
+
+DRIFT gradient at LOOKBACK=11, THRESHOLD=2.25:
+
+| DRIFT | Headline |
+|-------|----------|
+| 3.0   | 73.2     |
+| 5.0   | 75.1     |
+| 7.0   | 75.9     |
+| 10.0  | 76.2     |
+| 14.0  | 76.2     |
+| 20.0  | 76.3     |
+| 30.0  | 76.2     |
+| 100.0 | 76.1     |
+
+DRIFT plateaus from 10 to 30+. The peak at 20 (76.3) is only +0.04 above
+DRIFT=10 (76.24). DRIFT=10 is selected as the smallest value on the
+plateau that preserves some recency weighting (oldest day of an 11-day
+window carries exp(-ln2 * 10/10) = 50% weight); going higher effectively
+disables drift tracking for marginal replay gain.
+
+| Constant | Before | After |
+|---|---|---|
+| `LOOKBACK_DAYS` | 14 | 11 |
+| `DRIFT_WEIGHT_HALF_LIFE_DAYS` | 2.5 | 10.0 |
+| `MATCH_COST_THRESHOLD_HOURS` | 3.0 | 2.25 |
+
+| Metric | Before | After | Delta |
+|---|---|---|---|
+| Headline | 65.3 | 76.2 | +10.9 |
+| Count | 92.3 | 95.6 | +3.3 |
+| Timing | 46.8 | 61.2 | +14.4 |
+| Availability | 26/26 | 26/26 | 0 |
+
+### Solution
+
+Narrower lookback (11 days) drops the oldest three days from the window
+as the baby's episode count has climbed into a 7-10 range with median 8
+(episode-level) over Apr 5-15. This matches the recent pattern more
+tightly than the 14-day view that included Apr 2-4.
+
+Tighter threshold (2.25h) rejects slot assignments that would exceed
+the observed maximum cost (~2.1h on most days) while still admitting
+almost every legitimate match. The prior 3.0h threshold was admitting
+noise that pulled drift estimates toward outliers.
+
+Near-uniform drift weighting (DRIFT=10) reflects that per-slot timing
+has been oscillating, not drifting linearly. At an 11-day window, the
+oldest day carries 50% of the newest day's weight. Going to higher
+values yields only ~0.1 headline and loses the ability to react if a
+real trend emerges. The plateau from DRIFT=10 upward is a signal that
+the model's linear-drift hypothesis is not carrying signal on current
+data; DRIFT=10 is a principled compromise between replay gain and
+forward-looking adaptability.
+
+Timing improved +14.4 (the primary gain), count improved +3.3. The
+largest per-window improvements concentrate on the Apr 14 midday cutoffs
+where the baseline collapsed to head 43-58 (predicting 5-6 episodes for
+days with 8-9 actual); the new constants lift those same windows to
+69-78.
+
 ## Wider lookback, faster drift for template stability | 2026-04-13
 
 ### Problem

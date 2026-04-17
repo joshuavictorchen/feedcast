@@ -2,6 +2,86 @@
 
 Tracks behavior-level changes to the Survival Hazard model. Add newest entries first.
 
+## Soften both shapes sharply for more variable feeding | 2026-04-16
+
+### Problem
+
+The 20260416 export (28 new rows vs the 20260413 export) shifted the
+canonical replay landscape substantially. With the prior constants
+(ON=6.0, DT=1.75), the new export scored 63.95 headline (-4.4 vs the
+68.3 recorded on 20260413). Timing degraded most (50.1 to 44.7) while
+count held (94.2 to 93.3). Per-window inspection showed the highest-
+weight recent windows scored 45-57 headline with large timing errors,
+and the shipped model routinely overpredicted (pred 9-10 vs actual 7-8).
+
+### Research
+
+Ran three sweep rounds on `exports/export_narababy_silas_20260416.csv`:
+
+1. Coarse 56-candidate grid (OVERNIGHT 4.5-8.0, DAYTIME 1.0-3.0):
+   best at (4.5, 1.25) headline 65.60 (+1.65). Every top-10 candidate
+   had DT <= 1.5 and OS <= 6.5. Boundary winner on OS.
+2. Fine 40-candidate grid (OVERNIGHT 3.0-5.25 x 0.25-0.5, DAYTIME
+   1.0-1.5): best at (3.0, 1.5) headline 67.41 (+3.46). Still a
+   boundary winner on OS.
+3. Extension 24-candidate grid (OVERNIGHT 1.5-3.0, DAYTIME 1.25-1.75):
+   best at (2.75, 1.625) headline 68.52 (+4.57). OS=2.75 is interior,
+   with OS=2.5 scoring 67.76 and OS=3.0 scoring 67.79. DT=1.625 is
+   interior: DT=1.5 scores 67.98 and DT=1.75 scores 67.86.
+
+The 198-candidate analysis sweep (grid extended to include OS 2.0-2.75)
+confirms (2.75, 1.625) as the unambiguous best. Top 5 all at OS=2.75
+(spread 0.7 headline).
+
+Episode-level MLE: overnight 6.02, daytime 3.03. The overnight shape
+diverges from canonical by 3.3 units, the largest gap in recent
+history. The MLE is stable vs prior export (was 5.96), so the shift is
+entirely in what recent windows reward, not in the underlying full-
+history distribution.
+
+| Metric | Previous (6.0, 1.75) | Updated (2.75, 1.625) | Delta |
+|---|---|---|---|
+| Headline | 63.95 | 68.52 | +4.57 |
+| Count | 93.27 | 91.33 | -1.94 |
+| Timing | 44.66 | 51.73 | +7.07 |
+
+Availability unchanged at 26/26.
+
+The improvement concentrates on the most recent high-weight windows.
+The two highest-weight windows (04-15T20:57 wt=1.0 and 04-15T17:42
+wt=0.94) improved from 45.8 and 45.5 to 72.4 and 64.3 respectively.
+Timing on the top-weight window went from 22.8 to 59.8.
+
+Holdout (04/15 20:57 cutoff) predicted 10 vs actual 9 feeds with 2.86h
+mean timing error. The first-gap prediction was 1.9h early (22:04 vs
+23:59 actual), and that error propagated through the chain. The
+holdout day appears to have been unusually irregular; the canonical
+aggregate is the primary shipping evidence, not this single day.
+
+### Solution
+
+Updated production shapes:
+
+- `OVERNIGHT_SHAPE`: 6.0 to 2.75
+- `DAYTIME_SHAPE`: 1.75 to 1.625
+
+Both shapes moved sharply toward the exponential (memoryless) boundary,
+reflecting a baby whose feeding has become markedly less predictable
+over the most recent 96-hour window. The day-part split is narrower
+but still present (OS=2.75 vs DT=1.625, both > 1 so hazard still
+increases with elapsed time).
+
+Extended the analysis script's `OVERNIGHT_SHAPE` grid downward
+(added 2.0, 2.25, 2.5, 2.75) so the chosen value is reachable from a
+single recorded sweep. The 154-candidate grid's previous lower bound
+(3.0) would have missed the true optimum.
+
+The overnight shape oscillation (4.75 to 7.5 to 4.5 to 6.0 to 2.75)
+has widened rather than stabilized. The 20260413 conjecture that 6.0
+was "structurally anchored" by MLE convergence does not survive this
+export: canonical and MLE have diverged again, with canonical now
+preferring shapes 3 units softer than the descriptive fit.
+
 ## Re-tune both shapes for shifted day-part patterns | 2026-04-13
 
 ### Problem

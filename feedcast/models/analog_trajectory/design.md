@@ -10,12 +10,12 @@ is a full canonical replay sweep through `tune_model()`. The local
 | Parameter | Rationale |
 | --------- | --------- |
 | HISTORY_MODE | Raw history preserves cluster-internal feeds, which are needed for neighbor matching during periods of cluster feeding. Episode history still wins the local diagnostic decisively, but canonical replay currently favors raw |
-| LOOKBACK_HOURS | A 24-hour lookback captures roughly a full day of feeds, giving rolling means a stable daily base. Paired with gap_hour weighting and broader recency, the longer window smooths intra-day variation while gap_hour weighting keeps retrieval keyed on cadence and time-of-day |
-| FEATURE_WEIGHTS | Gap_hour weighting emphasizes gap cadence and time-of-day over volume. As the baby's schedule consolidates, temporal regularity is a stronger retrieval cue than feed size |
-| K_NEIGHBORS | k=5 balances sharpness with coverage, providing enough neighbor diversity to handle daily cadence variations while still favoring cadence-similar states |
-| RECENCY_HALF_LIFE_HOURS | Broader recency (240h, ~10 days) keeps enough historical states available for selective (k=3) retrieval. Distance-based neighbor selection handles recency naturally |
+| LOOKBACK_HOURS | A 9-hour lookback focuses rolling means on the most recent ~3 feeds, giving the query state a sharp read on the current rhythm rather than a day-long average. Paired with tight recency, this keeps retrieval keyed on the immediate pattern |
+| FEATURE_WEIGHTS | Gap_emphasis doubles the weight on last_gap and mean_gap while keeping volume, hour, and baseline features at weight 1. Gap cadence remains the strongest retrieval cue on the current export; volume and time-of-day contribute at baseline rather than being suppressed or elevated |
+| K_NEIGHBORS | k=7 wins the current canonical sweep. Broader neighbor averaging smooths individual trajectory noise while gap-emphasis weighting still keeps retrieval selective on cadence |
+| RECENCY_HALF_LIFE_HOURS | 36h (~1.5 days) is the interior canonical optimum. Tight recency concentrates neighbor weight on the most recent states, appropriate because the baby's feeding regime has shifted rapidly between exports. A targeted check at [12, 18, 24, 36] confirms 36h is interior |
 | TRAJECTORY_LENGTH_METHOD | Median is more robust than mean on variable-length neighbor trajectories |
-| ALIGNMENT | Gap alignment leads on the current export, regaining its historical position after a single-export time_offset preference. Gap alignment blends inter-event gaps step-by-step and rolls forward from the cutoff |
+| ALIGNMENT | Gap alignment leads on the current export by a thin margin (+0.2 headline points vs time_offset). The axis is effectively tied. Gap alignment blends inter-event gaps step-by-step and rolls forward from the cutoff |
 
 ## History source
 
@@ -27,9 +27,10 @@ creates short-gap events that episode collapse removes. Raw history
 preserves these patterns and lets the neighbor search match against
 historical cluster feeds.
 
-The raw/episode margin on canonical replay is narrow (+0.5 headline
-points). This choice has oscillated between exports and may flip again
-as the baby's patterns evolve. See `research.md` for specific numbers.
+The raw/episode margin on canonical replay is +1.8 headline points on
+the current export (70.5 vs 68.7). This choice has oscillated between
+exports and may flip again as the baby's patterns evolve. See
+`research.md` for specific numbers.
 
 ## Feature selection and weighting
 
@@ -42,28 +43,28 @@ Each state uses six features:
 - `sin_hour`
 - `cos_hour`
 
-The shipped weight profile is gap_hour (`[2, 2, 0.5, 0.5, 2, 2]`),
-which emphasizes gap cadence and time-of-day while de-emphasizing volume.
-On the current export, the baby's feeding schedule is consolidating,
-making temporal regularity (gap rhythm and time-of-day) the strongest
-retrieval cues. Volume carries less discriminating signal. The diagnostic
-sweep still prefers means_only, but canonical replay selects gap_hour on
-the current export. See `research.md` for the specific comparison.
+The shipped weight profile is gap_emphasis (`[2, 2, 1, 1, 1, 1]`),
+which doubles the weight on last_gap and mean_gap while keeping all
+other features at baseline. Gap cadence remains the dominant retrieval
+cue on the current export; the prior gap_hour profile's additional
+volume de-emphasis and hour emphasis no longer help. The diagnostic
+sweep still prefers means_only, but canonical replay selects
+gap_emphasis. See `research.md` for the specific comparison.
 
 ## Lookback and recency
 
-A 24-hour lookback window captures roughly a full day of feeds, giving
-rolling means a stable daily base. Paired with gap_hour weighting and
-broader recency (240h), the longer lookback smooths intra-day variation
-while gap_hour weighting keeps retrieval keyed on cadence and
-time-of-day. Broader recency keeps enough historical states available
-for selective (k=5) retrieval.
+A 9-hour lookback window focuses rolling means on the most recent ~3
+feeds, giving the query state a sharp read on the current rhythm
+rather than a day-long average. Paired with tight recency (36h),
+retrieval keys on the baby's immediate pattern rather than smoothing
+across longer history.
 
 Neighbor weights are `recency / (distance + epsilon)`. The recency
-half-life is set broad (240h, ~10 days). With k=5 neighbors,
-distance-based selection naturally favors recent, cadence-similar states;
-the broader half-life avoids starving the retrieval pool. See `model.py`
-for the current values.
+half-life is set tight (36h, ~1.5 days). With k=7 neighbors, tight
+recency concentrates weight on the most recent states while still
+retrieving enough candidates for stable blending. A targeted
+same-axis check at [12, 18, 24, 36] confirms 36h is an interior
+optimum on the current export. See `model.py` for the current values.
 
 ## Alignment and trajectory length
 

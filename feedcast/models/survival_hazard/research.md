@@ -23,12 +23,12 @@ day-part-specific Weibull hazards. The key research questions are:
 
 | Field | Value |
 |---|---|
-| Run date | 2026-04-13 |
-| Export | `exports/export_narababy_silas_20260413.csv` |
-| Dataset | `sha256:1820a6f33b499f22c5adbfc8bbb0538fca2366fbf4661452b57fddd31a0a6d8d` |
+| Run date | 2026-04-16 |
+| Export | `exports/export_narababy_silas_20260416.csv` |
+| Dataset | `sha256:383bff93af3fbf40ff86f1eccecd6d2fefd9a4b7d5093eb1b37174f552ac6e74` |
 | Command | `.venv/bin/python -m feedcast.models.survival_hazard.analysis` |
-| Canonical headline | 68.3 |
-| Availability | 25/25 windows (100%) |
+| Canonical headline | 68.5 |
+| Availability | 26/26 windows (100%) |
 | Full output | [`artifacts/research_results.txt`](artifacts/research_results.txt) |
 
 > **Staleness check:** if the current export differs from the one
@@ -47,13 +47,14 @@ for a fixed constant set and keeps the canonical run practical.
 
 **Canonical tuning** sweeps `OVERNIGHT_SHAPE` and `DAYTIME_SHAPE`
 jointly via `tune_model()`. The current sweep is a mixed-resolution
-154-candidate grid:
+198-candidate grid:
 
-- `OVERNIGHT_SHAPE`: `3.0, 3.5, 4.0, 4.25, 4.5, 4.75, 5.0, 5.25, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0`
+- `OVERNIGHT_SHAPE`: `2.0, 2.25, 2.5, 2.75, 3.0, 3.5, 4.0, 4.25, 4.5, 4.75, 5.0, 5.25, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0`
 - `DAYTIME_SHAPE`: `1.0, 1.25, 1.5, 1.625, 1.75, 1.875, 2.0, 2.5, 3.0, 3.5, 4.0`
 
-The original 40-candidate grid bottomed out at the lowest-tested
-corner, so the wider grid is the authoritative search.
+The grid has been extended downward on overnight twice: the original
+40-candidate grid bottomed out on the low corner, and the 20260416
+sweep found the optimum below the 154-candidate grid's OS=3.0 floor.
 Scale is still estimated at runtime; only the fixed shape parameters
 are tuned canonically.
 
@@ -115,31 +116,32 @@ arm depends on the later event's volume.
 
 ### Canonical findings
 
-The current production constants (`OVERNIGHT_SHAPE=6.0`,
-`DAYTIME_SHAPE=1.75`) score:
+The current production constants (`OVERNIGHT_SHAPE=2.75`,
+`DAYTIME_SHAPE=1.625`) score:
 
 | Metric | Score |
 |---|---|
-| Headline | 68.3 |
-| Count | 94.2 |
-| Timing | 50.1 |
+| Headline | 68.5 |
+| Count | 91.3 |
+| Timing | 51.7 |
 
-All 25 windows scored (100% availability). Headline improved +4.0 over
-the prior constants (4.5/3.0) on the same export. All three sub-metrics
-improved: count +0.9, timing +5.5.
+All 26 windows scored (100% availability). Headline improved +4.57
+over the prior constants (6.0/1.75) on the same export. Timing gained
++7.07, count traded -1.94. The improvement concentrates on the
+highest-weight recent windows: the top two windows by weight
+(04-15T20:57 and 04-15T17:42) went from headline 45.8 and 45.5 to 72.4
+and 64.3 respectively.
 
-The 154-candidate canonical sweep confirms the current constants as
-near-best. The best candidate (`OVERNIGHT_SHAPE=8.0`,
-`DAYTIME_SHAPE=1.0`) gains +0.9 headline but trades 3 count points
-(94.2 to 91.1) for timing (50.1 to 53.0). DT=1.0 is the structural
-boundary (exponential, memoryless), so the sweep does not extend below
-it. The top candidates at DT=1.75 span a broad plateau (68.0-68.3)
-from OVERNIGHT 5.5 to 8.0.
+The 198-candidate canonical sweep identifies the current constants as
+the unambiguous best. Top 5 all sit at OS=2.75 across DT=1.5-1.875,
+spread 0.7 headline. The chosen point is interior in both dimensions:
+OS=2.5 scores 67.76 and OS=3.0 scores 67.79; DT=1.5 scores 67.98 and
+DT=1.75 scores 67.86.
 
-The weakest canonical windows are concentrated on 2026-04-10: the
-12:16 window scores headline 46.4 with timing 25.5. The strongest
-windows are the most recent (April 12), with the highest-weight
-window (19:15, weight 1.0) scoring 82.4 headline.
+The weakest canonical windows are concentrated on 2026-04-13 (55.2
+headline at 00:10). The strongest windows are April 13-14 mid-day,
+with timing scores in the 60-71 range. The highest-weight window
+(04-15T20:57, weight 1.0) scores 72.4 headline.
 
 ### Diagnostic findings
 
@@ -149,137 +151,161 @@ and naive baselines on one-step walk-forward gap MAE:
 
 | Model | gap1 MAE |
 |---|---|
-| Naive last-gap | 0.937h |
+| Naive last-gap | 0.940h |
 | Naive mean-3-gaps | 0.906h |
-| Discrete hazard | 0.758h |
-| Plain Weibull | 0.772h |
-| Day-part split Weibull | 0.705h |
+| Discrete hazard | 0.763h |
+| Plain Weibull | 0.774h |
+| Day-part split Weibull | 0.697h |
 
-This still supports the overnight/daytime regime split in `design.md`.
+This still supports the overnight/daytime regime split in `design.md`
+at the distribution level, even though the production shapes are now
+much softer than the raw-fit values would suggest.
 
-**Episode history remains essential:** Raw bottle-only events (270)
-collapse to 238 episode events, absorbing 32 cluster feeds. The direct
+**Episode history remains essential:** Raw bottle-only events (298)
+collapse to 263 episode events, absorbing 35 cluster feeds. The direct
 day-part Weibull fits sharpen materially after collapsing:
-overnight `4.98 -> 5.96`, daytime `2.61 -> 3.47`. That is the cleanest
-evidence that raw feeds were contaminating the gap distribution with
-cluster-internal noise.
+overnight `5.25 -> 6.02`, daytime `2.56 -> 3.03`. That remains the
+cleanest evidence that raw feeds were contaminating the gap
+distribution with cluster-internal noise.
 
-**Internal fit and canonical replay have partially converged:** The
-episode-level MLE fit prefers shapes (`5.96`, `3.47`), while canonical
-replay selects (`6.0`, `1.75`). The overnight shape converged for the
-first time: MLE 5.96, production 6.0. The daytime shape diverges (MLE
-3.47 vs production 1.75), consistent with the established pattern where
-the production forecaster's chained-median mechanics prefer softer
-daytime shapes than the raw distribution fit.
+**Internal fit and canonical replay have re-diverged sharply:** The
+episode-level MLE fit prefers shapes (`6.02`, `3.03`), while canonical
+replay selects (`2.75`, `1.625`). The overnight gap is now 3.3 shape
+units, the largest in the tracked history. This is a reversal of the
+20260413 convergence (MLE 5.96, canonical 6.0), and the MLE itself has
+not moved meaningfully (5.96 -> 6.02). All of the divergence comes
+from canonical replay preferring much softer shapes over the last 96h.
 
-The overnight convergence is a structural improvement over prior
-exports, where MLE and canonical disagreed on overnight by 1-3 shape
-units. The convergence suggests that 6.0 is well-anchored as the
-baby's current overnight regularity rather than an artifact of replay
-window weighting.
+The contributor analysis from prior exports still applies, but with a
+sharper distinction:
 
-The contributor analysis from prior exports still applies:
-
-1. *Data window.* The episode-level fit uses all 237 gaps in the full
+1. *Data window.* The episode-level fit uses all 262 gaps in the full
    export. Canonical replay optimizes over the last ~96h with 36h
-   half-life. The baby's feeding patterns shift with growth, so
-   full-history MLE and recent-window replay describe different regimes.
+   half-life. On this export the recent 96h appears to deviate
+   markedly from the full-history distribution: recent feeds are more
+   irregular than the baby's long-run pattern.
 
 2. *Model compensation.* The production forecaster chains deterministic
    medians, re-estimates scale at runtime, and uses conditional survival
-   for the first feed. These mechanics pull optimal shapes away from
-   the MLE. The daytime divergence (MLE 3.47 vs production 1.75) is
-   consistent with this effect.
+   for the first feed. Softer shapes dampen the conditional-survival
+   response to elapsed time, which helps when recent inter-episode gaps
+   are variable enough that the MLE's sharper peaks misfire.
 
 **Half-life trade-off stays real:** In the episode-level walk-forward
-diagnostic, `48h` and `120h` tie for best on gap1 MAE (`0.621h`) while
-the current `168h` is best on feed-count MAE (`0.97`). The gap1
-difference is negligible (0.003h), while the feed-count advantage of
-`168h` is substantial (0.97 vs 1.51).
+diagnostic, the current `168h` is best on both gap1 MAE (`0.631h`) and
+feed-count MAE (`0.90`). All half-lives score within 0.02h on gap1,
+but `168h` is materially better on feed-count vs `48h` (`0.90` vs
+`1.31`).
 
 **Volume overlay remains rejected:** On episode-level data, the scalar
-AFT volume overlay is statistically significant by LR test (`6.762`),
-but every positive beta worsens walk-forward performance relative to the
-no-volume baseline. This is a consistent repeat of prior results:
-"volume is real" does not imply "this overlay helps."
+AFT volume overlay is statistically significant by LR test (`14.643`,
+stronger than the prior export's 6.76), but every positive beta worsens
+walk-forward performance relative to the no-volume baseline. The
+stronger LR signal does not translate to better forecasts under the
+tested formulation.
 
 **Breastfeed merge still does nothing structural:** Bottle-only and
 breastfeed-merged inputs produce identical episode boundaries on the
-current export. Only 3 episode volumes change, and because the current
-production model does not use a volume covariate, merge policy has no
-effect on its forecasts.
+current export. Only a handful of episode volumes differ, and because
+the current production model does not use a volume covariate, merge
+policy has no effect on its forecasts.
 
-**Holdout: count and timing both improved.** The shipped model
-predicts 9 feeds vs. 9 actual in the most recent 24h holdout (perfect
-count), with 0.54h mean timing error on the 9 matched pairs. This is a
-marked improvement from the prior export (8 vs 11 actual, 3 count miss).
-The count improvement reflects both the shape changes and the baby's
-feeding frequency on this holdout day aligning with the model's
-7-day lookback window. The persistent count miss from prior exports
-does not appear on this holdout.
+**Holdout: large timing error on an irregular day.** The shipped model
+predicts 10 feeds vs 9 actual in the most recent 24h holdout (count
+error 1), with 2.86h mean timing error on the 9 matched pairs. The
+first-feed prediction missed by 1.9h (22:04 predicted vs 23:59 actual),
+and that error propagates through the deterministic median chain. The
+holdout day appears unusually irregular compared with the 96h window
+used in canonical evaluation: the same constants produce large timing
+gains on the aggregate (51.7 vs 44.7 baseline) while fitting this
+single day poorly. The canonical aggregate is the shipping gate, not
+this single day.
 
 ## Conclusions
 
-**Disposition: Re-tuned.** `OVERNIGHT_SHAPE` changed from `4.5` to
-`6.0`. `DAYTIME_SHAPE` changed from `3.0` to `1.75`.
+**Disposition: Re-tuned.** `OVERNIGHT_SHAPE` changed from `6.0` to
+`2.75`. `DAYTIME_SHAPE` changed from `1.75` to `1.625`.
 
-The 20260413 export (18 new rows vs the 20260411(1) export) shifted
-the canonical replay landscape substantially. With the prior shapes
-(4.5/3.0), the new export scored 64.2 headline. With the updated shapes
-(6.0/1.75), it scores 68.3 (+4.0). All three sub-metrics improved:
-count +0.9, timing +5.5.
+The 20260416 export (28 new rows vs the 20260413 export) shifted the
+canonical replay landscape toward much softer shapes. With the prior
+constants (6.0/1.75), the new export scored 63.95 headline. With the
+updated constants (2.75/1.625), it scores 68.52 (+4.57). Timing drove
+the gain (+7.07), count traded slightly (-1.94). The improvement
+concentrates on the highest-weight recent windows, where the baseline
+scored in the 45-57 range and the new constants score 64-72.
 
-Both shapes sit on broad plateaus: OVERNIGHT 5.5-7.5 at DT=1.75 (all
-score 68.0+), and DAYTIME 1.5-2.0 across most overnight values. The
-constants were chosen at plateau centers to reduce sensitivity to the
-next data shift.
+The chosen point is a clear interior optimum on a tight plateau: the
+top 5 candidates all sit at OS=2.75 across DT=1.5-1.875 (spread 0.7
+headline). Neighbors at OS=2.5 and OS=3.0 score 0.7 below. The plateau
+is noticeably narrower than in prior tunes.
 
-The overnight shape (6.0) converges with the episode-level MLE (5.96)
-for the first time. Prior exports showed MLE/canonical disagreement of
-1-3 shape units for overnight. This convergence suggests 6.0 is
-structurally anchored. The overnight oscillation (4.75 to 7.5 to 4.5
-to 6.0) may be stabilizing: 6.0 is near the center of the historical
-range and is supported by both fitting approaches.
+The overnight shape (2.75) diverges sharply from the episode-level MLE
+(6.02). The 20260413 conjecture that overnight 6.0 was "structurally
+anchored" by MLE convergence does not survive this export: the MLE has
+barely moved (5.96 to 6.02) but canonical replay has dropped 3.3 shape
+units. Either the recent 96h of feeding is genuinely more irregular
+than the long-run distribution, or the production forecaster's chain
+dynamics interact with recent gap variability in a way the MLE does
+not capture.
 
-The daytime shape (1.75) diverges from MLE (3.47) in the expected
-direction: the production forecaster's chained-median mechanics prefer
-softer daytime shapes. DT=1.75 is the same value that was optimal on
-the 20260327 export, suggesting it may be a more stable point for
-daytime than the 3.0 from the brief April 10-11 period.
+The daytime shape (1.625) is a mild softening of the prior 1.75 value
+and sits in the same plateau region that has been favored since
+20260327 (DT=1.75 then and at intermediate exports). DT=1.625 was
+already a grid value; canonical selects it over 1.75 by 0.7 headline.
+
+The overnight oscillation (4.75 to 7.5 to 4.5 to 6.0 to 2.75) has not
+stabilized. Each new export in the last month has shifted the
+canonical overnight optimum by at least 1.5 shape units, and the
+absolute range has widened. This is a live signal that the
+fixed-shape architecture may be chasing short-window variability that
+a shape-adaptive or longer-window formulation could absorb more
+stably.
 
 ## Open questions
 
 ### Model-local
 
-- **Overnight shape oscillation may be stabilizing.** The sequence
-  (4.75 to 7.5 to 4.5 to 6.0) placed the overnight shape near the
-  center of its historical range and at the MLE convergence point. If
-  subsequent exports confirm that 6.0 +/- 0.5 remains optimal, the
-  oscillation concern is resolved. If the shape jumps again, the
-  fixed-shape architecture may need structural changes (e.g., adaptive
-  shape estimation, wider lookback for shape).
-- **Holdout count miss resolved on this export (9 vs 9).** The prior
-  persistent count miss (8 vs 11) did not recur. The improvement may
-  reflect the shape changes, or the baby's feeding frequency on this
-  holdout day may simply align with the model's lookback. If the count
-  miss returns on subsequent exports, `LOOKBACK_DAYS` or model
-  structure may need revisiting.
+- **Overnight shape oscillation has widened.** The sequence
+  (4.75 to 7.5 to 4.5 to 6.0 to 2.75) now spans 4.75 shape units. The
+  prior export's convergence with MLE did not hold. If subsequent
+  exports continue to move overnight by >=1.5 units per week, the
+  fixed-shape architecture is the likely root cause. Candidate
+  interventions: adaptive shape estimation within the lookback window,
+  a longer lookback for shape (to absorb week-to-week noise), or a
+  shape floor/ceiling to bound the oscillation. Each changes the
+  model structure, not just a constant.
+- **Holdout fit is poor on an apparently irregular day.** The shipped
+  model predicts 10 vs 9 actual feeds with 2.86h mean timing error, a
+  large regression from prior holdouts (0.54h on 20260413). The
+  first-feed conditional-survival miss (~1.9h) propagates through the
+  deterministic median chain. This is one day and should not
+  independently drive tuning, but if successive holdouts show the same
+  pattern, the chained-median forecaster may be too brittle when the
+  first gap is mis-predicted.
 - **Can volume help under a different formulation?** The scalar AFT
-  overlay is decisively bad. A residual or regime-specific volume term
-  may still be worth testing, but it should be treated as a new model
-  idea, not a tweak to the rejected overlay.
+  overlay is decisively bad (LR 14.6 significant, but every positive
+  beta worsens walk-forward). A residual or regime-specific volume
+  term may still be worth testing, but it should be treated as a new
+  model idea, not a tweak to the rejected overlay.
 
 ### Cross-cutting
 
-- **MLE/canonical have partially converged for this model.** Overnight
-  shape converged (MLE 5.96, production 6.0) for the first time.
-  Daytime still diverges (MLE 3.47, production 1.75), consistent with
-  the production forecaster's mechanics preferring softer shapes. The
-  overnight convergence is relevant to the stacked generalization
-  question: if a model's canonical optimum aligns with its native fit,
-  internal tuning and canonical tuning would agree, weakening the case
-  for separate optimization levels.
-- **Timing as shared bottleneck:** Timing (50.1) lags count (94.2).
+- **MLE/canonical divergence has widened to 3.3 shape units on
+  overnight.** Last export saw these two approaches agree (MLE 5.96,
+  production 6.0). This export has them disagreeing more than at any
+  point in the tracked history (MLE 6.02, production 2.75). The
+  daytime gap also widened (MLE 3.03, production 1.625). This
+  strengthens rather than weakens the case that internal tuning and
+  canonical tuning optimize different objectives for this model. The
+  stacked-generalization question in `feedcast/research/README.md` is
+  directly relevant: if canonical-optimal shapes are this far from the
+  distribution fit, the production forecaster's chained-median
+  mechanics may be doing most of the work, and a simpler or
+  shape-adaptive forecaster could match performance without the
+  divergence.
+- **Timing as shared bottleneck:** Timing (51.7) lags count (91.3).
   This pattern persists across all models, see
   `feedcast/research/README.md`. The current tune improved timing by
-  5.5 points, narrowing the gap somewhat.
+  7.1 points at the cost of 1.9 count points. That timing-vs-count
+  tradeoff is rewarded by the geometric-mean headline in the current
+  distribution.
