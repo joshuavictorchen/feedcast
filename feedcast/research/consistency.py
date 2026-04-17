@@ -76,6 +76,16 @@ def find_consistency_issues(
                 changed_paths=changed_paths,
             )
         )
+
+    agents_dir = resolved_repo_root / "feedcast" / "agents"
+    if agents_dir.is_dir():
+        issues.extend(
+            _check_agents_workspace(
+                agents_dir=agents_dir,
+                repo_root=resolved_repo_root,
+                changed_paths=changed_paths,
+            )
+        )
     return issues
 
 
@@ -135,6 +145,34 @@ def _check_research_dir(
                 f"{relative_dir}: model.py changed without a matching research.md update"
             )
         issues.extend(_check_model_baseline(research_dir, repo_root, results_text))
+
+    return issues
+
+
+def _check_agents_workspace(
+    *,
+    agents_dir: Path,
+    repo_root: Path,
+    changed_paths: set[Path],
+) -> list[str]:
+    """Check the agent inference workspace: `model.py` holds the
+    canonical forecast, so any change to it must ship with a
+    `CHANGELOG.md` update. Other `.py` files (research, helpers,
+    analysis) are allowed and unchecked.
+    """
+    relative_dir = agents_dir.relative_to(repo_root)
+    changed_here = {
+        path.relative_to(relative_dir)
+        for path in changed_paths
+        if _is_relative_to(path, relative_dir)
+    }
+
+    issues: list[str] = []
+
+    if Path("model.py") in changed_here and Path("CHANGELOG.md") not in changed_here:
+        issues.append(
+            f"{relative_dir}: model.py changed without a matching CHANGELOG.md update"
+        )
 
     return issues
 

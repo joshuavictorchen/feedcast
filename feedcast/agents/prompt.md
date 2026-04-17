@@ -35,10 +35,12 @@ optional -- it will be collapsed before scoring.
 
 ## Workspace
 
-Your workspace may contain artifacts from prior runs, including strategy notes,
-model code, or helper scripts. If `strategy.md` exists, read it first:
-it documents the current approach, performance data, and guidance from
-prior agents. You are free to follow, modify, or discard prior work.
+Your workspace may contain artifacts from prior runs, including
+strategy notes, `model.py`, and any research or helper scripts
+prior agents kept. If `strategy.md` exists, read it first: it
+documents the current approach, tuning rationale, and guidance
+from prior agents. You are free to follow, modify, or discard
+prior work.
 
 ## Freedom
 
@@ -47,16 +49,24 @@ You may:
 
 - Read anything in the repo
 - Inspect tracker history, reports, scripts, models, and research
-- Write and run helper scripts in your workspace
-- Create or modify `model.py` or any other workspace artifacts
+- Write helper, analysis, or research scripts in the workspace
+- Rewrite `model.py` if a better approach emerges
+- Modify any workspace documentation (`strategy.md`, `design.md`, etc.)
 - Use pure inference if you prefer
-- Keep durable notes or strategy files in your workspace
+- Keep durable notes, strategy files, or research artifacts in your workspace
 
 ## Boundaries
 
 - Do not modify files outside your workspace.
 - Treat the rest of the repo as read-only reference material.
-- Your workspace persists across runs. Use it however you want.
+- Your workspace persists across runs; prior files may be kept,
+  updated, or removed.
+- `model.py` holds the canonical forecast implementation: the
+  pipeline runs it, and the committed `forecast.json` must come
+  from running it. You may keep other `.py` files alongside it for
+  research, analysis, or helpers. Any change to `model.py` must
+  be paired with a new entry in `CHANGELOG.md`; a repository
+  consistency check enforces this pairing.
 
 ## Runtime Budget
 
@@ -131,9 +141,19 @@ current-state, and mechanism-first.
 
 Your workspace contains `CHANGELOG.md`. Whenever this run changes
 behavior materially, append a new entry at the top of the file.
-Material changes include a new approach, a different bucket or slot
-scheme, a reworked projection step, or a tuned constant backed by new
-evidence.
+Material changes include:
+
+- A new approach, a different bucket or slot scheme, or a reworked
+  projection step.
+- A tuned constant backed by new evidence.
+- Codifying a previously ad-hoc approach as committed code in
+  `model.py`, or refactoring the committed implementation.
+- Removing a previously committed capability (such as conditional
+  first-feed handling or count calibration), even when the numeric
+  forecast is similar.
+
+The repository consistency check fails any run that changes
+`model.py` without a matching `CHANGELOG.md` update.
 
 Use the same `Problem / Research / Solution` format as the scripted
 models (e.g. `feedcast/models/slot_drift/CHANGELOG.md`):
@@ -155,5 +175,6 @@ constants or projection shape when applicable.>
 ```
 
 Cadence: one entry per material change, newest first. Cosmetic
-rewording of `methodology.md` that describes the same mechanism does
-not need an entry; approach changes and constant changes always do.
+rewording of `methodology.md` that describes the same mechanism
+does not need an entry; approach changes, constant changes, and
+implementation refactors always do.
