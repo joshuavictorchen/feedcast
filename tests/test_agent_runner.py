@@ -49,7 +49,7 @@ class InvokeAgentTests(unittest.TestCase):
         command = call_args[0]
         self.assertEqual(
             command[:6],
-            ["claude", "--model", "claude-opus-4-6", "--effort", "max", "-p"],
+            ["claude", "--model", "claude-opus-4-7", "--effort", "max", "-p"],
         )
         self.assertEqual(command[-1], "Hello Silas from home.\n")
         self.assertEqual(call_kwargs["timeout"], 123)

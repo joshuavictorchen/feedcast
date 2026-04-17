@@ -179,7 +179,7 @@ def _agent_command(agent: str, prompt: str) -> list[str]:
         return [
             "claude",
             "--model",
-            "claude-opus-4-6",
+            "claude-opus-4-7",
             "--effort",
             "max",
             "-p",
